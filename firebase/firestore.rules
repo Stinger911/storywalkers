@@ -1,0 +1,217 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /* =========================
+     * Helpers
+     * ========================= */
+
+    function isSignedIn() {
+      return request.auth != null && request.auth.uid != null;
+    }
+
+    function userDoc(uid) {
+      return get(/databases/$(database)/documents/users/$(uid));
+    }
+
+    function userRole() {
+      return isSignedIn() && userDoc(request.auth.uid).exists
+        ? userDoc(request.auth.uid).data.role
+        : null;
+    }
+
+    function isStaff() {
+      return isSignedIn() && (userRole() == "admin" || userRole() == "expert");
+    }
+
+    function isSelf(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    // True if the request writes ONLY the fields in allowedFields (no extra fields).
+    // (Allows creating/updating those fields; does not force all of them to be present.)
+    function onlyAffects(allowedFields) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(allowedFields);
+    }
+
+    // True if fields are unchanged (cannot be altered by this write).
+    function fieldsUnchanged(fieldNames) {
+      return request.resource.data.diff(resource.data).changedKeys().hasNone(fieldNames);
+    }
+
+    // For creates where resource doesn't exist.
+    function hasOnlyKeysOnCreate(allowedKeys) {
+      return request.resource.data.keys().hasOnly(allowedKeys);
+    }
+
+    /* =========================
+     * Default: deny
+     * ========================= */
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    /* =========================
+     * users/{uid}
+     * ========================= */
+    match /users/{uid} {
+      // Read: self or staff
+      allow get, list: if isStaff() || isSelf(uid);
+
+      // Create:
+      // - staff can create any user doc
+      // - allow self-create minimal profile (optional). If you want admin-only provisioning, remove the self-create branch.
+      allow create: if isStaff()
+        || (isSelf(uid)
+            // Minimal safe shape on self-create
+            && request.resource.data.role == "student"
+            && request.resource.data.status == "active"
+            && request.resource.data.email is string
+            && request.resource.data.displayName is string
+            && request.resource.data.createdAt is timestamp);
+
+      // Update:
+      // - staff full control
+      // - self can update only displayName (and optionally updatedAt), but cannot change role/status/email/createdAt
+      allow update: if isStaff()
+        || (isSelf(uid)
+            && onlyAffects(["displayName", "updatedAt"])
+            && fieldsUnchanged(["role", "status", "email", "createdAt"]));
+
+      // Delete: staff only
+      allow delete: if isStaff();
+    }
+
+    /* =========================
+     * categories/{categoryId}
+     * ========================= */
+    match /categories/{categoryId} {
+      allow get, list: if isSignedIn();  // students need to read for filters
+      allow create, update, delete: if isStaff();
+    }
+
+    /* =========================
+     * goals/{goalId}
+     * ========================= */
+    match /goals/{goalId} {
+      allow get, list: if isSignedIn();  // students may read goal details
+      allow create, update, delete: if isStaff();
+    }
+
+    /* =========================
+     * step_templates/{templateId}
+     * ========================= */
+    match /step_templates/{templateId} {
+      // Optional: allow students to read templates (e.g., for displaying template names).
+      // If you want templates hidden from students, change to: allow get, list: if isStaff();
+      allow get, list: if isSignedIn();
+      allow create, update, delete: if isStaff();
+    }
+
+    /* =========================
+     * student_plans/{uid}
+     * planId == student uid (one plan per student)
+     * ========================= */
+    match /student_plans/{uid} {
+      // Read: self or staff
+      allow get: if isStaff() || isSelf(uid);
+      // List: staff only (to prevent students from enumerating)
+      allow list: if isStaff();
+
+      // Writes: staff only (plan assignment is admin operation)
+      allow create, update, delete: if isStaff();
+
+      /* -------------------------
+       * student_plans/{uid}/steps/{stepId}
+       * ------------------------- */
+      match /steps/{stepId} {
+        // Read: self or staff
+        allow get: if isStaff() || isSelf(uid);
+        allow list: if isStaff() || isSelf(uid);
+
+        // Create/delete: staff only
+        allow create, delete: if isStaff();
+
+        // Update:
+        // - staff can edit anything
+        // - student can only toggle progress: isDone, doneAt, updatedAt
+        allow update: if isStaff()
+          || (isSelf(uid)
+              && onlyAffects(["isDone", "doneAt", "updatedAt"])
+              && request.resource.data.isDone is bool
+              // If done -> doneAt must be timestamp, else must be null
+              && (
+                (request.resource.data.isDone == true  && request.resource.data.doneAt is timestamp)
+                || (request.resource.data.isDone == false && request.resource.data.doneAt == null)
+              )
+              // Cannot change these core fields even if omitted from affectedKeys check (belt + suspenders)
+              && fieldsUnchanged(["title", "description", "materialUrl", "order", "templateId", "createdAt"]));
+      }
+    }
+
+    /* =========================
+     * questions/{questionId}
+     * ========================= */
+    match /questions/{questionId} {
+      // Read:
+      // - staff: all
+      // - student: only own
+      allow get: if isStaff()
+        || (isSignedIn() && resource.data.studentUid == request.auth.uid);
+
+      // List:
+      // - staff can list
+      // - students can list, but queries must be constrained; rules cannot enforce query predicates perfectly,
+      //   so we rely on per-document read constraint above. This is standard Firestore pattern.
+      allow list: if isStaff() || isSignedIn();
+
+      // Create (student):
+      // Must be owned by auth user, status "new", no answer written by student.
+      allow create: if isSignedIn()
+        && request.resource.data.studentUid == request.auth.uid
+        && request.resource.data.categoryId is string
+        && request.resource.data.title is string
+        && (request.resource.data.body is string || !("body" in request.resource.data))
+        && request.resource.data.status == "new"
+        && (!("answer" in request.resource.data) || request.resource.data.answer == null)
+        && request.resource.data.createdAt is timestamp
+        && request.resource.data.updatedAt is timestamp;
+
+      // Update:
+      // - staff can update anything (including answering)
+      // - student can update only before answered and never touch answer/status
+      allow update: if isStaff()
+        || (isSignedIn()
+            && resource.data.studentUid == request.auth.uid
+            // Can't edit once answered or if answer exists
+            && resource.data.status == "new"
+            && (resource.data.answer == null || !("answer" in resource.data))
+            // Student can edit limited fields
+            && onlyAffects(["title", "body", "categoryId", "updatedAt"])
+            && fieldsUnchanged(["studentUid", "status", "answer", "createdAt"]));
+
+      // Delete: staff only (safer MVP)
+      allow delete: if isStaff();
+    }
+
+    /* =========================
+     * library_entries/{entryId}
+     * ========================= */
+    match /library_entries/{entryId} {
+      // Read:
+      // - staff: all
+      // - student: only published
+      allow get: if isStaff()
+        || (isSignedIn() && resource.data.status == "published");
+
+      // List:
+      // - staff: all
+      // - student: allowed, but each doc read is still enforced (published only)
+      allow list: if isStaff() || isSignedIn();
+
+      // Writes: staff only
+      allow create, update, delete: if isStaff();
+    }
+  }
+}

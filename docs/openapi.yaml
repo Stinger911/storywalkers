@@ -1,0 +1,1532 @@
+openapi: 3.0.3
+info:
+  title: Personalized Learning Pathways API
+  version: "0.1.0"
+  description: >
+    MVP API for Personalized Learning Pathways (Goal → Plan → Steps, Q&A, Library).
+    Auth via Firebase ID token in Authorization header. Source spec: :contentReference[oaicite:0]{index=0}
+servers:
+  - url: /api
+
+security:
+  - FirebaseBearer: []
+
+tags:
+  - name: Auth
+  - name: Admin - Students
+  - name: Admin - Settings
+  - name: Questions
+  - name: Library
+
+components:
+  securitySchemes:
+    FirebaseBearer:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              example: forbidden
+            message:
+              type: string
+              example: Insufficient permissions
+            details:
+              type: object
+              additionalProperties: true
+
+    MeResponse:
+      type: object
+      required: [uid, email, displayName, role, status]
+      properties:
+        uid:
+          type: string
+          example: UID123
+        email:
+          type: string
+          format: email
+          example: alex@example.com
+        displayName:
+          type: string
+          example: Alex
+        role:
+          type: string
+          enum: [student, admin, expert]
+          example: student
+        status:
+          type: string
+          enum: [active, disabled]
+          example: active
+
+    Paginated:
+      type: object
+      properties:
+        nextCursor:
+          type: string
+          nullable: true
+          example: null
+
+    StudentSummary:
+      type: object
+      required: [uid, email, displayName, role, status, createdAt]
+      properties:
+        uid:
+          type: string
+          example: UID123
+        email:
+          type: string
+          format: email
+          example: alex@example.com
+        displayName:
+          type: string
+          example: Alex
+        role:
+          type: string
+          enum: [student, admin, expert]
+          example: student
+        status:
+          type: string
+          enum: [active, disabled]
+          example: active
+        createdAt:
+          type: string
+          format: date-time
+          example: "2026-02-02T10:15:30Z"
+        updatedAt:
+          type: string
+          format: date-time
+          nullable: true
+          example: "2026-02-02T11:00:00Z"
+
+    StudentsListResponse:
+      allOf:
+        - $ref: "#/components/schemas/Paginated"
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/StudentSummary"
+
+    CreateStudentRequest:
+      type: object
+      required: [email, displayName]
+      properties:
+        email:
+          type: string
+          format: email
+        displayName:
+          type: string
+        role:
+          type: string
+          enum: [student, admin, expert]
+          default: student
+          description: "MVP recommended: only student creation via this endpoint."
+      example:
+        email: alex@example.com
+        displayName: Alex
+        role: student
+
+    PatchStudentRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        displayName:
+          type: string
+        status:
+          type: string
+          enum: [active, disabled]
+      example:
+        displayName: Alex Doe
+        status: disabled
+
+    PlanResponse:
+      type: object
+      required: [planId, studentUid, goalId, createdAt, updatedAt]
+      properties:
+        planId:
+          type: string
+          description: "For MVP equals student uid"
+          example: UID123
+        studentUid:
+          type: string
+          example: UID123
+        goalId:
+          type: string
+          example: goal_video_editor
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    AssignPlanRequest:
+      type: object
+      required: [goalId]
+      properties:
+        goalId:
+          type: string
+          example: goal_video_editor
+
+    BulkAddStepsRequest:
+      type: object
+      required: [items]
+      properties:
+        append:
+          type: boolean
+          default: true
+          description: "If true, add to end. If false, implementation may replace existing steps (optional)."
+        items:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/BulkStepItem"
+      example:
+        append: true
+        items:
+          - templateId: tmpl_cut_basics
+          - title: Custom step title
+            description: Custom step description
+            materialUrl: https://example.com/material
+            templateId: null
+
+    BulkStepItem:
+      type: object
+      properties:
+        templateId:
+          type: string
+          nullable: true
+          description: "If provided, backend copies from template; other fields may be ignored."
+        title:
+          type: string
+        description:
+          type: string
+        materialUrl:
+          type: string
+          format: uri
+      oneOf:
+        - required: [templateId]
+        - required: [title, description, materialUrl]
+
+    CreatedStep:
+      type: object
+      required: [stepId, order, templateId, title, description, materialUrl, isDone, doneAt]
+      properties:
+        stepId:
+          type: string
+          example: step_001
+        order:
+          type: integer
+          example: 0
+        templateId:
+          type: string
+          nullable: true
+          example: tmpl_cut_basics
+        title:
+          type: string
+          example: Learn basic cuts
+        description:
+          type: string
+          example: Watch lesson and practice on a short clip
+        materialUrl:
+          type: string
+          format: uri
+          example: https://example.com/lesson
+        isDone:
+          type: boolean
+          example: false
+        doneAt:
+          type: string
+          format: date-time
+          nullable: true
+          example: null
+
+    BulkAddStepsResponse:
+      type: object
+      required: [created]
+      properties:
+        created:
+          type: array
+          items:
+            $ref: "#/components/schemas/CreatedStep"
+
+    ReorderStepsRequest:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required: [stepId, order]
+            properties:
+              stepId:
+                type: string
+                example: step_001
+              order:
+                type: integer
+                example: 0
+
+    ReorderStepsResponse:
+      type: object
+      required: [updated]
+      properties:
+        updated:
+          type: integer
+          example: 2
+
+    Category:
+      type: object
+      required: [id, name, slug, type]
+      properties:
+        id:
+          type: string
+          example: cat_editing
+        name:
+          type: string
+          example: Editing
+        slug:
+          type: string
+          example: editing
+        type:
+          type: string
+          enum: [questions, library, mixed]
+          example: mixed
+
+    CategoriesListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Category"
+
+    CreateCategoryRequest:
+      type: object
+      required: [name, slug, type]
+      properties:
+        name:
+          type: string
+        slug:
+          type: string
+        type:
+          type: string
+          enum: [questions, library, mixed]
+
+    PatchCategoryRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+        slug:
+          type: string
+        type:
+          type: string
+          enum: [questions, library, mixed]
+
+    Goal:
+      type: object
+      required: [id, title]
+      properties:
+        id:
+          type: string
+          example: goal_video_editor
+        title:
+          type: string
+          example: Become a video editor
+        description:
+          type: string
+          nullable: true
+          example: "..."
+        createdAt:
+          type: string
+          format: date-time
+          nullable: true
+        updatedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    GoalsListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Goal"
+
+    CreateGoalRequest:
+      type: object
+      required: [title]
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+
+    PatchGoalRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+
+    StepTemplate:
+      type: object
+      required: [id, title, description, materialUrl, isActive]
+      properties:
+        id:
+          type: string
+          example: tmpl_cut_basics
+        title:
+          type: string
+          example: Learn basic cuts
+        description:
+          type: string
+          example: Watch lesson and practice
+        materialUrl:
+          type: string
+          format: uri
+          example: https://example.com/lesson
+        categoryId:
+          type: string
+          nullable: true
+          example: cat_editing
+        tags:
+          type: array
+          items:
+            type: string
+          example: [cuts, basics]
+        isActive:
+          type: boolean
+          example: true
+        createdAt:
+          type: string
+          format: date-time
+          nullable: true
+        updatedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    StepTemplatesListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/StepTemplate"
+
+    CreateStepTemplateRequest:
+      type: object
+      required: [title, description, materialUrl]
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        materialUrl:
+          type: string
+          format: uri
+        categoryId:
+          type: string
+          nullable: true
+        tags:
+          type: array
+          items:
+            type: string
+        isActive:
+          type: boolean
+          default: true
+
+    PatchStepTemplateRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        materialUrl:
+          type: string
+          format: uri
+        categoryId:
+          type: string
+          nullable: true
+        tags:
+          type: array
+          items:
+            type: string
+        isActive:
+          type: boolean
+
+    AnswerMap:
+      type: object
+      required: [expertUid, text, createdAt, publishToLibrary]
+      properties:
+        expertUid:
+          type: string
+          example: UID999
+        text:
+          type: string
+          example: Use noise reduction...
+        videoUrl:
+          type: string
+          format: uri
+          nullable: true
+          example: https://example.com/video
+        createdAt:
+          type: string
+          format: date-time
+        publishToLibrary:
+          type: boolean
+          example: true
+
+    Question:
+      type: object
+      required: [id, studentUid, categoryId, title, status, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          example: q_abc123
+        studentUid:
+          type: string
+          example: UID123
+        categoryId:
+          type: string
+          example: cat_editing
+        title:
+          type: string
+          example: How do I remove background noise?
+        body:
+          type: string
+          nullable: true
+          example: I have a voiceover with hum...
+        status:
+          type: string
+          enum: [new, answered]
+          example: new
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        answer:
+          $ref: "#/components/schemas/AnswerMap"
+          nullable: true
+
+    QuestionsListResponse:
+      allOf:
+        - $ref: "#/components/schemas/Paginated"
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/Question"
+
+    CreateQuestionRequest:
+      type: object
+      required: [categoryId, title]
+      properties:
+        categoryId:
+          type: string
+          example: cat_editing
+        title:
+          type: string
+          example: How do I remove background noise?
+        body:
+          type: string
+          nullable: true
+          example: I have a voiceover with hum...
+
+    LibraryEntrySummary:
+      type: object
+      required: [id, categoryId, title, status, updatedAt]
+      properties:
+        id:
+          type: string
+          example: kb_001
+        categoryId:
+          type: string
+          example: cat_audio
+        title:
+          type: string
+          example: Remove background noise in DaVinci Resolve
+        status:
+          type: string
+          enum: [draft, published]
+          example: published
+        updatedAt:
+          type: string
+          format: date-time
+
+    LibraryListResponse:
+      allOf:
+        - $ref: "#/components/schemas/Paginated"
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/LibraryEntrySummary"
+
+    LibraryEntry:
+      type: object
+      required: [id, categoryId, title, content, status, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          example: kb_001
+        categoryId:
+          type: string
+          example: cat_audio
+        title:
+          type: string
+          example: Remove background noise in DaVinci Resolve
+        titleLower:
+          type: string
+          nullable: true
+          example: remove background noise in davinci resolve
+        content:
+          type: string
+          example: "Steps: ..."
+        videoUrl:
+          type: string
+          format: uri
+          nullable: true
+        sourceQuestionId:
+          type: string
+          nullable: true
+          example: q_abc123
+        status:
+          type: string
+          enum: [draft, published]
+          example: published
+        keywords:
+          type: array
+          items:
+            type: string
+          nullable: true
+          example: [remove, background, noise, davinci, resolve]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateLibraryEntryRequest:
+      type: object
+      required: [categoryId, title, content, status]
+      properties:
+        categoryId:
+          type: string
+        title:
+          type: string
+        content:
+          type: string
+        videoUrl:
+          type: string
+          format: uri
+          nullable: true
+        status:
+          type: string
+          enum: [draft, published]
+        keywords:
+          type: array
+          items:
+            type: string
+          nullable: true
+
+    PatchLibraryEntryRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        categoryId:
+          type: string
+        title:
+          type: string
+        content:
+          type: string
+        videoUrl:
+          type: string
+          format: uri
+          nullable: true
+        status:
+          type: string
+          enum: [draft, published]
+        keywords:
+          type: array
+          items:
+            type: string
+
+    AnswerQuestionRequest:
+      type: object
+      required: [text, publishToLibrary]
+      properties:
+        text:
+          type: string
+          example: Use noise reduction...
+        videoUrl:
+          type: string
+          format: uri
+          nullable: true
+          example: https://example.com/video
+        publishToLibrary:
+          type: boolean
+          example: true
+        library:
+          type: object
+          nullable: true
+          description: >
+            Optional payload for creating/updating a library entry when publishToLibrary=true.
+            Backend may still normalize/generate keywords/titleLower.
+          properties:
+            status:
+              type: string
+              enum: [draft, published]
+              default: published
+            categoryId:
+              type: string
+              example: cat_audio
+            title:
+              type: string
+              example: Remove background noise in DaVinci Resolve
+            content:
+              type: string
+              example: "Steps: ..."
+            keywords:
+              type: array
+              items:
+                type: string
+              nullable: true
+
+    AnswerQuestionResponse:
+      type: object
+      required: [question]
+      properties:
+        question:
+          type: object
+          required: [id, status, updatedAt]
+          properties:
+            id:
+              type: string
+              example: q_abc123
+            status:
+              type: string
+              enum: [answered]
+              example: answered
+            updatedAt:
+              type: string
+              format: date-time
+              example: "2026-02-02T13:00:00Z"
+        libraryEntry:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: string
+              example: kb_001
+            status:
+              type: string
+              enum: [draft, published]
+              example: published
+
+  responses:
+    Unauthorized:
+      description: Unauthenticated (missing/invalid token)
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Forbidden:
+      description: Forbidden (insufficient role)
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    NotFound:
+      description: Not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    ValidationError:
+      description: Validation error
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+paths:
+  /me:
+    get:
+      tags: [Auth]
+      summary: Get current user profile + role
+      operationId: getMe
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MeResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /admin/students:
+    get:
+      tags: [Admin - Students]
+      summary: List students
+      operationId: adminListStudents
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [active, disabled]
+        - in: query
+          name: role
+          schema:
+            type: string
+            enum: [student, admin, expert]
+            default: student
+        - in: query
+          name: q
+          schema:
+            type: string
+          description: "Optional search (email/displayName). Implementation may be simple."
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 50
+            maximum: 200
+        - in: query
+          name: cursor
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudentsListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [Admin - Students]
+      summary: Create student user record
+      operationId: adminCreateStudent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateStudentRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudentSummary"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+
+  /admin/students/{uid}:
+    patch:
+      tags: [Admin - Students]
+      summary: Update student profile/status
+      operationId: adminPatchStudent
+      parameters:
+        - in: path
+          name: uid
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatchStudentRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudentSummary"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+
+  /admin/students/{uid}/plan:
+    post:
+      tags: [Admin - Students]
+      summary: Assign goal to student and ensure plan exists
+      operationId: adminAssignPlan
+      parameters:
+        - in: path
+          name: uid
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssignPlanRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlanResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+
+  /admin/students/{uid}/plan/steps:
+    post:
+      tags: [Admin - Students]
+      summary: Bulk add steps to a student plan (from templates or custom)
+      operationId: adminBulkAddSteps
+      parameters:
+        - in: path
+          name: uid
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BulkAddStepsRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BulkAddStepsResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+
+  /admin/students/{uid}/plan/steps/reorder:
+    patch:
+      tags: [Admin - Students]
+      summary: Reorder steps by setting order fields
+      operationId: adminReorderSteps
+      parameters:
+        - in: path
+          name: uid
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReorderStepsRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReorderStepsResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+
+  /admin/categories:
+    get:
+      tags: [Admin - Settings]
+      summary: List categories
+      operationId: adminListCategories
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CategoriesListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [Admin - Settings]
+      summary: Create category
+      operationId: adminCreateCategory
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCategoryRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Category"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+
+  /admin/categories/{id}:
+    patch:
+      tags: [Admin - Settings]
+      summary: Update category
+      operationId: adminPatchCategory
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatchCategoryRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Category"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+    delete:
+      tags: [Admin - Settings]
+      summary: Delete category
+      operationId: adminDeleteCategory
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "204":
+          description: No Content
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /admin/goals:
+    get:
+      tags: [Admin - Settings]
+      summary: List goals
+      operationId: adminListGoals
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GoalsListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [Admin - Settings]
+      summary: Create goal
+      operationId: adminCreateGoal
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateGoalRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Goal"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+
+  /admin/goals/{id}:
+    patch:
+      tags: [Admin - Settings]
+      summary: Update goal
+      operationId: adminPatchGoal
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatchGoalRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Goal"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+    delete:
+      tags: [Admin - Settings]
+      summary: Delete goal
+      operationId: adminDeleteGoal
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "204":
+          description: No Content
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /admin/step-templates:
+    get:
+      tags: [Admin - Settings]
+      summary: List step templates
+      operationId: adminListStepTemplates
+      parameters:
+        - in: query
+          name: isActive
+          schema: { type: boolean }
+        - in: query
+          name: categoryId
+          schema: { type: string }
+        - in: query
+          name: limit
+          schema: { type: integer, default: 50, maximum: 200 }
+        - in: query
+          name: cursor
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StepTemplatesListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [Admin - Settings]
+      summary: Create step template
+      operationId: adminCreateStepTemplate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateStepTemplateRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StepTemplate"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+
+  /admin/step-templates/{id}:
+    patch:
+      tags: [Admin - Settings]
+      summary: Update step template
+      operationId: adminPatchStepTemplate
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatchStepTemplateRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StepTemplate"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+    delete:
+      tags: [Admin - Settings]
+      summary: Delete step template
+      operationId: adminDeleteStepTemplate
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "204":
+          description: No Content
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /questions:
+    get:
+      tags: [Questions]
+      summary: List questions (student: own; staff: all with filters)
+      operationId: listQuestions
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [new, answered]
+        - in: query
+          name: categoryId
+          schema: { type: string }
+        - in: query
+          name: studentUid
+          schema: { type: string }
+          description: "Staff only (enforced server-side)."
+        - in: query
+          name: limit
+          schema: { type: integer, default: 50, maximum: 200 }
+        - in: query
+          name: cursor
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuestionsListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      tags: [Questions]
+      summary: Create question (student)
+      operationId: createQuestion
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateQuestionRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Question"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+
+  /admin/questions/{id}/answer:
+    post:
+      tags: [Questions]
+      summary: Answer a question and optionally publish to library (staff)
+      operationId: adminAnswerQuestion
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AnswerQuestionRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnswerQuestionResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+
+  /library:
+    get:
+      tags: [Library]
+      summary: List library entries (student: published; staff: optional status filter)
+      operationId: listLibrary
+      parameters:
+        - in: query
+          name: categoryId
+          schema: { type: string }
+        - in: query
+          name: q
+          schema: { type: string }
+          description: "MVP search (prefix on titleLower or keywords-based), implementation-defined."
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [draft, published]
+          description: "Staff only (enforced server-side)."
+        - in: query
+          name: limit
+          schema: { type: integer, default: 50, maximum: 200 }
+        - in: query
+          name: cursor
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LibraryListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /library/{id}:
+    get:
+      tags: [Library]
+      summary: Get library entry (student: only published; staff: any)
+      operationId: getLibraryEntry
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LibraryEntry"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /admin/library:
+    post:
+      tags: [Library]
+      summary: Create library entry (staff)
+      operationId: adminCreateLibraryEntry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateLibraryEntryRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LibraryEntry"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+
+  /admin/library/{id}:
+    patch:
+      tags: [Library]
+      summary: Update library entry (staff)
+      operationId: adminPatchLibraryEntry
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatchLibraryEntryRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LibraryEntry"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+
+  /healthz:
+    get:
+      tags: [Auth]
+      summary: Health check (liveness/readiness)
+      operationId: healthz
+      security: []   # no auth required
+      responses:
+        "200":
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status:
+                    type: string
+                    example: ok
+
+  /version:
+    get:
+      tags: [Auth]
+      summary: Service version and build info
+      operationId: version
+      security: []   # no auth required
+      responses:
+        "200":
+          description: Version info
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [name, version]
+                properties:
+                  name:
+                    type: string
+                    example: personalized-learning-pathways-api
+                  version:
+                    type: string
+                    example: 0.1.0
+                  commit:
+                    type: string
+                    nullable: true
+                    example: a1b2c3d
+                  buildTime:
+                    type: string
+                    format: date-time
+                    nullable: true
+                    example: "2026-02-02T09:30:00Z"

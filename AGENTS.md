@@ -4,12 +4,12 @@ This document outlines the operational guidelines for AI agents interacting with
 
 ## Core Mandates
 
--   **Adherence to Conventions:** Always prioritize existing project conventions (formatting, naming, structure, libraries) when modifying code.
--   **Tool Usage:** Utilize available tools (e.g., `read_file`, `write_file`, `run_shell_command`, `replace`, `search_file_content`, `glob`, `web_fetch`, `codebase_investigator`, `write_todos`) efficiently and appropriately.
--   **Security:** Never introduce or expose sensitive information (secrets, API keys). Explain critical commands before execution.
--   **Proactiveness:** Fulfill user requests thoroughly, including adding tests where applicable.
--   **Conciseness:** Be direct and concise in communication. Avoid unnecessary chitchat.
--   **No Assumptions:** Always verify file contents with `read_file` before making modifications.
+- **Adherence to Conventions:** Always prioritize existing project conventions (formatting, naming, structure, libraries) when modifying code.
+- **Tool Usage:** Utilize available tools (e.g., `read_file`, `write_file`, `run_shell_command`, `replace`, `search_file_content`, `glob`, `web_fetch`, `codebase_investigator`, `write_todos`) efficiently and appropriately.
+- **Security:** Never introduce or expose sensitive information (secrets, API keys). Explain critical commands before execution.
+- **Proactiveness:** Fulfill user requests thoroughly, including adding tests where applicable.
+- **Conciseness:** Be direct and concise in communication. Avoid unnecessary chitchat.
+- **No Assumptions:** Always verify file contents with `read_file` before making modifications.
 
 ## Workflow for Software Engineering Tasks
 
@@ -31,14 +31,25 @@ This document outlines the operational guidelines for AI agents interacting with
 
 ## Tool Usage Best Practices
 
--   **`run_shell_command`:** Explain commands that modify the file system or system state. Prefer non-interactive commands.
--   **Token Efficiency:** Use command flags to reduce output verbosity. Redirect large outputs to temporary files if necessary.
--   **`replace`:** Provide exact `old_string` and `new_string` with sufficient context.
--   **`save_memory`:** Use only for user-specific facts or preferences that should persist across sessions, when explicitly asked or clearly beneficial.
+- **`run_shell_command`:** Explain commands that modify the file system or system state. Prefer non-interactive commands.
+- **Token Efficiency:** Use command flags to reduce output verbosity. Redirect large outputs to temporary files if necessary.
+- **`replace`:** Provide exact `old_string` and `new_string` with sufficient context.
+- **`save_memory`:** Use only for user-specific facts or preferences that should persist across sessions, when explicitly asked or clearly beneficial.
 
 ## Git Repository Interaction
 
--   **Before Commit:** Run `git status`, `git diff HEAD`, `git log -n 3` to understand changes and commit style.
--   **Commit Messages:** Propose clear, concise commit messages focusing on "why."
--   **Confirmation:** Confirm successful commits with `git status`.
--   **No Push:** Never push changes without explicit user instruction.
+- **Before Commit:** Run `git status`, `git diff HEAD`, `git log -n 3` to understand changes and commit style.
+- **Commit Messages:** Propose clear, concise commit messages focusing on "why."
+- **Confirmation:** Confirm successful commits with `git status`.
+- **No Push:** Never push changes without explicit user instruction.
+
+## Project State Confirmation
+
+The current project includes:
+
+- Frontend (Solid.js)
+- Backend (FastAPI)
+- Documentation (API contract, architecture, Firestore rules/schema, OpenAPI spec)
+- Testing setup (Firestore rules tests in tests/firebase)
+
+Follow the above workflows and update documentation and test configuration as the project evolves.
