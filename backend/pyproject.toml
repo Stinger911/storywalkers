@@ -3,20 +3,33 @@ name = "backend"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.13"
 dependencies = [
     "annotated-doc==0.0.4",
     "annotated-types==0.7.0",
     "anyio==4.12.1",
     "click==8.3.1",
     "fastapi==0.128.0",
+    "firebase-admin>=7.1.0",
+    "google-cloud-firestore>=2.23.0",
     "granian==2.6.1",
     "h11==0.16.0",
     "idna==3.11",
     "pydantic==2.12.5",
     "pydantic-core==2.41.5",
+    "pydantic-settings>=2.12.0",
+    "python-json-logger>=4.0.0",
+    "pyyaml>=6.0.3",
     "starlette==0.50.0",
     "typing-extensions==4.15.0",
     "typing-inspection==0.4.2",
     "uvicorn==0.40.0",
+]
+
+[dependency-groups]
+dev = [
+    "granian[reload]>=2.6.1",
+    "httpx>=0.28.1",
+    "pytest>=9.0.2",
+    "ruff>=0.14.14",
 ]

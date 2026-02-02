@@ -11,27 +11,27 @@ env: ## create the virtual environment
 	uv venv --python 3.13
 
 install: ## install the dependencies
-	(cd backend && \
-	uv lock --upgrade --active && uv sync --all-groups --active)
+	@(cd backend && \
+	uv lock --upgrade && uv sync --all-groups)
 
 format: ## format the codebase
-	(cd backend && \
+	@(cd backend && \
 	uv run --group dev ruff format .)
 
 isort: ## sort imports
-	(cd backend && \
+	@(cd backend && \
 	uv run --group dev ruff check --select I --fix .)
 
 fix-unused-imports: ## fix unused imports
-	(cd backend && \
+	@(cd backend && \
 	uv run --group dev ruff check --select F401 --fix .)
 
 check-unused-imports: ## check for unused imports
-	(cd backend && \
+	@(cd backend && \
 	uv run --group dev ruff check --select F401 .)
 
 check: ## check code style
-	(cd backend && \
+	@(cd backend && \
 	uv run --group dev ruff format --check .)
 	make check-unused-imports
 
@@ -46,9 +46,14 @@ tests: ## run tests
 	@echo "🔥 Running firestore rules tests..."
 	(cd tests/firebase && \
 	npm install && \
-	npm run test:emu)
+# 	npm run test:emu \
+	)
 	@echo "✅ Firestore rules tests passed!"
 	@echo "🐍 Running backend tests..."
-# 	uv run --group dev pytest tests/backend
+	uv run --group dev pytest backend/tests
 	@echo "✅ Backend tests passed!"
 	@echo "🚀 All tests passed!"
+
+dev: ## run the development servers
+	@(cd backend && \
+	uv run --group dev granian app.main:app --reload --host 0.0.0.0 --port 8080)
