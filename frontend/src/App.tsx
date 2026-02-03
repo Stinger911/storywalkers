@@ -1,35 +1,37 @@
-import { createSignal } from 'solid-js'
-import solidLogo from './assets/solid.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { Route, Router } from "@solidjs/router";
+import "./App.css";
+import { AdminLayout } from "./routes/admin/AdminLayout.tsx";
+import { AdminCategories } from "./routes/admin/AdminCategories.tsx";
+import { AdminHome } from "./routes/admin/AdminHome.tsx";
+import { AdminGoals } from "./routes/admin/AdminGoals.tsx";
+import { AdminStepTemplates } from "./routes/admin/AdminStepTemplates.tsx";
+import { AdminStudentProfile } from "./routes/admin/AdminStudentProfile.tsx";
+import { AdminStudents } from "./routes/admin/AdminStudents.tsx";
+import { Landing } from "./routes/Landing.tsx";
+import { Login } from "./routes/Login.tsx";
+import { NotFound } from "./routes/NotFound.tsx";
+import { StudentLayout } from "./routes/student/StudentLayout.tsx";
+import { StudentHome } from "./routes/student/StudentHome.tsx";
 
-function App() {
-  const [count, setCount] = createSignal(0)
-
+export default function App() {
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} class="logo" alt="Vite logo" />
-        </a>
-        <a href="https://solidjs.com" target="_blank">
-          <img src={solidLogo} class="logo solid" alt="Solid logo" />
-        </a>
-      </div>
-      <h1>Vite + Solid</h1>
-      <div class="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count()}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p class="read-the-docs">
-        Click on the Vite and Solid logos to learn more
-      </p>
-    </>
-  )
+    <Router>
+      <Route path="/" component={Landing} />
+      <Route path="/login" component={Login} />
+      <Route path="/student/*" component={StudentLayout}>
+        <Route path="/" component={StudentHome} />
+        <Route path="/home" component={StudentHome} />
+      </Route>
+      <Route path="/admin/*" component={AdminLayout}>
+        <Route path="/" component={AdminHome} />
+        <Route path="/home" component={AdminHome} />
+        <Route path="/students" component={AdminStudents} />
+        <Route path="/students/:uid" component={AdminStudentProfile} />
+        <Route path="/categories" component={AdminCategories} />
+        <Route path="/goals" component={AdminGoals} />
+        <Route path="/step-templates" component={AdminStepTemplates} />
+      </Route>
+      <Route path="*" component={NotFound} />
+    </Router>
+  );
 }
-
-export default App

@@ -1,6 +1,7 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
 from app.core.errors import not_implemented_error
+from app.auth.deps import require_staff
 
 router = APIRouter(prefix="/api", tags=["Library"])
 
@@ -16,10 +17,10 @@ async def library_by_id(id: str):
 
 
 @router.api_route("/admin/library", methods=["POST"])
-async def admin_library_root():
+async def admin_library_root(user: dict = Depends(require_staff)):
     raise not_implemented_error()
 
 
 @router.api_route("/admin/library/{id}", methods=["PATCH"])
-async def admin_library_by_id(id: str):
+async def admin_library_by_id(id: str, user: dict = Depends(require_staff)):
     raise not_implemented_error()

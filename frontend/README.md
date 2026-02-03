@@ -1,28 +1,37 @@
-## Usage
+# Frontend (Solid + Vite)
+
+Single-page app for StoryWalkers. Uses Firebase Auth and calls the backend with a Firebase ID token.
+
+## Setup
 
 ```bash
-$ npm install # or pnpm install or yarn install
+cd frontend
+npm install
 ```
 
-### Learn more on the [Solid Website](https://solidjs.com) and come chat with us on our [Discord](https://discord.com/invite/solidjs)
+## Environment
 
-## Available Scripts
+Create `frontend/.env`:
 
-In the project directory, you can run:
+```bash
+VITE_FIREBASE_API_KEY=...
+VITE_FIREBASE_AUTH_DOMAIN=...
+VITE_FIREBASE_PROJECT_ID=...
+VITE_FIREBASE_APP_ID=...
+VITE_FIREBASE_MESSAGING_SENDER_ID=...
+VITE_API_BASE=
+```
 
-### `npm run dev`
+`VITE_API_BASE` can be empty for same-origin (`/api`).
 
-Runs the app in the development mode.<br>
-Open [http://localhost:5173](http://localhost:5173) to view it in the browser.
+## Run
 
-### `npm run build`
+```bash
+npm run dev
+```
 
-Builds the app for production to the `dist` folder.<br>
-It correctly bundles Solid in production mode and optimizes the build for the best performance.
+## Routes
 
-The build is minified and the filenames include the hashes.<br>
-Your app is ready to be deployed!
-
-## Deployment
-
-Learn more about deploying your application with the [documentations](https://vite.dev/guide/static-deploy.html)
+- `/login`
+- `/student/*`
+- `/admin/*`

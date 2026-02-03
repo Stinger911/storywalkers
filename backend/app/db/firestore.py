@@ -8,5 +8,7 @@ from app.core.config import get_settings
 def get_firestore_client() -> firestore.Client:
     settings = get_settings()
     if settings.FIREBASE_PROJECT_ID:
-        return firestore.Client(project=settings.FIREBASE_PROJECT_ID)
+        return firestore.Client(
+            project=settings.FIREBASE_PROJECT_ID, database="pathways"
+        )
     return firestore.Client()

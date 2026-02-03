@@ -86,3 +86,4 @@ uv.lock
 
 # ignore artifacts
 data/
+*.nogit.*
