@@ -6,9 +6,10 @@ StoryWalkers' Club site. This project is a monorepo containing the frontend, bac
 
 Project directories:
 
-- `frontend/`: Solid.js frontend application
-- `backend/`: FastAPI backend application
-- `docs/`: Documentation (API contract, architecture, Firestore rules/schema, OpenAPI spec)
+- `frontend/`: Solid.js frontend application (Vite SPA + Firebase Auth)
+- `backend/`: FastAPI backend application (Firebase Admin SDK + Firestore)
+- `firebase/`: Firebase Hosting + Firestore rules/indexes
+- `docs/`: Documentation (API contract, architecture, Firestore rules/schema, OpenAPI spec, deployment)
 - `tests/`: Testing setup (including Firestore rules tests)
 - `AGENTS.md`: AI agent instructions
 - `GEMINI.md`: Symlink to `AGENTS.md`
@@ -27,17 +28,18 @@ The backend is a Python project using FastAPI.
     ```
 2.  **Create a virtual environment:**
     ```bash
-    uv venv
+    uv venv --python 3.13
     ```
 3.  **Install dependencies:**
     ```bash
-    uv pip install -r requirements.txt
+    uv lock --upgrade
+    uv sync --all-groups
     ```
 4.  **Run the backend server:**
     ```bash
-    granian main:app --interface asgi --port 8000 --reload
+    uv run --group dev granian app.main:app --reload --host 0.0.0.0 --port 8080
     ```
-    The backend will be available at `http://localhost:8000`.
+    The backend will be available at `http://localhost:8080`.
 
 ### Testing
 
@@ -81,3 +83,9 @@ The frontend is a Solid.js project.
 ## Deployment
 
 See `docs/deployment.md` for Firebase Hosting and Cloud Run steps.
+
+## Features (current)
+
+- Student Q&A: submit questions and view expert answers.
+- Admin Q&A: list questions, answer, and optionally publish to library.
+- Library: students browse published entries; staff create/edit drafts and publish.

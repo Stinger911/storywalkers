@@ -62,3 +62,83 @@ These scripts are safe to call from CI and expect environment variables:
 - `scripts/ci/build-backend.sh` (`IMAGE_TAG` optional)
 - `scripts/ci/deploy-frontend.sh` (`FIREBASE_PROJECT_ID` required)
 - `scripts/ci/deploy-backend.sh` (`PROJECT_ID`, `CLOUD_RUN_SERVICE`, `CLOUD_RUN_REGION` required)
+
+## GitHub Actions (Workload Identity Federation)
+
+This repo ships a release workflow that deploys on tags `v*` and uses Workload
+Identity Federation (WIF). You must create a WIF provider, a service account,
+and grant permissions.
+
+### 1) Create a service account
+
+```bash
+gcloud iam service-accounts create storywalkers-deployer \
+  --project <PROJECT_ID> \
+  --display-name "StoryWalkers GitHub Actions"
+```
+
+### 2) Create WIF pool + provider
+
+```bash
+gcloud iam workload-identity-pools create github-actions \
+  --project <PROJECT_ID> \
+  --location "global" \
+  --display-name "GitHub Actions Pool"
+
+gcloud iam workload-identity-pools providers create-oidc github-actions \
+  --project <PROJECT_ID> \
+  --location "global" \
+  --workload-identity-pool "github-actions" \
+  --display-name "GitHub Actions Provider" \
+  --issuer-uri "https://token.actions.githubusercontent.com" \
+  --attribute-mapping "google.subject=assertion.sub,attribute.repository=assertion.repository,attribute.ref=assertion.ref"
+```
+
+### 3) Bind the service account to the repo
+
+```bash
+gcloud iam service-accounts add-iam-policy-binding \
+  "storywalkers-deployer@<PROJECT_ID>.iam.gserviceaccount.com" \
+  --project <PROJECT_ID> \
+  --role "roles/iam.workloadIdentityUser" \
+  --member "principalSet://iam.googleapis.com/projects/<PROJECT_NUMBER>/locations/global/workloadIdentityPools/github-actions/attribute.repository/<OWNER>/<REPO>"
+```
+
+### 4) Grant required permissions
+
+This workflow uses Cloud Build + Cloud Run + Firebase Hosting deploy. Grant the
+service account these roles (adjust if you have stricter policies):
+
+```bash
+gcloud projects add-iam-policy-binding <PROJECT_ID> \
+  --member "serviceAccount:storywalkers-deployer@<PROJECT_ID>.iam.gserviceaccount.com" \
+  --role "roles/run.admin"
+
+gcloud projects add-iam-policy-binding <PROJECT_ID> \
+  --member "serviceAccount:storywalkers-deployer@<PROJECT_ID>.iam.gserviceaccount.com" \
+  --role "roles/cloudbuild.builds.editor"
+
+gcloud projects add-iam-policy-binding <PROJECT_ID> \
+  --member "serviceAccount:storywalkers-deployer@<PROJECT_ID>.iam.gserviceaccount.com" \
+  --role "roles/storage.admin"
+
+gcloud projects add-iam-policy-binding <PROJECT_ID> \
+  --member "serviceAccount:storywalkers-deployer@<PROJECT_ID>.iam.gserviceaccount.com" \
+  --role "roles/firebase.admin"
+```
+
+If you prefer Firebase Hosting only (no rules deploy), you can replace
+`roles/firebase.admin` with a narrower Firebase Hosting role.
+
+### 5) GitHub secrets
+
+Set the following GitHub Actions secrets:
+
+- `GCP_WIF_PROVIDER`: full provider resource name, e.g.
+  `projects/<PROJECT_NUMBER>/locations/global/workloadIdentityPools/github-actions/providers/github-actions`
+- `GCP_WIF_SERVICE_ACCOUNT`: service account email, e.g.
+  `storywalkers-deployer@<PROJECT_ID>.iam.gserviceaccount.com`
+- `PROJECT_ID`: GCP project id
+- `FIREBASE_PROJECT_ID`: Firebase project id (same as `PROJECT_ID`)
+- `CLOUD_RUN_SERVICE`: Cloud Run service name
+- `CLOUD_RUN_REGION`: Cloud Run region

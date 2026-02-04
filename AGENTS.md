@@ -49,7 +49,10 @@ The current project includes:
 
 - Frontend (Solid.js)
 - Backend (FastAPI)
+- Firebase Hosting + Firestore rules/indexes (`firebase/`)
 - Documentation (API contract, architecture, Firestore rules/schema, OpenAPI spec)
 - Testing setup (Firestore rules tests in tests/firebase)
+- Admin Q&A + Library features (questions, answers, published entries)
+- CI deployment on tags (GitHub Actions)
 
 Follow the above workflows and update documentation and test configuration as the project evolves.
