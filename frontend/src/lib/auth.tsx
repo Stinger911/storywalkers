@@ -47,12 +47,18 @@ export function AuthProvider(props: { children: JSX.Element }) {
       return
     }
 
-    const response = await apiFetch('/api/me')
-    if (response.ok) {
-      const data = (await response.json()) as MeProfile
-      setMe(data)
-    } else if (response.status === 401) {
-      await signOut(auth)
+    try {
+      const response = await apiFetch('/api/me')
+      if (response.ok) {
+        const data = (await response.json()) as MeProfile
+        setMe(data)
+      } else if (response.status === 401) {
+        await signOut(auth)
+        setMe(null)
+      } else {
+        setMe(null)
+      }
+    } catch {
       setMe(null)
     }
   }
@@ -80,8 +86,11 @@ export function AuthProvider(props: { children: JSX.Element }) {
     }
 
     setLoading(true)
-    await refreshMe()
-    setLoading(false)
+    try {
+      await refreshMe()
+    } finally {
+      setLoading(false)
+    }
   })
 
   onCleanup(() => unsubscribe())

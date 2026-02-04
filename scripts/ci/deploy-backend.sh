@@ -2,7 +2,7 @@
 set -euo pipefail
 
 : "${CLOUD_RUN_SERVICE:?Set CLOUD_RUN_SERVICE}"
-: "${CLOUD_RUN_REGION:?Set CLOUD_RUN_REGION}"
+: "${CLOUD_RUN_REGION:=europe-west1}"
 : "${PROJECT_ID:?Set PROJECT_ID}"
 
 gcloud builds submit backend \

@@ -162,6 +162,23 @@ export async function listStudents(params?: {
   return handleJson<ApiList<Student>>(response)
 }
 
+export async function getStudent(uid: string) {
+  const response = await apiFetch(`/api/admin/students/${uid}`)
+  return handleJson<Student>(response)
+}
+
+export async function getStudentPlan(uid: string) {
+  const response = await apiFetch(`/api/admin/students/${uid}/plan`)
+  return handleJson<PlanResponse>(response)
+}
+
+export async function getStudentPlanSteps(uid: string) {
+  const response = await apiFetch(`/api/admin/students/${uid}/plan/steps`)
+  return handleJson<{ items: { stepId: string; title: string; description: string; materialUrl: string; order: number; isDone: boolean; doneAt?: unknown }[] }>(
+    response,
+  )
+}
+
 export async function assignPlan(uid: string, goalId: string) {
   const response = await apiFetch(`/api/admin/students/${uid}/plan`, {
     method: 'POST',

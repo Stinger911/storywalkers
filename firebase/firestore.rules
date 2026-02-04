@@ -22,7 +22,15 @@ service cloud.firestore {
     }
 
     function isStaff() {
-      return isSignedIn() && (userRole() == "admin" || userRole() == "expert");
+      return isSignedIn() && (
+        userRole() == "admin"
+        || userRole() == "expert"
+        // Optional: allow staff via custom claims if present
+        || request.auth.token.role == "admin"
+        || request.auth.token.role == "expert"
+        || (request.auth.token.roles is list
+            && request.auth.token.roles.hasAny(["admin", "expert"]))
+      );
     }
 
     function isSelf(uid) {

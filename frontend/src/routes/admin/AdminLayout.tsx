@@ -1,4 +1,3 @@
-import { Outlet } from "solid-app-router";
 import { AppShell } from "../../components/AppShell";
 import { useAuth } from "../../lib/auth";
 import { RequireAuth } from "../RequireAuth";
@@ -16,9 +15,13 @@ export function AdminLayout(props: AdminLayoutProps) {
       <AppShell
         title="Admin Console"
         roleLabel="Staff"
-        onLogout={() => void auth.logout()}
+        userName={auth.me()?.displayName}
+        onLogout={() => {
+          void auth.logout();
+          window.location.href = "/";
+        }}
       >
-        {props.children || <Outlet />}
+        {props.children}
       </AppShell>
     </RequireAuth>
   );

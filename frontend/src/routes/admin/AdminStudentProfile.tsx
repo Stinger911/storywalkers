@@ -1,35 +1,24 @@
-import {
-  createEffect,
-  createMemo,
-  createSignal,
-  onCleanup,
-  Show,
-} from "solid-js";
+import { createEffect, createMemo, createSignal, Show } from "solid-js";
 import { useParams } from "@solidjs/router";
-import {
-  collection,
-  doc,
-  onSnapshot,
-  orderBy,
-  query,
-} from "firebase/firestore";
 
 import { Button } from "../../components/ui/button";
-import {
-  TextField,
-  TextFieldInput,
-  TextFieldLabel,
-} from "../../components/ui/text-field";
+// import {
+//   TextField,
+//   TextFieldInput,
+//   TextFieldLabel,
+// } from "../../components/ui/text-field";
 import {
   assignPlan,
   bulkAddSteps,
+  getStudent,
+  getStudentPlan,
+  getStudentPlanSteps,
   listGoals,
   listStepTemplates,
   reorderSteps,
   type Goal,
   type StepTemplate,
 } from "../../lib/adminApi";
-import { db } from "../../lib/firebase";
 
 type StudentProfile = {
   displayName?: string;
@@ -56,10 +45,10 @@ type PlanStep = {
 
 export function AdminStudentProfile() {
   const params = useParams();
-  const uid = () => params.uid;
+  const uid = () => params.uid ?? "";
 
   const [student, setStudent] = createSignal<StudentProfile | null>(null);
-  const [plan, setPlan] = createSignal<StudentPlan | null>(null);
+  const [, setPlan] = createSignal<StudentPlan | null>(null);
   const [steps, setSteps] = createSignal<PlanStep[]>([]);
   const [goals, setGoals] = createSignal<Goal[]>([]);
   const [templates, setTemplates] = createSignal<StepTemplate[]>([]);
@@ -69,40 +58,43 @@ export function AdminStudentProfile() {
   const [error, setError] = createSignal<string | null>(null);
   const [saving, setSaving] = createSignal(false);
 
-  createEffect(() => {
-    const studentRef = doc(db, "users", uid());
-    const planRef = doc(db, "student_plans", uid());
-    const stepsRef = collection(db, "student_plans", uid(), "steps");
-    const stepsQuery = query(stepsRef, orderBy("order", "asc"));
-
+  const load = async () => {
     setLoading(true);
-    const unsubStudent = onSnapshot(studentRef, (snap) => {
-      setStudent(snap.exists() ? (snap.data() as StudentProfile) : null);
-    });
-    const unsubPlan = onSnapshot(planRef, (snap) => {
-      if (snap.exists()) {
-        const data = snap.data() as StudentPlan;
-        setPlan(data);
-        setGoalId(data.goalId || "");
+    setError(null);
+    try {
+      const [studentData, planData, stepsData] = await Promise.all([
+        getStudent(uid()),
+        getStudentPlan(uid()).catch(() => null),
+        getStudentPlanSteps(uid()).catch(() => ({ items: [] })),
+      ]);
+      setStudent(studentData as StudentProfile);
+      if (planData) {
+        setPlan(planData as StudentPlan);
+        setGoalId(planData.goalId || "");
       } else {
         setPlan(null);
         setGoalId("");
       }
-    });
-    const unsubSteps = onSnapshot(stepsQuery, (snap) => {
-      const items = snap.docs.map((docSnap) => ({
-        id: docSnap.id,
-        ...(docSnap.data() as Omit<PlanStep, "id">),
-      }));
-      setSteps(items);
+      setSteps(
+        stepsData.items.map((step) => ({
+          id: step.stepId,
+          title: step.title,
+          description: step.description,
+          materialUrl: step.materialUrl,
+          order: step.order,
+          isDone: step.isDone,
+          doneAt: step.doneAt as { toDate?: () => Date } | null,
+        })),
+      );
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
       setLoading(false);
-    });
+    }
+  };
 
-    onCleanup(() => {
-      unsubStudent();
-      unsubPlan();
-      unsubSteps();
-    });
+  createEffect(() => {
+    void load();
   });
 
   createEffect(() => {
@@ -147,6 +139,7 @@ export function AdminStudentProfile() {
     setError(null);
     try {
       await assignPlan(uid(), goalId());
+      await load();
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -166,6 +159,7 @@ export function AdminStudentProfile() {
         items: selectedTemplates().map((templateId) => ({ templateId })),
       });
       setSelectedTemplates([]);
+      await load();
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -187,6 +181,7 @@ export function AdminStudentProfile() {
           { stepId: swapWith.id, order: target.order },
         ],
       });
+      await load();
     } catch (err) {
       setError((err as Error).message);
     } finally {

@@ -1,17 +1,8 @@
-import { createEffect, createMemo, createSignal, onCleanup, Show } from 'solid-js'
-import {
-  collection,
-  doc,
-  onSnapshot,
-  orderBy,
-  query,
-  serverTimestamp,
-  updateDoc,
-} from 'firebase/firestore'
-
+import { createEffect, createMemo, createSignal, Show } from 'solid-js'
 import { Button } from '../../components/ui/button'
 import { useAuth } from '../../lib/auth'
-import { db } from '../../lib/firebase'
+import { getMyPlan, getMyPlanSteps, updateMyStepProgress, type PlanStep as ApiPlanStep } from '../../lib/studentApi'
+import { listGoals, type Goal } from '../../lib/adminApi'
 
 type StudentPlan = {
   studentUid: string
@@ -28,11 +19,6 @@ type PlanStep = {
   doneAt?: { toDate?: () => Date } | null
 }
 
-type Goal = {
-  title: string
-  description?: string
-}
-
 export function StudentHome() {
   const auth = useAuth()
   const [plan, setPlan] = createSignal<StudentPlan | null>(null)
@@ -41,84 +27,44 @@ export function StudentHome() {
   const [loading, setLoading] = createSignal(true)
   const [error, setError] = createSignal<string | null>(null)
 
-  createEffect(() => {
-    const user = auth.firebaseUser()
-    const uid = user?.uid ?? auth.me()?.uid
-    if (!uid) {
+  const load = async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const [planData, stepsData, goalsData] = await Promise.all([
+        getMyPlan(),
+        getMyPlanSteps(),
+        listGoals(),
+      ])
+      setPlan({
+        studentUid: planData.studentUid,
+        goalId: planData.goalId,
+      })
+      const goalMatch = goalsData.items.find((g) => g.id === planData.goalId) || null
+      setGoal(goalMatch)
+      setSteps(
+        stepsData.items.map((step: ApiPlanStep) => ({
+          id: step.stepId,
+          title: step.title,
+          description: step.description,
+          materialUrl: step.materialUrl,
+          order: step.order,
+          isDone: step.isDone,
+          doneAt: step.doneAt as { toDate?: () => Date } | null,
+        })),
+      )
+    } catch (err) {
+      setError((err as Error).message)
       setPlan(null)
       setGoal(null)
       setSteps([])
+    } finally {
       setLoading(false)
-      return
     }
-
-    setLoading(true)
-    setError(null)
-    const planRef = doc(db, 'student_plans', uid)
-    const stepsRef = collection(db, 'student_plans', uid, 'steps')
-    const stepsQuery = query(stepsRef, orderBy('order', 'asc'))
-
-    const unsubPlan = onSnapshot(
-      planRef,
-      (snap) => {
-        if (!snap.exists()) {
-          setPlan(null)
-          setGoal(null)
-          setSteps([])
-          setLoading(false)
-          return
-        }
-        setPlan(snap.data() as StudentPlan)
-        setLoading(false)
-      },
-      (err) => {
-        setError(err.message)
-        setLoading(false)
-      },
-    )
-
-    const unsubSteps = onSnapshot(
-      stepsQuery,
-      (snap) => {
-        const items = snap.docs.map(
-          (docSnap) =>
-            ({
-              id: docSnap.id,
-              ...(docSnap.data() as Omit<PlanStep, 'id'>),
-            }) satisfies PlanStep,
-        )
-        setSteps(items)
-      },
-      (err) => setError(err.message),
-    )
-
-    onCleanup(() => {
-      unsubPlan()
-      unsubSteps()
-    })
-  })
+  }
 
   createEffect(() => {
-    const currentPlan = plan()
-    if (!currentPlan?.goalId) {
-      setGoal(null)
-      return
-    }
-
-    const goalRef = doc(db, 'goals', currentPlan.goalId)
-    const unsubGoal = onSnapshot(
-      goalRef,
-      (snap) => {
-        if (!snap.exists()) {
-          setGoal(null)
-          return
-        }
-        setGoal(snap.data() as Goal)
-      },
-      (err) => setError(err.message),
-    )
-
-    onCleanup(() => unsubGoal())
+    void load()
   })
 
   const progress = createMemo(() => {
@@ -129,16 +75,13 @@ export function StudentHome() {
   })
 
   const toggleStep = async (step: PlanStep) => {
-    const user = auth.firebaseUser()
-    if (!user) return
-
-    const stepRef = doc(db, 'student_plans', user.uid, 'steps', step.id)
     const nextDone = !step.isDone
-    await updateDoc(stepRef, {
-      isDone: nextDone,
-      doneAt: nextDone ? serverTimestamp() : null,
-      updatedAt: serverTimestamp(),
-    })
+    try {
+      await updateMyStepProgress(step.id, nextDone)
+      await load()
+    } catch (err) {
+      setError((err as Error).message)
+    }
   }
 
   return (

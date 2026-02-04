@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, Query, status
 from google.cloud import firestore
 from pydantic import BaseModel
 
-from app.auth.deps import require_staff
+from app.auth.deps import get_current_user, require_staff
 from app.core.errors import AppError
 from app.db.firestore import get_firestore_client
 
@@ -62,7 +62,7 @@ def _doc_or_404(doc_ref: firestore.DocumentReference) -> dict[str, Any]:
 
 @router.get("/categories")
 async def list_categories(
-    user: dict = Depends(require_staff),
+    user: dict = Depends(get_current_user),
     limit: int = Query(200, ge=1, le=200),
 ):
     db = get_firestore_client()
@@ -126,7 +126,7 @@ async def delete_category(
 
 @router.get("/goals")
 async def list_goals(
-    user: dict = Depends(require_staff),
+    user: dict = Depends(get_current_user),
     limit: int = Query(200, ge=1, le=200),
 ):
     db = get_firestore_client()

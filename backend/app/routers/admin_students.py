@@ -189,6 +189,53 @@ async def assign_plan(
     }
 
 
+@router.get("/students/{uid}")
+async def get_student(
+    uid: str,
+    user: dict = Depends(require_staff),
+):
+    db = get_firestore_client()
+    doc_ref = db.collection("users").document(uid)
+    data = _doc_or_404(doc_ref)
+    data["uid"] = uid
+    return data
+
+
+@router.get("/students/{uid}/plan")
+async def get_plan(
+    uid: str,
+    user: dict = Depends(require_staff),
+):
+    db = get_firestore_client()
+    plan_ref = db.collection("student_plans").document(uid)
+    plan = _doc_or_404(plan_ref)
+    return {
+        "planId": uid,
+        "studentUid": uid,
+        "goalId": plan.get("goalId"),
+        "createdAt": plan.get("createdAt"),
+        "updatedAt": plan.get("updatedAt"),
+    }
+
+
+@router.get("/students/{uid}/plan/steps")
+async def get_plan_steps(
+    uid: str,
+    user: dict = Depends(require_staff),
+):
+    db = get_firestore_client()
+    plan_ref = db.collection("student_plans").document(uid)
+    _doc_or_404(plan_ref)
+    steps_ref = plan_ref.collection("steps")
+    query = steps_ref.order_by("order", direction=firestore.Query.ASCENDING)
+    items = []
+    for snap in query.stream():
+        data = snap.to_dict() or {}
+        data["stepId"] = snap.id
+        items.append(data)
+    return {"items": items}
+
+
 @router.post("/students/{uid}/plan/steps", status_code=status.HTTP_201_CREATED)
 async def bulk_add_steps(
     uid: str,

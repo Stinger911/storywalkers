@@ -10,7 +10,7 @@ import {
   fetchSignInMethodsForEmail,
 } from "firebase/auth";
 import type { FirebaseError } from "firebase/app";
-import { auth } from "~/lib/firebase";
+import { auth } from "../lib/firebase";
 
 // Solid UI components (проверь пути в своём проекте)
 import {
@@ -19,13 +19,15 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "~/components/ui/card";
+} from "../components/ui/card";
 import {
   TextField,
   TextFieldInput,
   TextFieldLabel,
-} from "~/components/ui/text-field";
-import { Button } from "~/components/ui/button";
+} from "../components/ui/text-field";
+import { Button } from "../components/ui/button";
+import { type MeProfile } from "../lib/auth";
+import { apiFetch } from "../lib/api";
 
 function friendlyAuthError(err: unknown): string {
   const e = err as Partial<FirebaseError> & { code?: string; message?: string };
@@ -162,11 +164,26 @@ export function Login() {
 
   // redirect to dashboard if already logged in
   async function redirectIfLoggedIn() {
-    const user = auth.currentUser;
-    if (user.role === "staff") {
-      window.location.href = "/admin/home";
+    const response = await apiFetch("/api/me");
+    if (response.ok) {
+      const data = (await response.json()) as MeProfile;
+      if (!data) {
+        setError("Не удалось получить профиль пользователя после входа.");
+        return;
+      }
+      console.log("Logged in user:", data.email);
+      console.log("User claims:", data);
+      if (!data.role) {
+        setError("Неверная роль пользователя.");
+        return;
+      }
+      if (data.role === "staff") {
+        window.location.href = "/admin/home";
+      } else {
+        window.location.href = "/student/home";
+      }
     } else {
-      window.location.href = "/student/home";
+      setError("Не удалось получить профиль пользователя после входа.");
     }
   }
 
