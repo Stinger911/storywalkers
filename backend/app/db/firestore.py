@@ -1,4 +1,5 @@
 from functools import lru_cache
+
 from google.cloud import firestore
 
 from app.core.config import get_settings

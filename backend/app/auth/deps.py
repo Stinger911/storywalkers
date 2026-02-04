@@ -1,12 +1,13 @@
 from datetime import datetime, timezone
+
 from fastapi import Depends, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from app.auth.firebase import verify_id_token
 from app.core.config import get_settings
 from app.core.errors import AppError, forbidden_error, unauthorized_error
-from app.db.firestore import get_firestore_client
 from app.core.logging import get_logger
+from app.db.firestore import get_firestore_client
 
 security = HTTPBearer(auto_error=False)
 

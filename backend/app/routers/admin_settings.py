@@ -84,7 +84,9 @@ async def create_category(
     doc_id = payload.slug
     doc_ref = db.collection("categories").document(doc_id)
     if doc_ref.get().exists:
-        raise AppError(code="conflict", message="Category already exists", status_code=409)
+        raise AppError(
+            code="conflict", message="Category already exists", status_code=409
+        )
     now = firestore.SERVER_TIMESTAMP
     data = {
         "name": payload.name,

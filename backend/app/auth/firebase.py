@@ -1,5 +1,5 @@
-from firebase_admin import auth, credentials
 import firebase_admin
+from firebase_admin import auth, credentials
 
 from app.core.config import get_settings
 

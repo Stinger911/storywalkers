@@ -26,7 +26,7 @@ type LibraryForm = {
 
 export function AdminLibraryDetail() {
   const params = useParams();
-  const [entry, setEntry] = createSignal<LibraryEntry | null>(null);
+  const [, setEntry] = createSignal<LibraryEntry | null>(null);
   const [categories, setCategories] = createSignal<Category[]>([]);
   const [loading, setLoading] = createSignal(true);
   const [saving, setSaving] = createSignal(false);
@@ -174,7 +174,9 @@ export function AdminLibraryDetail() {
               <TextFieldInput
                 id="library-title"
                 value={form().title}
-                onInput={(e) => setForm({ ...form(), title: e.currentTarget.value })}
+                onInput={(e) =>
+                  setForm({ ...form(), title: e.currentTarget.value })
+                }
                 placeholder="Lighting tips for interviews"
               />
             </TextField>
@@ -254,7 +256,11 @@ export function AdminLibraryDetail() {
               <Button onClick={() => void submit()} disabled={saving()}>
                 {saving() ? "Saving…" : "Save"}
               </Button>
-              <Button variant="outline" onClick={() => void load()} disabled={saving()}>
+              <Button
+                variant="outline"
+                onClick={() => void load()}
+                disabled={saving()}
+              >
                 Reset
               </Button>
             </div>

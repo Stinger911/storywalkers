@@ -247,8 +247,14 @@ async def bulk_add_steps(
     _doc_or_404(plan_ref)
 
     steps_ref = plan_ref.collection("steps")
-    existing_steps = list(steps_ref.order_by("order", direction=firestore.Query.DESCENDING).limit(1).stream())
-    start_order = existing_steps[0].to_dict().get("order", -1) + 1 if existing_steps else 0
+    existing_steps = list(
+        steps_ref.order_by("order", direction=firestore.Query.DESCENDING)
+        .limit(1)
+        .stream()
+    )
+    start_order = (
+        existing_steps[0].to_dict().get("order", -1) + 1 if existing_steps else 0
+    )
 
     created = []
     batch = db.batch()
@@ -267,7 +273,11 @@ async def bulk_add_steps(
             }
         else:
             if not item.title or not item.description or not item.materialUrl:
-                raise AppError(code="validation_error", message="Invalid step item", status_code=400)
+                raise AppError(
+                    code="validation_error",
+                    message="Invalid step item",
+                    status_code=400,
+                )
             step_data = {
                 "templateId": None,
                 "title": item.title,

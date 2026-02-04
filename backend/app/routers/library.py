@@ -33,7 +33,9 @@ class PatchLibraryEntryRequest(BaseModel):
 def _doc_or_404(doc_ref: firestore.DocumentReference) -> dict[str, Any]:
     snap = doc_ref.get()
     if not snap.exists:
-        raise AppError(code="not_found", message="Library entry not found", status_code=404)
+        raise AppError(
+            code="not_found", message="Library entry not found", status_code=404
+        )
     data = snap.to_dict() or {}
     data["id"] = snap.id
     return data
@@ -80,7 +82,9 @@ async def library_root(
         token = q.strip().lower()
         if token:
             query = query.where("keywords", "array_contains", token)
-    query = query.order_by("updatedAt", direction=firestore.Query.DESCENDING).limit(limit)
+    query = query.order_by("updatedAt", direction=firestore.Query.DESCENDING).limit(
+        limit
+    )
     _ = cursor
     items = []
     for snap in query.stream():
@@ -104,7 +108,9 @@ async def library_by_id(id: str, user: dict = Depends(get_current_user)):
     doc_ref = db.collection("library_entries").document(id)
     entry = _doc_or_404(doc_ref)
     if user.get("role") != "staff" and entry.get("status") != "published":
-        raise AppError(code="not_found", message="Library entry not found", status_code=404)
+        raise AppError(
+            code="not_found", message="Library entry not found", status_code=404
+        )
     return entry
 
 
@@ -163,23 +169,37 @@ async def admin_library_by_id(
     if payload.title is not None:
         title = payload.title.strip()
         if not title:
-            raise AppError(code="validation_error", message="Title cannot be empty.", status_code=400)
+            raise AppError(
+                code="validation_error",
+                message="Title cannot be empty.",
+                status_code=400,
+            )
         updates["title"] = title
         updates["titleLower"] = title.lower()
     if payload.content is not None:
         content = payload.content.strip()
         if not content:
-            raise AppError(code="validation_error", message="Content cannot be empty.", status_code=400)
+            raise AppError(
+                code="validation_error",
+                message="Content cannot be empty.",
+                status_code=400,
+            )
         updates["content"] = content
     if payload.videoUrl is not None:
         updates["videoUrl"] = payload.videoUrl
     if payload.status is not None:
         updates["status"] = payload.status
 
-    if payload.keywords is not None or payload.title is not None or payload.content is not None:
+    if (
+        payload.keywords is not None
+        or payload.title is not None
+        or payload.content is not None
+    ):
         base_title = updates.get("title") or entry.get("title") or ""
         base_content = updates.get("content") or entry.get("content") or ""
-        existing_keywords = payload.keywords if payload.keywords is not None else entry.get("keywords")
+        existing_keywords = (
+            payload.keywords if payload.keywords is not None else entry.get("keywords")
+        )
         updates["keywords"] = _normalize_keywords(
             base_title,
             base_content,
@@ -187,7 +207,9 @@ async def admin_library_by_id(
         )
 
     if not updates:
-        raise AppError(code="validation_error", message="No fields provided.", status_code=400)
+        raise AppError(
+            code="validation_error", message="No fields provided.", status_code=400
+        )
 
     updates["updatedAt"] = firestore.SERVER_TIMESTAMP
     doc_ref.update(updates)

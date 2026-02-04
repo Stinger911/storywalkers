@@ -16,7 +16,9 @@ async def get_me(user: dict = Depends(get_current_user)) -> dict:
     return user
 
 
-def _doc_or_404(doc_ref: firestore.DocumentReference, code: str, message: str) -> dict[str, Any]:
+def _doc_or_404(
+    doc_ref: firestore.DocumentReference, code: str, message: str
+) -> dict[str, Any]:
     snap = doc_ref.get()
     if not snap.exists:
         raise AppError(code=code, message=message, status_code=404)

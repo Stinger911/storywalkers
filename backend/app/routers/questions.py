@@ -1,5 +1,5 @@
-from typing import Any
 import re
+from typing import Any
 
 from fastapi import APIRouter, Depends, Query, status
 from google.cloud import firestore
@@ -82,7 +82,9 @@ async def list_questions(
         query = query.where("status", "==", status)
     if categoryId:
         query = query.where("categoryId", "==", categoryId)
-    query = query.order_by("createdAt", direction=firestore.Query.DESCENDING).limit(limit)
+    query = query.order_by("createdAt", direction=firestore.Query.DESCENDING).limit(
+        limit
+    )
     _ = cursor
     items = []
     for snap in query.stream():
