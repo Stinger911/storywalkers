@@ -6,6 +6,22 @@ export function setUnauthorizedHandler(handler: () => void) {
   unauthorizedHandler = handler
 }
 
+async function getIdTokenWithTimeout(timeoutMs = 5000) {
+  const user = auth.currentUser
+  if (!user) return null
+  let timeout: ReturnType<typeof setTimeout> | null = null
+  try {
+    return await Promise.race<string | null>([
+      user.getIdToken(),
+      new Promise<null>((resolve) => {
+        timeout = setTimeout(() => resolve(null), timeoutMs)
+      }),
+    ])
+  } finally {
+    if (timeout) clearTimeout(timeout)
+  }
+}
+
 function buildUrl(path: string) {
   const base = import.meta.env.VITE_API_BASE ?? ''
   if (path.startsWith('http://') || path.startsWith('https://')) {
@@ -16,7 +32,7 @@ function buildUrl(path: string) {
 
 export async function apiFetch(path: string, init: RequestInit = {}) {
   const headers = new Headers(init.headers)
-  const token = await auth.currentUser?.getIdToken()
+  const token = await getIdTokenWithTimeout()
 
   if (token) {
     headers.set('Authorization', `Bearer ${token}`)

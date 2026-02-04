@@ -47,8 +47,10 @@ export function AuthProvider(props: { children: JSX.Element }) {
       return
     }
 
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 8000)
     try {
-      const response = await apiFetch('/api/me')
+      const response = await apiFetch('/api/me', { signal: controller.signal })
       if (response.ok) {
         const data = (await response.json()) as MeProfile
         setMe(data)
@@ -58,8 +60,10 @@ export function AuthProvider(props: { children: JSX.Element }) {
       } else {
         setMe(null)
       }
-    } catch {
+    } catch (err) {
       setMe(null)
+    } finally {
+      clearTimeout(timeout)
     }
   }
 
@@ -77,7 +81,12 @@ export function AuthProvider(props: { children: JSX.Element }) {
     void logout()
   })
 
+  const loadingFallback = setTimeout(() => {
+    setLoading(false)
+  }, 8000)
+
   const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    clearTimeout(loadingFallback)
     setFirebaseUser(user)
     if (!user) {
       setMe(null)
@@ -93,7 +102,10 @@ export function AuthProvider(props: { children: JSX.Element }) {
     }
   })
 
-  onCleanup(() => unsubscribe())
+  onCleanup(() => {
+    clearTimeout(loadingFallback)
+    unsubscribe()
+  })
 
   const value: AuthContextValue = {
     firebaseUser,

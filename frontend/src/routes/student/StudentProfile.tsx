@@ -2,10 +2,12 @@ import { createSignal } from 'solid-js'
 import { Button } from '../../components/ui/button'
 import { StudentHome } from './StudentHome'
 import { StudentQuestions } from './StudentQuestions'
+import { StudentLibrary } from './StudentLibrary'
 
 const tabs = [
   { id: 'path', label: 'My Path' },
   { id: 'questions', label: 'My Questions' },
+  { id: 'library', label: 'Library' },
 ] as const
 
 type TabId = (typeof tabs)[number]['id']
@@ -26,7 +28,13 @@ export function StudentProfile() {
         ))}
       </div>
 
-      {activeTab() === 'path' ? <StudentHome /> : <StudentQuestions />}
+      {activeTab() === 'path' ? (
+        <StudentHome />
+      ) : activeTab() === 'questions' ? (
+        <StudentQuestions />
+      ) : (
+        <StudentLibrary />
+      )}
     </section>
   )
 }
