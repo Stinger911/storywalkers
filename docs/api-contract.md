@@ -104,7 +104,7 @@ List students (and optionally staff, depending on implementation).
 **Query params (optional)**
 
 - `status`: `active|disabled`
-- `role`: `student|admin|expert` (default: `student`)
+- `role`: `student|admin|expert|staff` (default: `student`)
 - `q`: string (search by email/displayName; MVP can ignore or simple contains)
 - `limit`: number (default 50, max 200)
 - `cursor`: string (pagination token; optional MVP)
@@ -180,7 +180,8 @@ Update student profile/status.
 ```json
 {
   "displayName": "Alex Doe",
-  "status": "disabled"
+  "status": "disabled",
+  "role": "expert"
 }
 ```
 

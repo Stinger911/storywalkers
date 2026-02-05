@@ -9,7 +9,8 @@ import {
 import { listStudents, type Student } from "../../lib/adminApi";
 
 export function AdminStudents() {
-  const [items, setItems] = createSignal<Student[]>([]);
+  const [students, setStudents] = createSignal<Student[]>([]);
+  const [staff, setStaff] = createSignal<Student[]>([]);
   const [loading, setLoading] = createSignal(true);
   const [error, setError] = createSignal<string | null>(null);
   const [query, setQuery] = createSignal("");
@@ -18,8 +19,13 @@ export function AdminStudents() {
     setLoading(true);
     setError(null);
     try {
-      const data = await listStudents({ q: query() || undefined });
-      setItems(data.items);
+      const search = query() || undefined;
+      const [studentData, staffData] = await Promise.all([
+        listStudents({ q: search, role: "student" }),
+        listStudents({ q: search, role: "staff" }),
+      ]);
+      setStudents(studentData.items);
+      setStaff(staffData.items);
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -66,30 +72,70 @@ export function AdminStudents() {
           when={!loading()}
           fallback={<div class="mt-4 text-sm">Loading…</div>}
         >
-          <div class="mt-4 grid gap-3">
-            {items().map((student) => (
-              <div class="rounded-xl border p-4">
-                <div class="flex items-start justify-between gap-4">
-                  <div>
-                    <div class="text-base font-semibold">
-                      {student.displayName || "Unnamed student"}
-                    </div>
-                    <div class="text-sm text-muted-foreground">
-                      {student.email}
-                    </div>
-                    <div class="text-xs text-muted-foreground">
-                      {student.status || "active"} · {student.role || "student"}
+          <div class="mt-4 grid gap-6 lg:grid-cols-2">
+            <div class="space-y-3">
+              <div class="text-sm font-semibold text-muted-foreground">
+                Students
+              </div>
+              <div class="grid gap-3">
+                {students().map((student) => (
+                  <div class="rounded-xl border p-4">
+                    <div class="flex items-start justify-between gap-4">
+                      <div>
+                        <div class="text-base font-semibold">
+                          {student.displayName || "Unnamed student"}
+                        </div>
+                        <div class="text-sm text-muted-foreground">
+                          {student.email}
+                        </div>
+                        <div class="text-xs text-muted-foreground">
+                          {student.status || "active"} ·{" "}
+                          {student.role || "student"}
+                        </div>
+                      </div>
+                      <A
+                        href={`/admin/students/${student.uid}`}
+                        class="text-sm font-medium text-primary underline"
+                      >
+                        Open profile
+                      </A>
                     </div>
                   </div>
-                  <A
-                    href={`/admin/students/${student.uid}`}
-                    class="text-sm font-medium text-primary underline"
-                  >
-                    Open profile
-                  </A>
-                </div>
+                ))}
               </div>
-            ))}
+            </div>
+
+            <div class="space-y-3">
+              <div class="text-sm font-semibold text-muted-foreground">
+                Staff
+              </div>
+              <div class="grid gap-3">
+                {staff().map((member) => (
+                  <div class="rounded-xl border p-4">
+                    <div class="flex items-start justify-between gap-4">
+                      <div>
+                        <div class="text-base font-semibold">
+                          {member.displayName || "Unnamed user"}
+                        </div>
+                        <div class="text-sm text-muted-foreground">
+                          {member.email}
+                        </div>
+                        <div class="text-xs text-muted-foreground">
+                          {member.status || "active"} ·{" "}
+                          {member.role || "staff"}
+                        </div>
+                      </div>
+                      <A
+                        href={`/admin/students/${member.uid}`}
+                        class="text-sm font-medium text-primary underline"
+                      >
+                        Open profile
+                      </A>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </Show>
       </div>

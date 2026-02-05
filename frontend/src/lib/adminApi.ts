@@ -162,6 +162,17 @@ export async function listStudents(params?: {
   return handleJson<ApiList<Student>>(response)
 }
 
+export async function updateStudent(
+  uid: string,
+  payload: { displayName?: string; status?: string; role?: string },
+) {
+  const response = await apiFetch(`/api/admin/students/${uid}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  })
+  return handleJson<Student>(response)
+}
+
 export async function getStudent(uid: string) {
   const response = await apiFetch(`/api/admin/students/${uid}`)
   return handleJson<Student>(response)

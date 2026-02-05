@@ -8,6 +8,12 @@ export default ({ mode }: { mode: string }) => {
   const PROXY_TARGET = env.PROXY_TARGET || "https://storywalkers-b4fdf.firebaseapp.com/";
 return defineConfig({
   plugins: [solid()],
+  test: {
+    environment: "jsdom",
+    setupFiles: "src/setupTests.ts",
+    globals: true,
+    include: ["tests/**/*.test.ts", "tests/**/*.test.tsx"],
+  },
   server: {
     proxy: {
       '/api': {

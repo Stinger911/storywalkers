@@ -146,6 +146,9 @@ components:
         status:
           type: string
           enum: [active, disabled]
+        role:
+          type: string
+          enum: [student, admin, expert]
       example:
         displayName: Alex Doe
         status: disabled
@@ -824,7 +827,7 @@ paths:
           name: role
           schema:
             type: string
-            enum: [student, admin, expert]
+            enum: [student, admin, expert, staff]
             default: student
         - in: query
           name: q

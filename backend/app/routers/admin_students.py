@@ -21,6 +21,7 @@ class CreateStudentRequest(BaseModel):
 class PatchStudentRequest(BaseModel):
     displayName: str | None = None
     status: str | None = None
+    role: str | None = None
 
 
 class AssignPlanRequest(BaseModel):
@@ -69,7 +70,10 @@ async def list_students(
     db = get_firestore_client()
     query = db.collection("users")
     if role:
-        query = query.where("role", "==", role)
+        if role == "staff":
+            query = query.where("role", "in", ["admin", "expert"])
+        else:
+            query = query.where("role", "==", role)
     if status_filter:
         query = query.where("status", "==", status_filter)
     query = query.order_by("createdAt").limit(limit)
@@ -138,6 +142,13 @@ async def update_student(
     doc_ref = db.collection("users").document(uid)
     _doc_or_404(doc_ref)
     updates = payload.model_dump(exclude_unset=True)
+    role = updates.get("role")
+    if role and role not in {"student", "admin", "expert"}:
+        raise AppError(
+            code="validation_error",
+            message="Invalid role",
+            status_code=400,
+        )
     updates["updatedAt"] = firestore.SERVER_TIMESTAMP
     doc_ref.update(updates)
     data = _doc_or_404(doc_ref)

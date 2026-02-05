@@ -1,0 +1,160 @@
+from fastapi.testclient import TestClient
+from google.cloud import firestore
+
+from app.auth.deps import require_staff
+from app.main import app
+from app.routers import admin_students
+
+
+class FakeSnap:
+    def __init__(self, doc_id, data):
+        self.id = doc_id
+        self._data = data
+
+    @property
+    def exists(self):
+        return self._data is not None
+
+    def to_dict(self):
+        return self._data
+
+
+class FakeDoc:
+    def __init__(self, store, doc_id):
+        self._store = store
+        self.id = doc_id
+
+    def get(self):
+        return FakeSnap(self.id, self._store.get(self.id))
+
+    def set(self, data):
+        self._store[self.id] = _normalize(data)
+
+    def update(self, data):
+        if self.id not in self._store:
+            raise KeyError("missing doc")
+        self._store[self.id].update(_normalize(data))
+
+
+class FakeQuery:
+    def __init__(self, store):
+        self._store = store
+        self._filters = []
+        self._limit = None
+
+    def where(self, field, op, value):
+        self._filters.append((field, op, value))
+        return self
+
+    def order_by(self, _field):
+        return self
+
+    def limit(self, value):
+        self._limit = value
+        return self
+
+    def stream(self):
+        items = []
+        for doc_id, data in self._store.items():
+            if data is None:
+                continue
+            include = True
+            for field, op, value in self._filters:
+                if op == "==":
+                    include = data.get(field) == value
+                elif op == "in":
+                    include = data.get(field) in value
+                else:
+                    include = False
+                if not include:
+                    break
+            if include:
+                items.append(FakeSnap(doc_id, data))
+        if self._limit is not None:
+            items = items[: self._limit]
+        return items
+
+
+class FakeCollection(FakeQuery):
+    def document(self, doc_id=None):
+        if doc_id is None:
+            raise ValueError("doc_id required for tests")
+        return FakeDoc(self._store, doc_id)
+
+
+class FakeFirestore:
+    def __init__(self, users):
+        self._users = users
+
+    def collection(self, name):
+        if name != "users":
+            raise ValueError("only users collection supported in tests")
+        return FakeCollection(self._users)
+
+
+def _normalize(data):
+    normalized = {}
+    for key, value in data.items():
+        if value is firestore.SERVER_TIMESTAMP:
+            normalized[key] = "SERVER_TIMESTAMP"
+        else:
+            normalized[key] = value
+    return normalized
+
+
+def _override_staff():
+    return {
+        "uid": "staff-1",
+        "email": "staff@example.com",
+        "displayName": "Staff User",
+        "role": "staff",
+        "status": "active",
+        "roleRaw": "admin",
+    }
+
+
+def test_list_students_staff_filter(monkeypatch):
+    users = {
+        "s1": {"role": "student", "status": "active", "email": "s1@x.com"},
+        "a1": {"role": "admin", "status": "active", "email": "a1@x.com"},
+        "e1": {"role": "expert", "status": "active", "email": "e1@x.com"},
+    }
+    fake_db = FakeFirestore(users)
+    monkeypatch.setattr(admin_students, "get_firestore_client", lambda: fake_db)
+    app.dependency_overrides[require_staff] = _override_staff
+    client = TestClient(app)
+
+    response = client.get("/api/admin/students?role=staff")
+    assert response.status_code == 200
+    payload = response.json()
+    assert {item["uid"] for item in payload["items"]} == {"a1", "e1"}
+
+    app.dependency_overrides.clear()
+
+
+def test_patch_student_role_validation(monkeypatch):
+    users = {"s1": {"role": "student", "status": "active", "email": "s1@x.com"}}
+    fake_db = FakeFirestore(users)
+    monkeypatch.setattr(admin_students, "get_firestore_client", lambda: fake_db)
+    app.dependency_overrides[require_staff] = _override_staff
+    client = TestClient(app)
+
+    response = client.patch("/api/admin/students/s1", json={"role": "owner"})
+    assert response.status_code == 400
+
+    app.dependency_overrides.clear()
+
+
+def test_patch_student_role_updates(monkeypatch):
+    users = {"s1": {"role": "student", "status": "active", "email": "s1@x.com"}}
+    fake_db = FakeFirestore(users)
+    monkeypatch.setattr(admin_students, "get_firestore_client", lambda: fake_db)
+    app.dependency_overrides[require_staff] = _override_staff
+    client = TestClient(app)
+
+    response = client.patch("/api/admin/students/s1", json={"role": "expert"})
+    assert response.status_code == 200
+    assert response.json()["role"] == "expert"
+    assert users["s1"]["role"] == "expert"
+
+    app.dependency_overrides.clear()

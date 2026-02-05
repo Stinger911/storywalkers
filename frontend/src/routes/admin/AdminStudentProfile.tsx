@@ -16,6 +16,7 @@ import {
   listGoals,
   listStepTemplates,
   reorderSteps,
+  updateStudent,
   type Goal,
   type StepTemplate,
 } from "../../lib/adminApi";
@@ -57,6 +58,8 @@ export function AdminStudentProfile() {
   const [loading, setLoading] = createSignal(true);
   const [error, setError] = createSignal<string | null>(null);
   const [saving, setSaving] = createSignal(false);
+  const [savingProfile, setSavingProfile] = createSignal(false);
+  const [roleDraft, setRoleDraft] = createSignal("student");
 
   const load = async () => {
     setLoading(true);
@@ -95,6 +98,11 @@ export function AdminStudentProfile() {
 
   createEffect(() => {
     void load();
+  });
+
+  createEffect(() => {
+    const currentRole = student()?.role || "student";
+    setRoleDraft(currentRole);
   });
 
   createEffect(() => {
@@ -189,6 +197,19 @@ export function AdminStudentProfile() {
     }
   };
 
+  const saveProfile = async () => {
+    setSavingProfile(true);
+    setError(null);
+    try {
+      await updateStudent(uid(), { role: roleDraft() });
+      await load();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+
   return (
     <section class="space-y-6">
       <div class="rounded-2xl border bg-card p-6">
@@ -211,6 +232,33 @@ export function AdminStudentProfile() {
 
       <div class="grid gap-6 lg:grid-cols-[1.1fr_1fr]">
         <div class="space-y-6">
+          <div class="rounded-2xl border bg-card p-6">
+            <h3 class="text-lg font-semibold">Access</h3>
+            <div class="mt-4 grid gap-4">
+              <div class="grid gap-2">
+                <label class="text-sm font-medium" for="role-select">
+                  Role
+                </label>
+                <select
+                  id="role-select"
+                  class="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                  value={roleDraft()}
+                  onChange={(e) => setRoleDraft(e.currentTarget.value)}
+                >
+                  <option value="student">Student</option>
+                  <option value="expert">Expert</option>
+                  <option value="admin">Admin</option>
+                </select>
+              </div>
+              <Button
+                onClick={() => void saveProfile()}
+                disabled={savingProfile()}
+              >
+                Save access
+              </Button>
+            </div>
+          </div>
+
           <div class="rounded-2xl border bg-card p-6">
             <h3 class="text-lg font-semibold">Assign goal</h3>
             <div class="mt-4 grid gap-4">
