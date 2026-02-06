@@ -1,7 +1,16 @@
 import { createEffect, createMemo, createSignal, Show } from "solid-js";
 import { A } from "@solidjs/router";
 import { Button } from "../../components/ui/button";
+import { Page } from "../../components/ui/page";
+import { SectionCard } from "../../components/ui/section-card";
 import { TextField, TextFieldInput, TextFieldLabel } from "../../components/ui/text-field";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbSeparator,
+} from "../../components/ui/breadcrumb";
 import { listCategories, type Category } from "../../lib/adminApi";
 import { listQuestions, type Question } from "../../lib/questionsApi";
 
@@ -52,19 +61,29 @@ export function AdminQuestions() {
   });
 
   return (
-    <section class="space-y-6">
-      <div class="rounded-2xl border bg-card p-6">
-        <div class="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <h2 class="text-2xl font-semibold">Student questions</h2>
-            <p class="text-sm text-muted-foreground">
-              Review new questions and respond with published answers.
-            </p>
-          </div>
-          <Button variant="outline" onClick={() => void load()}>
-            Refresh
-          </Button>
-        </div>
+    <Page
+      title="Student questions"
+      subtitle="Review new questions and respond with published answers."
+      breadcrumb={
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink href="/admin">Admin</BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbLink current>Questions</BreadcrumbLink>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+      }
+      actions={
+        <Button variant="outline" onClick={() => void load()}>
+          Refresh
+        </Button>
+      }
+    >
+      <SectionCard title="Filters" description="Refine by status, category, or student name.">
         <div class="mt-4 grid gap-4 md:grid-cols-3">
           <div class="grid gap-2">
             <label class="text-sm font-medium" for="question-status">
@@ -128,7 +147,7 @@ export function AdminQuestions() {
             Clear
           </Button>
         </div>
-      </div>
+      </SectionCard>
 
       <Show when={error()}>
         <div class="rounded-2xl border border-error bg-error/10 p-4 text-sm text-error-foreground">
@@ -136,7 +155,7 @@ export function AdminQuestions() {
         </div>
       </Show>
 
-      <div class="rounded-2xl border bg-card p-6">
+      <SectionCard title="Questions">
         <Show when={!loading()} fallback={<div class="text-sm">Loading…</div>}>
           <div class="grid gap-3">
             {items().map((question) => (
@@ -171,7 +190,7 @@ export function AdminQuestions() {
             </div>
           </Show>
         </Show>
-      </div>
-    </section>
+      </SectionCard>
+    </Page>
   );
 }

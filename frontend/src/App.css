@@ -4,7 +4,7 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
+    --background: 220 20% 96%;
     --foreground: 240 10% 3.9%;
 
     --muted: 240 4.8% 95.9%;
@@ -13,8 +13,8 @@
     --popover: 0 0% 100%;
     --popover-foreground: 240 10% 3.9%;
 
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
+    --border: 220 14% 90%;
+    --input: 220 14% 90%;
 
     --card: 0 0% 100%;
     --card-foreground: 240 10% 3.9%;
@@ -46,6 +46,10 @@
     --ring: 240 5.9% 10%;
 
     --radius: 0.5rem;
+    --radius-lg: 1.25rem;
+    --radius-md: 0.75rem;
+    --shadow-card: 0 14px 34px rgba(15, 23, 42, 0.08);
+    --shadow-rail: 0 10px 24px rgba(15, 23, 42, 0.06);
   }
 
   .dark,
@@ -92,6 +96,10 @@
     --ring: 240 4.9% 83.9%;
 
     --radius: 0.5rem;
+    --radius-lg: 1.25rem;
+    --radius-md: 0.75rem;
+    --shadow-card: 0 14px 34px rgba(15, 23, 42, 0.16);
+    --shadow-rail: 0 10px 24px rgba(15, 23, 42, 0.12);
   }
 }
 
@@ -104,6 +112,16 @@
     font-feature-settings:
       "rlig" 1,
       "calt" 1;
+  }
+}
+
+@layer utilities {
+  .shadow-card {
+    box-shadow: var(--shadow-card);
+  }
+
+  .shadow-rail {
+    box-shadow: var(--shadow-rail);
   }
 }
 
@@ -138,4 +156,8 @@
 
 ::-webkit-scrollbar-corner {
   display: none;
+}
+
+.no-border {
+  border: none !important;
 }

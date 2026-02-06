@@ -1,14 +1,28 @@
 import { A } from "@solidjs/router";
 import { Grid, Col } from "../../components/ui/grid";
+import { Page } from "../../components/ui/page";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+} from "../../components/ui/breadcrumb";
 
 export function AdminHome() {
   return (
-    <section class="space-y-6">
-      <div class="panel">
-        <h2>Staff workspace</h2>
-        <p>Manage goals, categories, and step templates.</p>
-      </div>
-
+    <Page
+      title="Staff workspace"
+      subtitle="Manage goals, categories, and step templates."
+      breadcrumb={
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink current>Admin</BreadcrumbLink>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+      }
+    >
       <Grid cols={2} colsLg={4} class="w-full gap-4">
         <Col>
           <A href="/admin/students" class="panel panel--center hover:shadow-lg">
@@ -65,6 +79,6 @@ export function AdminHome() {
           </A>
         </Col>
       </Grid>
-    </section>
+    </Page>
   );
 }

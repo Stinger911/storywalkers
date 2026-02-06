@@ -171,8 +171,6 @@ export function Login() {
         setError("Не удалось получить профиль пользователя после входа.");
         return;
       }
-      console.log("Logged in user:", data.email);
-      console.log("User claims:", data);
       if (!data.role) {
         setError("Неверная роль пользователя.");
         return;

@@ -12,6 +12,10 @@ vi.mock("@solidjs/router", () => ({
   ),
 }));
 
+vi.mock("../../src/components/AppShell", () => ({
+  useAppShellRail: () => () => {},
+}));
+
 vi.mock("../../src/lib/adminApi", () => ({
   listStudents: vi.fn(),
 }));
@@ -42,7 +46,9 @@ describe("AdminStudents", () => {
 
     render(() => <AdminStudents />);
 
-    expect(await screen.findByText("Students")).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { name: "Students" }),
+    ).toBeInTheDocument();
     expect(await screen.findByText("Staff")).toBeInTheDocument();
 
     await waitFor(() => {

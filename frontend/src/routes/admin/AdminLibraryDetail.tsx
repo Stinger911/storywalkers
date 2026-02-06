@@ -1,12 +1,21 @@
 import { createEffect, createMemo, createSignal, Show } from "solid-js";
 import { A, useParams } from "@solidjs/router";
 import { Button } from "../../components/ui/button";
+import { Page } from "../../components/ui/page";
+import { SectionCard } from "../../components/ui/section-card";
 import {
   TextField,
   TextFieldInput,
   TextFieldLabel,
   TextFieldTextArea,
 } from "../../components/ui/text-field";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbSeparator,
+} from "../../components/ui/breadcrumb";
 import { listCategories, type Category } from "../../lib/adminApi";
 import {
   createLibraryEntry,
@@ -138,22 +147,32 @@ export function AdminLibraryDetail() {
   };
 
   return (
-    <section class="space-y-6">
-      <div class="rounded-2xl border bg-card p-6">
-        <div class="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <h2 class="text-2xl font-semibold">
-              {isNew() ? "New library entry" : "Edit library entry"}
-            </h2>
-            <p class="text-sm text-muted-foreground">
-              Draft, edit, and publish guidance for students.
-            </p>
-          </div>
-          <A href="/admin/library" class="text-sm text-primary underline">
-            Back to library
-          </A>
-        </div>
-      </div>
+    <Page
+      title={isNew() ? "New library entry" : "Edit library entry"}
+      subtitle="Draft, edit, and publish guidance for students."
+      breadcrumb={
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink href="/admin">Admin</BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbLink href="/admin/library">Library</BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbLink current>{isNew() ? "New" : "Edit"}</BreadcrumbLink>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+      }
+      actions={
+        <A href="/admin/library" class="text-sm text-primary underline">
+          Back to library
+        </A>
+      }
+    >
 
       <Show when={error()}>
         <div class="rounded-2xl border border-error bg-error/10 p-4 text-sm text-error-foreground">
@@ -167,7 +186,7 @@ export function AdminLibraryDetail() {
       </Show>
 
       <Show when={!loading()} fallback={<div class="text-sm">Loading…</div>}>
-        <div class="rounded-2xl border bg-card p-6">
+        <SectionCard title="Entry details">
           <div class="grid gap-4">
             <TextField>
               <TextFieldLabel for="library-title">Title</TextFieldLabel>
@@ -265,8 +284,8 @@ export function AdminLibraryDetail() {
               </Button>
             </div>
           </div>
-        </div>
+        </SectionCard>
       </Show>
-    </section>
+    </Page>
   );
 }

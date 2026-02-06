@@ -1,10 +1,19 @@
 import { createEffect, createSignal, Show } from "solid-js";
 import { Button } from "../../components/ui/button";
+import { Page } from "../../components/ui/page";
+import { SectionCard } from "../../components/ui/section-card";
 import {
   TextField,
   TextFieldInput,
   TextFieldLabel,
 } from "../../components/ui/text-field";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbSeparator,
+} from "../../components/ui/breadcrumb";
 import {
   type Goal,
   createGoal,
@@ -102,13 +111,23 @@ export function AdminGoals() {
   };
 
   return (
-    <section class="space-y-6">
-      <div class="rounded-2xl border bg-card p-6">
-        <h2 class="text-2xl font-semibold">Goals</h2>
-        <p class="text-sm text-muted-foreground">
-          Define learning goals assigned to students.
-        </p>
-      </div>
+    <Page
+      title="Goals"
+      subtitle="Define learning goals assigned to students."
+      breadcrumb={
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink href="/admin">Admin</BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbLink current>Goals</BreadcrumbLink>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+      }
+    >
 
       <Show when={error()}>
         <div class="rounded-2xl border border-error bg-error/10 p-4 text-sm text-error-foreground">
@@ -117,13 +136,14 @@ export function AdminGoals() {
       </Show>
 
       <div class="grid gap-6 lg:grid-cols-[1.2fr_1fr]">
-        <div class="rounded-2xl border bg-card p-6">
-          <div class="flex items-center justify-between">
-            <h3 class="text-lg font-semibold">All goals</h3>
+        <SectionCard
+          title="All goals"
+          actions={
             <Button variant="outline" onClick={() => void load()}>
               Refresh
             </Button>
-          </div>
+          }
+        >
           <Show
             when={!loading()}
             fallback={<div class="mt-4 text-sm">Loading…</div>}
@@ -159,12 +179,9 @@ export function AdminGoals() {
               ))}
             </div>
           </Show>
-        </div>
+        </SectionCard>
 
-        <div class="rounded-2xl border bg-card p-6">
-          <h3 class="text-lg font-semibold">
-            {form().id ? "Edit" : "New"} goal
-          </h3>
+        <SectionCard title={`${form().id ? "Edit" : "New"} goal`}>
           <div class="mt-4 grid gap-4">
             <TextField>
               <TextFieldLabel for="goal-title">Title</TextFieldLabel>
@@ -199,8 +216,8 @@ export function AdminGoals() {
               </Button>
             </div>
           </div>
-        </div>
+        </SectionCard>
       </div>
-    </section>
+    </Page>
   );
 }

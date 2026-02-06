@@ -1,10 +1,19 @@
 import { createEffect, createSignal, Show } from "solid-js";
 import { Button } from "../../components/ui/button";
+import { Page } from "../../components/ui/page";
+import { SectionCard } from "../../components/ui/section-card";
 import {
   TextField,
   TextFieldInput,
   TextFieldLabel,
 } from "../../components/ui/text-field";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbSeparator,
+} from "../../components/ui/breadcrumb";
 import {
   type Category,
   type StepTemplate,
@@ -136,13 +145,23 @@ export function AdminStepTemplates() {
   };
 
   return (
-    <section class="space-y-6">
-      <div class="rounded-2xl border bg-card p-6">
-        <h2 class="text-2xl font-semibold">Step Templates</h2>
-        <p class="text-sm text-muted-foreground">
-          Templates used to build student plans.
-        </p>
-      </div>
+    <Page
+      title="Step Templates"
+      subtitle="Templates used to build student plans."
+      breadcrumb={
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink href="/admin">Admin</BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbLink current>Step Templates</BreadcrumbLink>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+      }
+    >
 
       <Show when={error()}>
         <div class="rounded-2xl border border-error bg-error/10 p-4 text-sm text-error-foreground">
@@ -151,13 +170,14 @@ export function AdminStepTemplates() {
       </Show>
 
       <div class="grid gap-6 lg:grid-cols-[1.2fr_1fr]">
-        <div class="rounded-2xl border bg-card p-6">
-          <div class="flex items-center justify-between">
-            <h3 class="text-lg font-semibold">All templates</h3>
+        <SectionCard
+          title="All templates"
+          actions={
             <Button variant="outline" onClick={() => void load()}>
               Refresh
             </Button>
-          </div>
+          }
+        >
           <Show
             when={!loading()}
             fallback={<div class="mt-4 text-sm">Loading…</div>}
@@ -199,12 +219,9 @@ export function AdminStepTemplates() {
               ))}
             </div>
           </Show>
-        </div>
+        </SectionCard>
 
-        <div class="rounded-2xl border bg-card p-6">
-          <h3 class="text-lg font-semibold">
-            {form().id ? "Edit" : "New"} template
-          </h3>
+        <SectionCard title={`${form().id ? "Edit" : "New"} template`}>
           <div class="mt-4 grid gap-4">
             <TextField>
               <TextFieldLabel for="template-title">Title</TextFieldLabel>
@@ -293,8 +310,8 @@ export function AdminStepTemplates() {
               </Button>
             </div>
           </div>
-        </div>
+        </SectionCard>
       </div>
-    </section>
+    </Page>
   );
 }

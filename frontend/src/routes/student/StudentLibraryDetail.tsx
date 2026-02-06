@@ -1,5 +1,7 @@
 import { createEffect, createSignal, Show } from 'solid-js'
 import { A, useParams } from '@solidjs/router'
+import { buttonVariants } from '../../components/ui/button'
+import { SectionCard } from '../../components/ui/section-card'
 import { getLibraryEntry, type LibraryEntry } from '../../lib/libraryApi'
 
 export function StudentLibraryDetail() {
@@ -30,34 +32,37 @@ export function StudentLibraryDetail() {
 
   return (
     <section class="space-y-6">
-      <div class="rounded-2xl border bg-card p-6">
-        <div class="flex items-center justify-between">
-          <h2 class="text-2xl font-semibold">Library entry</h2>
-          <A href="/student/profile" class="text-sm text-primary underline">
-            Back to profile
-          </A>
-        </div>
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <h2 class="text-2xl font-semibold">Library entry</h2>
+        <A href="/student/library" class="text-sm text-primary underline">
+          Back to library
+        </A>
       </div>
 
       <Show when={error()}>
-        <div class="rounded-2xl border border-error bg-error/10 p-4 text-sm text-error-foreground">
+        <div class="rounded-[var(--radius-md)] border border-error/40 bg-error/10 px-4 py-3 text-sm text-error-foreground">
           {error()}
         </div>
       </Show>
 
       <Show when={!loading()} fallback={<div class="text-sm">Loading…</div>}>
         <Show when={entry()}>
-          <div class="rounded-2xl border bg-card p-6">
-            <div class="text-xs text-muted-foreground">
+          <div class="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+            <span class="rounded-full border border-border/70 bg-background px-2 py-0.5">
               {entry()?.categoryId}
-            </div>
-            <h3 class="text-xl font-semibold">{entry()?.title}</h3>
-            <p class="mt-3 whitespace-pre-line text-sm text-muted-foreground">
+            </span>
+            <span class="rounded-full border border-border/70 bg-background px-2 py-0.5">
+              {entry()?.status}
+            </span>
+          </div>
+
+          <SectionCard title={entry()?.title ?? 'Library entry'}>
+            <p class="whitespace-pre-line text-sm text-muted-foreground">
               {entry()?.content}
             </p>
             <Show when={entry()?.videoUrl}>
               <a
-                class="mt-3 inline-block text-sm text-primary underline"
+                class={`mt-3 inline-flex ${buttonVariants({ size: 'sm', variant: 'outline' })}`}
                 href={entry()?.videoUrl ?? ''}
                 target="_blank"
                 rel="noreferrer"
@@ -65,7 +70,7 @@ export function StudentLibraryDetail() {
                 Watch video
               </a>
             </Show>
-          </div>
+          </SectionCard>
         </Show>
       </Show>
     </section>

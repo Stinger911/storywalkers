@@ -15,6 +15,49 @@ vi.mock("@solidjs/router", () => ({
   useParams: () => ({ uid: "u1" }),
 }));
 
+vi.mock("../../src/components/AppShell", () => ({
+  useAppShellRail: () => () => {},
+}));
+
+vi.mock("../../src/components/ui/select", () => {
+  return {
+    Select: (props: {
+      value?: { value: string; label: string } | null;
+      onChange?: (value: { value: string; label: string } | null) => void;
+      options?: { value: string; label: string }[];
+      children?: unknown;
+    }) => {
+      const isRole =
+        (props.options || []).some((option) => option.label === "Student") ?? false;
+      const testId = isRole ? "role-select" : "goal-select";
+      const currentValue = props.value?.value ?? "";
+      return (
+        <select
+          data-testid={testId}
+          value={currentValue}
+          onChange={(e) => {
+            const next = (props.options || []).find(
+              (option) => option.value === e.currentTarget.value,
+            );
+            props.onChange?.(next ?? null);
+          }}
+        >
+          {(props.options || []).map((option) => (
+            <option value={option.value}>{option.label}</option>
+          ))}
+          {props.children as never}
+        </select>
+      );
+    },
+    SelectContent: (props: { children?: unknown }) => <>{props.children}</>,
+    SelectHiddenSelect: (props: { children?: unknown }) => <>{props.children}</>,
+    SelectItem: (props: { children?: unknown }) => <>{props.children}</>,
+    SelectLabel: (props: { children?: unknown }) => <>{props.children}</>,
+    SelectTrigger: (props: { children?: unknown }) => <>{props.children}</>,
+    SelectValue: (props: { children?: unknown }) => <>{props.children}</>,
+  };
+});
+
 vi.mock("../../src/lib/adminApi", () => ({
   assignPlan: vi.fn(),
   bulkAddSteps: vi.fn(),
@@ -61,7 +104,7 @@ describe("AdminStudentProfile", () => {
 
     expect(await screen.findByText("Student profile")).toBeInTheDocument();
 
-    const roleSelect = await screen.findByLabelText("Role");
+    const roleSelect = await screen.findByTestId("role-select");
     fireEvent.change(roleSelect, { target: { value: "expert" } });
 
     const saveButton = screen.getByText("Save access");

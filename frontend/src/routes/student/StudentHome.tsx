@@ -1,188 +1,177 @@
-import { createEffect, createMemo, createSignal, Show } from 'solid-js'
-import { Button } from '../../components/ui/button'
-import { useAuth } from '../../lib/auth'
-import { getMyPlan, getMyPlanSteps, updateMyStepProgress, type PlanStep as ApiPlanStep } from '../../lib/studentApi'
-import { listGoals, type Goal } from '../../lib/adminApi'
-
-type StudentPlan = {
-  studentUid: string
-  goalId: string
-}
-
-type PlanStep = {
-  id: string
-  title: string
-  description: string
-  materialUrl: string
-  order: number
-  isDone: boolean
-  doneAt?: { toDate?: () => Date } | null
-}
+import { Show, createMemo } from 'solid-js'
+import { Button, buttonVariants } from '../../components/ui/button'
+import { Card, CardContent } from '../../components/ui/card'
+import { Illustration } from '../../components/ui/illustration'
+import { SectionCard } from '../../components/ui/section-card'
+import { SmallStatBadge } from '../../components/ui/small-stat-badge'
+import { useMe } from '../../lib/useMe'
+import { useMyPlan } from './studentPlanContext'
+import { cn } from '../../lib/utils'
 
 export function StudentHome() {
-  const auth = useAuth()
-  const [plan, setPlan] = createSignal<StudentPlan | null>(null)
-  const [goal, setGoal] = createSignal<Goal | null>(null)
-  const [steps, setSteps] = createSignal<PlanStep[]>([])
-  const [loading, setLoading] = createSignal(true)
-  const [error, setError] = createSignal<string | null>(null)
-
-  const load = async () => {
-    setLoading(true)
-    setError(null)
-    try {
-      const [planData, stepsData, goalsData] = await Promise.all([
-        getMyPlan(),
-        getMyPlanSteps(),
-        listGoals(),
-      ])
-      setPlan({
-        studentUid: planData.studentUid,
-        goalId: planData.goalId,
-      })
-      const goalMatch = goalsData.items.find((g) => g.id === planData.goalId) || null
-      setGoal(goalMatch)
-      setSteps(
-        stepsData.items.map((step: ApiPlanStep) => ({
-          id: step.stepId,
-          title: step.title,
-          description: step.description,
-          materialUrl: step.materialUrl,
-          order: step.order,
-          isDone: step.isDone,
-          doneAt: step.doneAt as { toDate?: () => Date } | null,
-        })),
-      )
-    } catch (err) {
-      setError((err as Error).message)
-      setPlan(null)
-      setGoal(null)
-      setSteps([])
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  createEffect(() => {
-    void load()
+  const { me } = useMe()
+  const { plan, goal, steps, loading, error, progress, markStepDone, openMaterial } = useMyPlan()
+  const firstName = createMemo(() => {
+    const raw = me()?.displayName ?? ''
+    return raw.trim().split(' ')[0] || 'there'
   })
-
-  const progress = createMemo(() => {
-    const total = steps().length
-    const done = steps().filter((step) => step.isDone).length
-    const percent = total ? Math.round((done / total) * 100) : 0
-    return { total, done, percent }
-  })
-
-  const toggleStep = async (step: PlanStep) => {
-    const nextDone = !step.isDone
-    try {
-      await updateMyStepProgress(step.id, nextDone)
-      await load()
-    } catch (err) {
-      setError((err as Error).message)
-    }
-  }
 
   return (
     <section class="space-y-6">
-      <div class="rounded-2xl border bg-card p-6 shadow-sm">
-        <h2 class="text-2xl font-semibold">My Path</h2>
-        <p class="text-muted-foreground">
-          Track your progress and mark steps as completed.
-        </p>
-        <Show when={auth.me()}>
-          <div class="mt-3 text-sm text-muted-foreground">
-            Signed in as{' '}
-            <span class="font-medium text-foreground">
-              {auth.me()?.displayName ?? auth.me()?.email}
-            </span>
+      <Show
+        when={!loading()}
+        fallback={
+          <div class="space-y-4">
+            <div class="flex items-center gap-4">
+              <div class="h-10 w-56 animate-pulse rounded-[var(--radius-md)] bg-muted" />
+              <div class="h-7 w-20 animate-pulse rounded-full bg-muted" />
+            </div>
+            <div class="h-24 animate-pulse rounded-[var(--radius-lg)] bg-muted" />
+            <div class="space-y-3">
+              <div class="h-6 w-40 animate-pulse rounded-[var(--radius-md)] bg-muted" />
+              <div class="h-20 animate-pulse rounded-[var(--radius-lg)] bg-muted" />
+              <div class="h-16 animate-pulse rounded-[var(--radius-lg)] bg-muted" />
+            </div>
+          </div>
+        }
+      >
+        <div class="flex flex-wrap items-center justify-between gap-4">
+          <div class="flex items-center gap-3">
+            <h1 class="text-3xl font-semibold tracking-tight">Hi, {firstName()}!</h1>
+          <Show when={me()?.roleRaw && me()?.roleRaw !== 'student'}>
+            <SmallStatBadge class="bg-card">
+              <span class="material-symbols-outlined text-sm">school</span>
+              {me()?.roleRaw}
+            </SmallStatBadge>
+          </Show>
+        </div>
+          <Show when={me()}>
+            <div class="text-sm text-muted-foreground">
+              Signed in as{" "}
+              <span class="font-medium text-foreground">
+                {me()?.displayName ?? me()?.email}
+              </span>
+            </div>
+          </Show>
+        </div>
+
+        <Show when={error()}>
+          <div class="rounded-[var(--radius-md)] border border-error/40 bg-error/10 px-4 py-3 text-sm text-error-foreground">
+            {error()}
           </div>
         </Show>
-      </div>
 
-      <Show when={error()}>
-        <div class="rounded-2xl border border-error bg-error/10 p-4 text-sm text-error-foreground">
-          {error()}
-        </div>
-      </Show>
-
-      <Show when={!loading()} fallback={<div class="text-sm">Loading plan…</div>}>
         <Show
           when={plan()}
           fallback={
-            <div class="rounded-2xl border bg-card p-6 text-sm text-muted-foreground">
-              No plan has been assigned yet. Check back later.
-            </div>
+            <SectionCard title="No goal assigned">
+              <div class="flex flex-wrap items-center justify-between gap-4 text-sm text-muted-foreground">
+                <span>We’ll notify you once a learning goal is assigned.</span>
+                <a href="/student/questions" class="text-primary underline">
+                  Contact admin
+                </a>
+              </div>
+            </SectionCard>
           }
         >
-          <div class="rounded-2xl border bg-card p-6">
-            <div class="flex flex-wrap items-center justify-between gap-4">
-              <div>
-                <h3 class="text-xl font-semibold">
+          <div class="flex items-center justify-between gap-4">
+            <h2 class="text-lg font-semibold">Student Dashboard</h2>
+            <SmallStatBadge>{progress().percent}% complete</SmallStatBadge>
+          </div>
+
+          <Card class="border border-border/70">
+            <CardContent class="grid gap-4 p-6 lg:grid-cols-[minmax(0,1fr)_140px] lg:items-center">
+              <div class="space-y-2">
+                <div class="text-sm font-semibold text-muted-foreground">Goal</div>
+                <h3 class="text-2xl font-semibold">
                   {goal()?.title ?? 'Learning goal'}
                 </h3>
                 <p class="text-sm text-muted-foreground">
                   {goal()?.description ?? 'Your personalized learning path.'}
                 </p>
+                <div class="mt-4 h-2 w-full overflow-hidden rounded-full bg-muted">
+                  <div
+                    class="h-full rounded-full bg-primary transition-all"
+                    style={{ width: `${progress().percent}%` }}
+                  />
+                </div>
               </div>
-              <div class="rounded-full border px-4 py-2 text-sm font-medium">
-                {progress().done}/{progress().total} · {progress().percent}%
+              <div class="flex justify-start lg:justify-center">
+                <Illustration
+                  src="/illustrations/goal-thumb.svg"
+                  alt="Goal thumbnail"
+                  class="h-20 w-20 shadow-rail lg:h-24 lg:w-24"
+                />
               </div>
-            </div>
+            </CardContent>
+          </Card>
 
-            <div class="mt-4 h-2 w-full overflow-hidden rounded-full bg-muted">
-              <div
-                class="h-full rounded-full bg-primary transition-all"
-                style={{ width: `${progress().percent}%` }}
-              />
-            </div>
-          </div>
-
-          <div class="grid gap-4">
+          <SectionCard title="Steps" description="Work through your path in order.">
             <Show
               when={steps().length > 0}
               fallback={
-                <div class="rounded-2xl border bg-card p-6 text-sm text-muted-foreground">
-                  Steps will appear here once your plan is ready.
+                <div class="flex flex-wrap items-center justify-between gap-4 text-sm text-muted-foreground">
+                  <span>No steps yet. Ask a question or explore the library.</span>
+                  <div class="flex items-center gap-3">
+                    <a href="/student/questions" class="text-primary underline">
+                      Ask a question
+                    </a>
+                    <a href="/student/library" class="text-primary underline">
+                      Browse library
+                    </a>
+                  </div>
                 </div>
               }
             >
-              {steps().map((step) => (
-                <div class="rounded-2xl border bg-card p-6 shadow-sm">
-                  <div class="flex items-start justify-between gap-4">
-                    <div>
-                      <h4 class="text-lg font-semibold">{step.title}</h4>
-                      <p class="text-sm text-muted-foreground">
-                        {step.description}
-                      </p>
-                      <Show when={step.materialUrl}>
-                        <a
-                          class="mt-2 inline-block text-sm text-primary underline"
-                          href={step.materialUrl}
-                          target="_blank"
-                          rel="noreferrer"
+              <div class="grid gap-3">
+                {steps().map((step) => (
+                  <div class="rounded-[var(--radius-md)] border border-border/70 bg-card px-4 py-3 shadow-rail">
+                    <div class="flex items-center justify-between gap-4">
+                      <div class="flex items-center gap-3 min-w-0">
+                        <span
+                          class={cn(
+                            "material-symbols-outlined text-[22px]",
+                            step.isDone ? "text-success-foreground" : "text-muted-foreground",
+                          )}
                         >
-                          Open material
-                        </a>
-                      </Show>
+                          {step.isDone ? "check_circle" : "schedule"}
+                        </span>
+                        <div class="min-w-0 max-w-[520px]">
+                          <div class="truncate text-sm font-semibold">{step.title}</div>
+                          <div class="line-clamp-2 text-xs text-muted-foreground">
+                            {step.description}
+                          </div>
+                        </div>
+                      </div>
+                      <div class="flex items-center gap-2">
+                        {step.materialUrl ? (
+                          <button
+                            class={buttonVariants({ size: "sm" })}
+                            onClick={() => openMaterial(step.materialUrl)}
+                          >
+                            Open
+                          </button>
+                        ) : (
+                          <Button size="sm" disabled>
+                            Open
+                          </Button>
+                        )}
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          aria-label={step.isDone ? "Mark as not done" : "Mark as done"}
+                          title={step.isDone ? "Mark as not done" : "Mark as done"}
+                          onClick={() => void markStepDone(step.id, !step.isDone)}
+                        >
+                          <span class="material-symbols-outlined text-[18px]">check</span>
+                        </Button>
+                      </div>
                     </div>
-                    <Button
-                      variant={step.isDone ? 'secondary' : 'default'}
-                      onClick={() => void toggleStep(step)}
-                    >
-                      {step.isDone ? 'Completed' : 'Mark done'}
-                    </Button>
                   </div>
-                  <Show when={step.isDone && step.doneAt?.toDate}>
-                    <div class="mt-3 text-xs text-muted-foreground">
-                      Completed on {step.doneAt?.toDate?.().toLocaleDateString()}
-                    </div>
-                  </Show>
-                </div>
-              ))}
+                ))}
+              </div>
             </Show>
-          </div>
+          </SectionCard>
         </Show>
       </Show>
     </section>

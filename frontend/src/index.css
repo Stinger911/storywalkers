@@ -1,9 +1,7 @@
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Material+Symbols+Outlined:wght@300;400;500&display=swap');
 
 :root {
   font-family: 'Space Grotesk', system-ui, sans-serif;
-  color: #2b2b2b;
-  background-color: #f7f2ea;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
 }
@@ -14,7 +12,6 @@
 
 body {
   margin: 0;
-  background: #f7f2ea;
 }
 
 a {
@@ -24,4 +21,9 @@ a {
 
 button {
   font-family: inherit;
+}
+
+.material-symbols-outlined {
+  font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 20;
+  line-height: 1;
 }

@@ -1,6 +1,7 @@
 import { createEffect, createSignal, Show } from "solid-js";
-import { useParams, A } from "@solidjs/router";
-// import { Button } from "../../components/ui/button";
+import { useParams } from "@solidjs/router";
+import { A } from "@solidjs/router";
+import { SectionCard } from "../../components/ui/section-card";
 import { getQuestion, type Question } from "../../lib/questionsApi";
 
 export function StudentQuestionDetail() {
@@ -31,45 +32,43 @@ export function StudentQuestionDetail() {
 
   return (
     <section class="space-y-6">
-      <div class="rounded-2xl border bg-card p-6">
-        <div class="flex items-center justify-between">
-          <h2 class="text-2xl font-semibold">Question detail</h2>
-          <A href="/student/profile" class="text-sm text-primary underline">
-            Back to profile
-          </A>
-        </div>
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <h2 class="text-2xl font-semibold">Question detail</h2>
+        <A href="/student/questions" class="text-sm text-primary underline">
+          Back to questions
+        </A>
       </div>
 
       <Show when={error()}>
-        <div class="rounded-2xl border border-error bg-error/10 p-4 text-sm text-error-foreground">
+        <div class="rounded-[var(--radius-md)] border border-error/40 bg-error/10 px-4 py-3 text-sm text-error-foreground">
           {error()}
         </div>
       </Show>
 
       <Show when={!loading()} fallback={<div class="text-sm">Loading…</div>}>
         <Show when={question()}>
-          <div class="rounded-2xl border bg-card p-6">
-            <div class="text-xs text-muted-foreground">
-              {question()?.categoryId}
+          <SectionCard title={question()?.title ?? "Question"}>
+            <div class="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+              <span class="rounded-full border border-border/70 bg-background px-2 py-0.5">
+                {question()?.categoryId}
+              </span>
+              <span class="rounded-full border border-border/70 bg-background px-2 py-0.5">
+                {question()?.status === "answered" ? "Answered" : "New"}
+              </span>
             </div>
-            <h3 class="text-xl font-semibold">{question()?.title}</h3>
-            <p class="mt-2 text-sm text-muted-foreground">
+            <p class="mt-3 text-sm text-muted-foreground">
               {question()?.body || "No additional details"}
             </p>
-            <div class="mt-4 text-sm">
-              Status: {question()?.status === "answered" ? "Answered" : "New"}
-            </div>
-          </div>
+          </SectionCard>
 
-          <div class="rounded-2xl border bg-card p-6">
-            <h4 class="text-lg font-semibold">Answer</h4>
+          <SectionCard title="Answer">
             <Show
               when={question()?.answer}
               fallback={
-                <div class="text-sm text-muted-foreground">No answer yet.</div>
+                <div class="text-sm text-muted-foreground">Pending response.</div>
               }
             >
-              <p class="mt-2 text-sm text-muted-foreground">
+              <p class="text-sm text-muted-foreground">
                 {question()?.answer?.text}
               </p>
               <Show when={question()?.answer?.videoUrl}>
@@ -83,7 +82,7 @@ export function StudentQuestionDetail() {
                 </a>
               </Show>
             </Show>
-          </div>
+          </SectionCard>
         </Show>
       </Show>
     </section>

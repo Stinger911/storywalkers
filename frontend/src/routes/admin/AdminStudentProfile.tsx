@@ -2,6 +2,27 @@ import { createEffect, createMemo, createSignal, Show } from "solid-js";
 import { useParams } from "@solidjs/router";
 
 import { Button } from "../../components/ui/button";
+import { Page } from "../../components/ui/page";
+import { RightRail } from "../../components/ui/right-rail";
+import { RailCard } from "../../components/ui/rail-card";
+import { SectionCard } from "../../components/ui/section-card";
+import { SmallStatBadge } from "../../components/ui/small-stat-badge";
+import {
+  Select,
+  SelectContent,
+  SelectHiddenSelect,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "../../components/ui/select";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbSeparator,
+} from "../../components/ui/breadcrumb";
 // import {
 //   TextField,
 //   TextFieldInput,
@@ -42,6 +63,11 @@ type PlanStep = {
   order: number;
   isDone: boolean;
   doneAt?: { toDate?: () => Date } | null;
+};
+
+type SelectOption = {
+  value: string;
+  label: string;
 };
 
 export function AdminStudentProfile() {
@@ -128,6 +154,24 @@ export function AdminStudentProfile() {
   });
 
   const currentGoal = createMemo(() => goals().find((g) => g.id === goalId()));
+  const roleOptions: SelectOption[] = [
+    { value: "student", label: "Student" },
+    { value: "expert", label: "Expert" },
+    { value: "admin", label: "Admin" },
+  ];
+  const goalOptions = createMemo<SelectOption[]>(() => [
+    { value: "", label: "Select goal" },
+    ...goals().map((goal) => ({
+      value: goal.id,
+      label: goal.title,
+    })),
+  ]);
+  const selectedRoleOption = createMemo(() =>
+    roleOptions.find((option) => option.value === roleDraft()) ?? null,
+  );
+  const selectedGoalOption = createMemo(() =>
+    goalOptions().find((option) => option.value === goalId()) ?? null,
+  );
 
   const toggleTemplate = (id: string) => {
     const current = selectedTemplates();
@@ -211,18 +255,100 @@ export function AdminStudentProfile() {
   };
 
   return (
-    <section class="space-y-6">
-      <div class="rounded-2xl border bg-card p-6">
-        <h2 class="text-2xl font-semibold">Student profile</h2>
+    <Page
+      title="Student profile"
+      subtitle="Manage access, goals, and plan steps."
+      breadcrumb={
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink href="/admin">Admin</BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbLink href="/admin/students">Students</BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbLink current>Profile</BreadcrumbLink>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+      }
+      rightRail={
+        <RightRail>
+          <RailCard
+            title="Current plan"
+            actions={<SmallStatBadge>{progress()}% complete</SmallStatBadge>}
+          >
+            <Show
+              when={!loading()}
+              fallback={<div class="text-xs text-muted-foreground">Loading…</div>}
+            >
+              <div class="grid gap-3">
+                {steps().map((step, index) => (
+                  <div class="rounded-[var(--radius-md)] border border-border/70 bg-card p-3 shadow-rail">
+                    <div class="flex items-start justify-between gap-3">
+                      <div>
+                        <div class="text-xs text-muted-foreground">
+                          Step {index + 1}
+                        </div>
+                        <div class="text-sm font-semibold">{step.title}</div>
+                        <div class="text-xs text-muted-foreground">
+                          {step.description}
+                        </div>
+                        <Show when={step.materialUrl}>
+                          <a
+                            class="mt-1 inline-flex items-center gap-1 text-xs font-medium text-primary"
+                            href={step.materialUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            <span class="material-symbols-outlined text-[16px]">open_in_new</span>
+                            Open material
+                          </a>
+                        </Show>
+                      </div>
+                      <div class="flex flex-col gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={index === 0 || saving()}
+                          onClick={() => void moveStep(index, -1)}
+                        >
+                          Up
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={index === steps().length - 1 || saving()}
+                          onClick={() => void moveStep(index, 1)}
+                        >
+                          Down
+                        </Button>
+                      </div>
+                    </div>
+                    <div class="mt-2 text-xs text-muted-foreground">
+                      {step.isDone ? "Completed" : "Not started"}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Show>
+          </RailCard>
+        </RightRail>
+      }
+    >
+      <SectionCard title="Student">
         <Show
           when={student()}
           fallback={<div class="text-sm">Loading student…</div>}
         >
-          <div class="mt-2 text-sm text-muted-foreground">
+          <div class="text-sm text-muted-foreground">
             {student()?.displayName || "Unnamed student"} · {student()?.email}
           </div>
         </Show>
-      </div>
+      </SectionCard>
 
       <Show when={error()}>
         <div class="rounded-2xl border border-error bg-error/10 p-4 text-sm text-error-foreground">
@@ -230,163 +356,138 @@ export function AdminStudentProfile() {
         </div>
       </Show>
 
-      <div class="grid gap-6 lg:grid-cols-[1.1fr_1fr]">
-        <div class="space-y-6">
-          <div class="rounded-2xl border bg-card p-6">
-            <h3 class="text-lg font-semibold">Access</h3>
-            <div class="mt-4 grid gap-4">
-              <div class="grid gap-2">
-                <label class="text-sm font-medium" for="role-select">
-                  Role
-                </label>
-                <select
-                  id="role-select"
-                  class="h-10 rounded-md border border-input bg-background px-3 text-sm"
-                  value={roleDraft()}
-                  onChange={(e) => setRoleDraft(e.currentTarget.value)}
-                >
-                  <option value="student">Student</option>
-                  <option value="expert">Expert</option>
-                  <option value="admin">Admin</option>
-                </select>
-              </div>
-              <Button
-                onClick={() => void saveProfile()}
-                disabled={savingProfile()}
+      <div class="space-y-6">
+        <SectionCard title="Access">
+          <div class="grid gap-4">
+            <div class="grid gap-2">
+              <Select
+                value={selectedRoleOption()}
+                onChange={(value) =>
+                  setRoleDraft((value as SelectOption | null)?.value ?? "student")
+                }
+                options={roleOptions}
+                optionValue={(option) =>
+                  (option as unknown as SelectOption).value
+                }
+                optionTextValue={(option) =>
+                  (option as unknown as SelectOption).label
+                }
+                itemComponent={(props) => (
+                  <SelectItem item={props.item}>
+                    {
+                      (props.item.rawValue as unknown as { label: string })
+                        .label
+                    }
+                  </SelectItem>
+                )}
               >
-                Save access
-              </Button>
+                <SelectLabel for="role-select">Role</SelectLabel>
+                <SelectHiddenSelect id="role-select" />
+                <SelectTrigger aria-label="Role">
+                  <SelectValue<string>>
+                    {(state) =>
+                      (
+                        (state?.selectedOption() || {}) as unknown as {
+                          label: string;
+                        }
+                      ).label ?? "Select role"
+                    }
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent />
+              </Select>
             </div>
+            <Button
+              onClick={() => void saveProfile()}
+              disabled={savingProfile()}
+            >
+              Save access
+            </Button>
           </div>
+        </SectionCard>
 
-          <div class="rounded-2xl border bg-card p-6">
-            <h3 class="text-lg font-semibold">Assign goal</h3>
-            <div class="mt-4 grid gap-4">
-              <div class="grid gap-2">
-                <label class="text-sm font-medium" for="goal-select">
-                  Goal
-                </label>
-                <select
-                  id="goal-select"
-                  class="h-10 rounded-md border border-input bg-background px-3 text-sm"
-                  value={goalId()}
-                  onChange={(e) => setGoalId(e.currentTarget.value)}
-                >
-                  <option value="">Select goal</option>
-                  {goals().map((goal) => (
-                    <option value={goal.id}>{goal.title}</option>
-                  ))}
-                </select>
-              </div>
-              <Show when={currentGoal()}>
-                <div class="rounded-xl border p-4 text-sm text-muted-foreground">
-                  <div class="font-medium text-foreground">
-                    {currentGoal()?.title}
-                  </div>
-                  <div>{currentGoal()?.description || "No description"}</div>
+        <SectionCard title="Assign goal">
+          <div class="grid gap-4">
+            <div class="grid gap-2">
+              <Select
+                value={selectedGoalOption()}
+                onChange={(value) =>
+                  setGoalId((value as SelectOption | null)?.value ?? "")
+                }
+                options={goalOptions()}
+                optionValue={(option) =>
+                  (option as unknown as SelectOption).value
+                }
+                optionTextValue={(option) =>
+                  (option as unknown as SelectOption).label
+                }
+                itemComponent={(props) => (
+                  <SelectItem item={props.item}>
+                    {
+                      (props.item.rawValue as unknown as { label: string })
+                        .label
+                    }
+                  </SelectItem>
+                )}
+              >
+                <SelectLabel for="goal-select">Goal</SelectLabel>
+                <SelectHiddenSelect id="goal-select" />
+                <SelectTrigger aria-label="Goal">
+                  <SelectValue<string>>
+                    {(state) =>
+                      (
+                        (state?.selectedOption() || {}) as unknown as {
+                          label: string;
+                        }
+                      ).label ?? "Select goal"
+                    }
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent />
+              </Select>
+            </div>
+            <Show when={currentGoal()}>
+              <div class="rounded-xl border p-4 text-sm text-muted-foreground">
+                <div class="font-medium text-foreground">
+                  {currentGoal()?.title}
                 </div>
-              </Show>
-              <Button onClick={() => void saveGoal()} disabled={saving()}>
-                Save goal
-              </Button>
-            </div>
+                <div>{currentGoal()?.description || "No description"}</div>
+              </div>
+            </Show>
+            <Button onClick={() => void saveGoal()} disabled={saving()}>
+              Save goal
+            </Button>
           </div>
+        </SectionCard>
 
-          <div class="rounded-2xl border bg-card p-6">
-            <h3 class="text-lg font-semibold">Add steps from templates</h3>
-            <div class="mt-4 grid gap-3 max-h-[420px] overflow-y-auto">
-              {templates().map((template) => (
-                <label class="flex items-start gap-3 rounded-xl border p-3">
-                  <input
-                    type="checkbox"
-                    checked={selectedTemplates().includes(template.id)}
-                    onChange={() => toggleTemplate(template.id)}
-                  />
-                  <div>
-                    <div class="text-sm font-semibold">{template.title}</div>
-                    <div class="text-xs text-muted-foreground">
-                      {template.description}
-                    </div>
-                  </div>
-                </label>
-              ))}
-            </div>
-            <div class="mt-4 flex flex-wrap gap-2">
-              <Button onClick={() => void addSteps()} disabled={saving()}>
-                Add selected steps
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => setSelectedTemplates([])}
-              >
-                Clear selection
-              </Button>
-            </div>
-          </div>
-        </div>
-
-        <div class="rounded-2xl border bg-card p-6">
-          <div class="flex items-center justify-between">
-            <h3 class="text-lg font-semibold">Current plan</h3>
-            <span class="rounded-full border px-3 py-1 text-xs">
-              {progress()}% complete
-            </span>
-          </div>
-          <Show
-            when={!loading()}
-            fallback={<div class="mt-4 text-sm">Loading…</div>}
-          >
-            <div class="mt-4 grid gap-3">
-              {steps().map((step, index) => (
-                <div class="rounded-xl border p-4">
-                  <div class="flex items-start justify-between gap-4">
-                    <div>
-                      <div class="text-sm text-muted-foreground">
-                        Step {index + 1}
-                      </div>
-                      <div class="text-base font-semibold">{step.title}</div>
-                      <div class="text-sm text-muted-foreground">
-                        {step.description}
-                      </div>
-                      <Show when={step.materialUrl}>
-                        <a
-                          class="mt-1 inline-block text-xs text-primary underline"
-                          href={step.materialUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          Open material
-                        </a>
-                      </Show>
-                    </div>
-                    <div class="flex flex-col gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={index === 0 || saving()}
-                        onClick={() => void moveStep(index, -1)}
-                      >
-                        Up
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={index === steps().length - 1 || saving()}
-                        onClick={() => void moveStep(index, 1)}
-                      >
-                        Down
-                      </Button>
-                    </div>
-                  </div>
-                  <div class="mt-2 text-xs text-muted-foreground">
-                    {step.isDone ? "Completed" : "Not started"}
+        <SectionCard title="Add steps from templates">
+          <div class="grid gap-3 max-h-[420px] overflow-y-auto">
+            {templates().map((template) => (
+              <label class="flex items-start gap-3 rounded-xl border p-3">
+                <input
+                  type="checkbox"
+                  checked={selectedTemplates().includes(template.id)}
+                  onChange={() => toggleTemplate(template.id)}
+                />
+                <div>
+                  <div class="text-sm font-semibold">{template.title}</div>
+                  <div class="text-xs text-muted-foreground">
+                    {template.description}
                   </div>
                 </div>
-              ))}
-            </div>
-          </Show>
-        </div>
+              </label>
+            ))}
+          </div>
+          <div class="mt-4 flex flex-wrap gap-2">
+            <Button onClick={() => void addSteps()} disabled={saving()}>
+              Add selected steps
+            </Button>
+            <Button variant="outline" onClick={() => setSelectedTemplates([])}>
+              Clear selection
+            </Button>
+          </div>
+        </SectionCard>
       </div>
-    </section>
+    </Page>
   );
 }

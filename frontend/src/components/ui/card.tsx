@@ -8,7 +8,7 @@ const Card: Component<ComponentProps<"div">> = (props) => {
   return (
     <div
       class={cn(
-        "rounded-lg border bg-card text-card-foreground shadow-sm",
+        "rounded-[var(--radius-lg)] border bg-card text-card-foreground shadow-card",
         local.class,
       )}
       {...others}

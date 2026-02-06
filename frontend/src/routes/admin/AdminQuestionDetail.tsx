@@ -1,6 +1,15 @@
 import { createEffect, createMemo, createSignal, Show } from "solid-js";
 import { A, useParams } from "@solidjs/router";
 import { Button } from "../../components/ui/button";
+import { Page } from "../../components/ui/page";
+import { SectionCard } from "../../components/ui/section-card";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbSeparator,
+} from "../../components/ui/breadcrumb";
 import {
   TextField,
   TextFieldInput,
@@ -136,20 +145,32 @@ export function AdminQuestionDetail() {
   };
 
   return (
-    <section class="space-y-6">
-      <div class="rounded-2xl border bg-card p-6">
-        <div class="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <h2 class="text-2xl font-semibold">Answer question</h2>
-            <p class="text-sm text-muted-foreground">
-              Review the student question and craft the official answer.
-            </p>
-          </div>
-          <A href="/admin/questions" class="text-sm text-primary underline">
-            Back to questions
-          </A>
-        </div>
-      </div>
+    <Page
+      title="Answer question"
+      subtitle="Review the student question and craft the official answer."
+      breadcrumb={
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink href="/admin">Admin</BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbLink href="/admin/questions">Questions</BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbLink current>Answer</BreadcrumbLink>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+      }
+      actions={
+        <A href="/admin/questions" class="text-sm text-primary underline">
+          Back to questions
+        </A>
+      }
+    >
 
       <Show when={error()}>
         <div class="rounded-2xl border border-error bg-error/10 p-4 text-sm text-error-foreground">
@@ -164,7 +185,7 @@ export function AdminQuestionDetail() {
 
       <Show when={!loading()} fallback={<div class="text-sm">Loading…</div>}>
         <Show when={question()}>
-          <div class="rounded-2xl border bg-card p-6">
+          <SectionCard title="Question">
             <div class="text-xs text-muted-foreground">
               {categoryLookup().get(question()?.categoryId ?? "") ||
                 question()?.categoryId}
@@ -176,10 +197,9 @@ export function AdminQuestionDetail() {
             <div class="mt-4 text-sm text-muted-foreground">
               Status: {question()?.status === "answered" ? "Answered" : "New"}
             </div>
-          </div>
+          </SectionCard>
 
-          <div class="rounded-2xl border bg-card p-6">
-            <h4 class="text-lg font-semibold">Answer</h4>
+          <SectionCard title="Answer">
             <div class="mt-4 grid gap-4">
               <TextField>
                 <TextFieldLabel for="answer-text">Answer text</TextFieldLabel>
@@ -217,11 +237,10 @@ export function AdminQuestionDetail() {
                 Publish this answer to the library
               </label>
             </div>
-          </div>
+          </SectionCard>
 
           <Show when={form().publishToLibrary}>
-            <div class="rounded-2xl border bg-card p-6">
-              <h4 class="text-lg font-semibold">Library entry</h4>
+            <SectionCard title="Library entry">
               <div class="mt-4 grid gap-4">
                 <TextField>
                   <TextFieldLabel for="library-title">Title</TextFieldLabel>
@@ -322,7 +341,7 @@ export function AdminQuestionDetail() {
                   </select>
                 </div>
               </div>
-            </div>
+            </SectionCard>
           </Show>
 
           <div class="flex gap-2">
@@ -335,6 +354,6 @@ export function AdminQuestionDetail() {
           </div>
         </Show>
       </Show>
-    </section>
+    </Page>
   );
 }

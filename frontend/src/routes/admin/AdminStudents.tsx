@@ -1,11 +1,20 @@
 import { createEffect, createSignal, Show } from "solid-js";
 import { A } from "@solidjs/router";
 import { Button } from "../../components/ui/button";
+import { Page } from "../../components/ui/page";
+import { SectionCard } from "../../components/ui/section-card";
 import {
   TextField,
   TextFieldInput,
   TextFieldLabel,
 } from "../../components/ui/text-field";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbSeparator,
+} from "../../components/ui/breadcrumb";
 import { listStudents, type Student } from "../../lib/adminApi";
 
 export function AdminStudents() {
@@ -38,13 +47,23 @@ export function AdminStudents() {
   });
 
   return (
-    <section class="space-y-6">
-      <div class="rounded-2xl border bg-card p-6">
-        <h2 class="text-2xl font-semibold">Students</h2>
-        <p class="text-sm text-muted-foreground">
-          Select a student to manage their plan.
-        </p>
-      </div>
+    <Page
+      title="Students"
+      subtitle="Select a student to manage their plan."
+      breadcrumb={
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink href="/admin">Admin</BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbLink current>Students</BreadcrumbLink>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+      }
+    >
 
       <Show when={error()}>
         <div class="rounded-2xl border border-error bg-error/10 p-4 text-sm text-error-foreground">
@@ -52,21 +71,23 @@ export function AdminStudents() {
         </div>
       </Show>
 
-      <div class="rounded-2xl border bg-card p-6">
-        <div class="flex flex-wrap items-end justify-between gap-4">
-          <TextField class="w-full max-w-sm">
-            <TextFieldLabel for="student-search">Search</TextFieldLabel>
-            <TextFieldInput
-              id="student-search"
-              value={query()}
-              placeholder="Search by name or email"
-              onInput={(e) => setQuery(e.currentTarget.value)}
-            />
-          </TextField>
+      <SectionCard
+        title="Directory"
+        actions={
           <Button onClick={() => void load()} variant="outline">
             Refresh
           </Button>
-        </div>
+        }
+      >
+        <TextField class="w-full max-w-sm">
+          <TextFieldLabel for="student-search">Search</TextFieldLabel>
+          <TextFieldInput
+            id="student-search"
+            value={query()}
+            placeholder="Search by name or email"
+            onInput={(e) => setQuery(e.currentTarget.value)}
+          />
+        </TextField>
 
         <Show
           when={!loading()}
@@ -138,7 +159,7 @@ export function AdminStudents() {
             </div>
           </div>
         </Show>
-      </div>
-    </section>
+      </SectionCard>
+    </Page>
   );
 }

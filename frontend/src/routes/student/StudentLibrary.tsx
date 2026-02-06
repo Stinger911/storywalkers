@@ -1,6 +1,6 @@
 import { createEffect, createMemo, createSignal, Show } from 'solid-js'
 import { A } from '@solidjs/router'
-import { Button } from '../../components/ui/button'
+import { Button, buttonVariants } from '../../components/ui/button'
 import {
   TextField,
   TextFieldInput,
@@ -8,6 +8,9 @@ import {
 } from '../../components/ui/text-field'
 import { listCategories, type Category } from '../../lib/adminApi'
 import { listLibrary, type LibraryEntrySummary } from '../../lib/libraryApi'
+import { Illustration } from '../../components/ui/illustration'
+import { SectionCard } from '../../components/ui/section-card'
+import { SmallStatBadge } from '../../components/ui/small-stat-badge'
 
 export function StudentLibrary() {
   const [items, setItems] = createSignal<LibraryEntrySummary[]>([])
@@ -52,21 +55,37 @@ export function StudentLibrary() {
     void load()
   })
 
+  const formatDate = (value?: unknown) => {
+    if (!value) return ''
+    const maybe = value as { toDate?: () => Date }
+    if (maybe?.toDate) return maybe.toDate().toLocaleDateString()
+    if (typeof value === 'string' || typeof value === 'number') {
+      const date = new Date(value)
+      if (!Number.isNaN(date.getTime())) return date.toLocaleDateString()
+    }
+    return ''
+  }
+
   return (
     <section class="space-y-6">
-      <div class="rounded-2xl border bg-card p-6">
-        <div class="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <h2 class="text-2xl font-semibold">Library</h2>
-            <p class="text-sm text-muted-foreground">
-              Browse published tips from the expert team.
-            </p>
-          </div>
-          <Button variant="outline" onClick={() => void load()}>
-            Refresh
-          </Button>
-        </div>
-        <div class="mt-4 grid gap-4 md:grid-cols-2">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <h2 class="text-2xl font-semibold">Library</h2>
+        <Button variant="outline" onClick={() => void load()}>
+          Refresh
+        </Button>
+      </div>
+
+      <SectionCard title="Filters" description="Search by topic or category.">
+        <div class="grid gap-4 lg:grid-cols-[1.2fr_240px_auto] lg:items-end">
+          <TextField>
+            <TextFieldLabel for="library-search">Search</TextFieldLabel>
+            <TextFieldInput
+              id="library-search"
+              value={filters().q}
+              onInput={(e) => setFilters({ ...filters(), q: e.currentTarget.value })}
+              placeholder="Noise reduction, lighting, etc."
+            />
+          </TextField>
           <div class="grid gap-2">
             <label class="text-sm font-medium" for="library-category">
               Category
@@ -85,18 +104,14 @@ export function StudentLibrary() {
               ))}
             </select>
           </div>
-          <TextField>
-            <TextFieldLabel for="library-search">Search</TextFieldLabel>
-            <TextFieldInput
-              id="library-search"
-              value={filters().q}
-              onInput={(e) => setFilters({ ...filters(), q: e.currentTarget.value })}
-              placeholder="Noise reduction, lighting, etc."
-            />
-          </TextField>
+          <Button onClick={() => void load()}>Apply</Button>
         </div>
-        <div class="mt-4 flex gap-2">
-          <Button onClick={() => void load()}>Apply filters</Button>
+        <div class="mt-4 flex flex-wrap gap-2">
+          <Show when={filters().categoryId}>
+            <SmallStatBadge class="bg-card">
+              {categoryLookup().get(filters().categoryId) || filters().categoryId}
+            </SmallStatBadge>
+          </Show>
           <Button
             variant="outline"
             onClick={() => setFilters({ categoryId: '', q: '' })}
@@ -104,32 +119,49 @@ export function StudentLibrary() {
             Clear
           </Button>
         </div>
-      </div>
+      </SectionCard>
 
       <Show when={error()}>
-        <div class="rounded-2xl border border-error bg-error/10 p-4 text-sm text-error-foreground">
+        <div class="rounded-[var(--radius-md)] border border-error/40 bg-error/10 px-4 py-3 text-sm text-error-foreground">
           {error()}
         </div>
       </Show>
 
-      <div class="rounded-2xl border bg-card p-6">
+      <SectionCard title="Entries">
         <Show when={!loading()} fallback={<div class="text-sm">Loading…</div>}>
-          <div class="grid gap-3">
+          <div class="grid gap-3 md:grid-cols-2">
             {items().map((entry) => (
-              <div class="rounded-xl border p-4">
-                <div class="flex flex-wrap items-start justify-between gap-4">
-                  <div>
+              <div class="rounded-[var(--radius-md)] border border-border/70 bg-card p-4 shadow-rail">
+                <div class="flex items-start gap-4">
+                  <Illustration
+                    src="/illustrations/goal-thumb.svg"
+                    alt="Entry thumbnail"
+                    class="h-14 w-14"
+                  />
+                  <div class="min-w-0 flex-1">
                     <div class="text-xs text-muted-foreground">
                       {categoryLookup().get(entry.categoryId) || entry.categoryId}
                     </div>
-                    <div class="text-base font-semibold">{entry.title}</div>
+                    <div class="truncate text-sm font-semibold">{entry.title}</div>
+                    <div class="mt-1 truncate text-xs text-muted-foreground">
+                      {(categoryLookup().get(entry.categoryId) || entry.categoryId) +
+                        (entry.status ? ` · ${entry.status}` : "")}
+                    </div>
+                    <div class="mt-1 text-xs text-muted-foreground">
+                      Updated {formatDate(entry.updatedAt || entry.createdAt)}
+                    </div>
+                    <div class="mt-3 flex items-center justify-between">
+                      <A
+                        href={`/student/library/${entry.id}`}
+                        class={buttonVariants({ size: 'sm' })}
+                      >
+                        Open
+                      </A>
+                      <span class="text-xs text-muted-foreground">
+                        View
+                      </span>
+                    </div>
                   </div>
-                  <A
-                    href={`/student/library/${entry.id}`}
-                    class="text-sm font-medium text-primary underline"
-                  >
-                    View
-                  </A>
                 </div>
               </div>
             ))}
@@ -140,7 +172,7 @@ export function StudentLibrary() {
             </div>
           </Show>
         </Show>
-      </div>
+      </SectionCard>
     </section>
   )
 }

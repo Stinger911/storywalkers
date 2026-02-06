@@ -1,25 +1,26 @@
 import path from 'path'
-import { defineConfig, loadEnv } from 'vite'
+import { loadEnv } from 'vite'
+import { defineConfig } from 'vitest/config'
 import solid from 'vite-plugin-solid'
 
 export default ({ mode }: { mode: string }) => {
   const env = { ...process.env, ...loadEnv(mode, process.cwd(), "") };
 
   const PROXY_TARGET = env.PROXY_TARGET || "https://storywalkers-b4fdf.firebaseapp.com/";
-return defineConfig({
-  plugins: [solid()],
-  test: {
-    environment: "jsdom",
-    setupFiles: "src/setupTests.ts",
-    globals: true,
-    include: ["tests/**/*.test.ts", "tests/**/*.test.tsx"],
-  },
-  server: {
-    proxy: {
-      '/api': {
-        target: PROXY_TARGET,
-        changeOrigin: true,
-        secure: false,
+  return defineConfig({
+    plugins: [solid()],
+    test: {
+      environment: "jsdom",
+      setupFiles: "src/setupTests.ts",
+      globals: true,
+      include: ["tests/**/*.test.ts", "tests/**/*.test.tsx"],
+    },
+    server: {
+      proxy: {
+        '/api': {
+          target: PROXY_TARGET,
+          changeOrigin: true,
+          secure: false,
           headers: {
             "Content-Type": "application/json",
           },
@@ -31,13 +32,13 @@ return defineConfig({
               console.log("Received Response from the Target:", proxyRes.statusCode, req.url);
             });
           },
-          }
+        }
+      }
+    },
+    resolve: {
+      alias: {
+        "~": path.resolve(__dirname, "./src")
+      }
     }
-  },
-  resolve: {
-    alias: {
-      "~": path.resolve(__dirname, "./src")
-    }
-  }
-})
+  })
 }
