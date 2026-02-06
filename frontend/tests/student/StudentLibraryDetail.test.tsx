@@ -2,6 +2,7 @@ import { render, screen, waitFor } from "@solidjs/testing-library";
 import { vi } from "vitest";
 
 import { StudentLibraryDetail } from "../../src/routes/student/StudentLibraryDetail";
+import { I18nProvider } from "../../src/lib/i18n";
 import { getLibraryEntry } from "../../src/lib/libraryApi";
 
 vi.mock("@solidjs/router", () => ({
@@ -29,7 +30,11 @@ describe("StudentLibraryDetail", () => {
       content: "Use a high-pass filter.",
     });
 
-    render(() => <StudentLibraryDetail />);
+    render(() => (
+      <I18nProvider>
+        <StudentLibraryDetail />
+      </I18nProvider>
+    ));
     expect(await screen.findByText("Library entry")).toBeInTheDocument();
     await waitFor(() => {
       expect(screen.getByText("Noise reduction tips")).toBeInTheDocument();

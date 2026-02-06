@@ -2,6 +2,7 @@ import { render, screen, waitFor } from "@solidjs/testing-library";
 import { vi } from "vitest";
 
 import { StudentQuestions } from "../../src/routes/student/StudentQuestions";
+import { I18nProvider } from "../../src/lib/i18n";
 import { listCategories } from "../../src/lib/adminApi";
 import { listQuestions } from "../../src/lib/questionsApi";
 
@@ -37,7 +38,11 @@ describe("StudentQuestions", () => {
   });
 
   it("renders questions list", async () => {
-    render(() => <StudentQuestions />);
+    render(() => (
+      <I18nProvider>
+        <StudentQuestions />
+      </I18nProvider>
+    ));
     expect(await screen.findByText("My Questions")).toBeInTheDocument();
     await waitFor(() => {
       expect(screen.getByText("How to trim?")).toBeInTheDocument();

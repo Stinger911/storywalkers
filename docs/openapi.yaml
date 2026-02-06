@@ -178,6 +178,23 @@ components:
         goalId:
           type: string
           example: goal_video_editor
+        resetStepsFromGoalTemplate:
+          type: boolean
+          default: false
+          description: "If true, replace plan steps using the goal's template steps."
+        confirm:
+          type: string
+          description: "Required when resetStepsFromGoalTemplate=true. Must be RESET_STEPS."
+      allOf:
+        - if:
+            properties:
+              resetStepsFromGoalTemplate:
+                const: true
+          then:
+            required: [confirm]
+            properties:
+              confirm:
+                enum: ["RESET_STEPS"]
 
     BulkAddStepsRequest:
       type: object
@@ -427,6 +444,101 @@ components:
           type: string
           format: date-time
           nullable: true
+
+    GoalTemplateStep:
+      type: object
+      required: [id, goalId, title, description, materialUrl, order]
+      properties:
+        id:
+          type: string
+          example: tmpl_step_001
+        goalId:
+          type: string
+          example: goal_video_editor
+        title:
+          type: string
+          example: Learn basic cuts
+        description:
+          type: string
+          example: Watch lesson and practice
+        materialUrl:
+          type: string
+          format: uri
+          example: https://example.com/lesson
+        order:
+          type: integer
+          example: 0
+        createdAt:
+          type: string
+          format: date-time
+          nullable: true
+        updatedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    UpsertGoalTemplateStepsRequest:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          minItems: 0
+          items:
+            type: object
+            required: [title, description, materialUrl, order]
+            properties:
+              id:
+                type: string
+                nullable: true
+                description: "If provided, update existing template step; if null/omitted, create."
+              title:
+                type: string
+              description:
+                type: string
+              materialUrl:
+                type: string
+                format: uri
+              order:
+                type: integer
+
+    GoalTemplateStepsResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/GoalTemplateStep"
+
+    PreviewResetFromGoalRequest:
+      type: object
+      required: [goalId]
+      properties:
+        goalId:
+          type: string
+        resetStepsFromGoalTemplate:
+          type: boolean
+          default: true
+        confirm:
+          type: string
+          description: "If present, must be RESET_STEPS."
+
+    PreviewResetFromGoalResponse:
+      type: object
+      required: [existingSteps, willCreateSteps, willLoseProgressStepsDone, sampleTitles]
+      properties:
+        existingSteps:
+          type: integer
+        willCreateSteps:
+          type: integer
+        willLoseProgressStepsDone:
+          type: integer
+        sampleTitles:
+          type: array
+          items:
+            type: string
+          maxItems: 5
 
     StepTemplatesListResponse:
       type: object
@@ -931,6 +1043,39 @@ paths:
         "400":
           $ref: "#/components/responses/ValidationError"
 
+  /admin/students/{uid}/plan/preview-reset-from-goal:
+    post:
+      tags: [Admin - Students]
+      summary: Preview resetting plan steps from goal template
+      operationId: adminPreviewResetPlanFromGoal
+      parameters:
+        - in: path
+          name: uid
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PreviewResetFromGoalRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PreviewResetFromGoalResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+
   /admin/students/{uid}/plan/steps:
     post:
       tags: [Admin - Students]
@@ -1176,6 +1321,60 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+
+  /admin/goals/{id}/template-steps:
+    get:
+      tags: [Admin - Goals]
+      summary: List goal template steps
+      operationId: adminListGoalTemplateSteps
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GoalTemplateStepsResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    put:
+      tags: [Admin - Goals]
+      summary: Replace goal template steps (bulk)
+      operationId: adminReplaceGoalTemplateSteps
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpsertGoalTemplateStepsRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GoalTemplateStepsResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "400":
+          $ref: "#/components/responses/ValidationError"
 
   /admin/step-templates:
     get:

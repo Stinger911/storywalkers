@@ -8,6 +8,7 @@ from app.auth.deps import require_staff
 from app.auth.firebase import get_or_create_user
 from app.core.errors import AppError
 from app.db.firestore import get_firestore_client
+from app.services.goal_template_steps import list_steps
 
 router = APIRouter(prefix="/api/admin", tags=["Admin - Students"])
 
@@ -25,6 +26,12 @@ class PatchStudentRequest(BaseModel):
 
 
 class AssignPlanRequest(BaseModel):
+    goalId: str
+    resetStepsFromGoalTemplate: bool = False
+    confirm: str | None = None
+
+
+class PreviewResetFromGoalRequest(BaseModel):
     goalId: str
 
 
@@ -56,6 +63,11 @@ def _doc_or_404(doc_ref: firestore.DocumentReference) -> dict[str, Any]:
     data = snap.to_dict() or {}
     data["id"] = snap.id
     return data
+
+
+def _ensure_user_exists(db: firestore.Client, uid: str) -> None:
+    doc_ref = db.collection("users").document(uid)
+    _doc_or_404(doc_ref)
 
 
 @router.get("/students")
@@ -149,6 +161,13 @@ async def update_student(
             message="Invalid role",
             status_code=400,
         )
+    status = updates.get("status")
+    if status and status not in {"active", "disabled"}:
+        raise AppError(
+            code="validation_error",
+            message="Invalid status",
+            status_code=400,
+        )
     updates["updatedAt"] = firestore.SERVER_TIMESTAMP
     doc_ref.update(updates)
     data = _doc_or_404(doc_ref)
@@ -163,40 +182,138 @@ async def assign_plan(
     user: dict = Depends(require_staff),
 ):
     db = get_firestore_client()
-    user_ref = db.collection("users").document(uid)
-    _doc_or_404(user_ref)
+    _ensure_user_exists(db, uid)
 
     plan_ref = db.collection("student_plans").document(uid)
     snap = plan_ref.get()
     now = firestore.SERVER_TIMESTAMP
-    if snap.exists:
-        existing = snap.to_dict() or {}
-        created_at = existing.get("createdAt", now)
-        plan_ref.set(
-            {
-                "studentUid": uid,
-                "goalId": payload.goalId,
-                "createdAt": created_at,
-                "updatedAt": now,
-            }
-        )
-    else:
-        plan_ref.set(
-            {
-                "studentUid": uid,
-                "goalId": payload.goalId,
+    reset = bool(payload.resetStepsFromGoalTemplate)
+
+    if reset:
+        if payload.confirm != "RESET_STEPS":
+            raise AppError(
+                code="validation_error",
+                message="confirm must be RESET_STEPS",
+                status_code=400,
+            )
+        goal_ref = db.collection("goals").document(payload.goalId)
+        goal_snap = goal_ref.get()
+        if not goal_snap.exists:
+            raise AppError(code="not_found", message="Goal not found", status_code=404)
+        goal_data = goal_snap.to_dict() or {}
+
+        template_steps = list_steps(db, payload.goalId)
+        steps_ref = plan_ref.collection("steps")
+        existing_steps = list(steps_ref.stream())
+
+        total_ops = len(existing_steps) + len(template_steps) + 1
+        if total_ops > 500:
+            raise AppError(
+                code="validation_error",
+                message="Too many steps to reset in a single request",
+                status_code=400,
+            )
+
+        created_at = (snap.to_dict() or {}).get("createdAt", now) if snap.exists else now
+        source_version = goal_data.get("updatedAt") or now
+
+        plan_data = {
+            "studentUid": uid,
+            "goalId": payload.goalId,
+            "createdAt": created_at,
+            "updatedAt": now,
+            "lastResetAt": now,
+            "lastResetBy": user.get("uid"),
+            "sourceGoalTemplateVersion": source_version,
+        }
+
+        batch = db.batch()
+        batch.set(plan_ref, plan_data)
+        for snap in existing_steps:
+            batch.delete(snap.reference)
+        for order, step in enumerate(template_steps):
+            step_doc = steps_ref.document()
+            data = {
+                "templateId": None,
+                "title": step.get("title"),
+                "description": step.get("description"),
+                "materialUrl": step.get("materialUrl"),
+                "order": order,
+                "isDone": False,
+                "doneAt": None,
                 "createdAt": now,
                 "updatedAt": now,
             }
-        )
+            batch.set(step_doc, data)
+        batch.commit()
 
-    plan = _doc_or_404(plan_ref)
+        plan = _doc_or_404(plan_ref)
+    else:
+        if snap.exists:
+            existing = snap.to_dict() or {}
+            created_at = existing.get("createdAt", now)
+            plan_ref.set(
+                {
+                    "studentUid": uid,
+                    "goalId": payload.goalId,
+                    "createdAt": created_at,
+                    "updatedAt": now,
+                }
+            )
+        else:
+            plan_ref.set(
+                {
+                    "studentUid": uid,
+                    "goalId": payload.goalId,
+                    "createdAt": now,
+                    "updatedAt": now,
+                }
+            )
+
+        plan = _doc_or_404(plan_ref)
+
     return {
         "planId": uid,
         "studentUid": uid,
         "goalId": plan.get("goalId"),
         "createdAt": plan.get("createdAt"),
         "updatedAt": plan.get("updatedAt"),
+    }
+
+
+@router.post("/students/{uid}/plan/preview-reset-from-goal")
+async def preview_reset_from_goal(
+    uid: str,
+    payload: PreviewResetFromGoalRequest,
+    user: dict = Depends(require_staff),
+):
+    db = get_firestore_client()
+    _ensure_user_exists(db, uid)
+
+    template_steps = list_steps(db, payload.goalId)
+    plan_ref = db.collection("student_plans").document(uid)
+    plan_snap = plan_ref.get()
+
+    existing_total = 0
+    done_total = 0
+    if plan_snap.exists:
+        steps_ref = plan_ref.collection("steps")
+        for snap in steps_ref.stream():
+            existing_total += 1
+            if (snap.to_dict() or {}).get("isDone"):
+                done_total += 1
+
+    sample_titles = [
+        step.get("title", "")
+        for step in template_steps[:5]
+        if step.get("title")
+    ]
+
+    return {
+        "existingSteps": existing_total,
+        "willCreateSteps": len(template_steps),
+        "willLoseProgressStepsDone": done_total,
+        "sampleTitles": sample_titles,
     }
 
 

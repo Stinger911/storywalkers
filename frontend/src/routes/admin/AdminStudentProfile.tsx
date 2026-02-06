@@ -17,6 +17,14 @@ import {
   SelectValue,
 } from "../../components/ui/select";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "../../components/ui/dialog";
+import {
   Breadcrumb,
   BreadcrumbItem,
   BreadcrumbLink,
@@ -28,6 +36,7 @@ import {
 //   TextFieldInput,
 //   TextFieldLabel,
 // } from "../../components/ui/text-field";
+import { TextField, TextFieldInput, TextFieldLabel } from "../../components/ui/text-field";
 import {
   assignPlan,
   bulkAddSteps,
@@ -36,6 +45,7 @@ import {
   getStudentPlanSteps,
   listGoals,
   listStepTemplates,
+  previewResetFromGoal,
   reorderSteps,
   updateStudent,
   type Goal,
@@ -86,6 +96,18 @@ export function AdminStudentProfile() {
   const [saving, setSaving] = createSignal(false);
   const [savingProfile, setSavingProfile] = createSignal(false);
   const [roleDraft, setRoleDraft] = createSignal("student");
+  const [statusDraft, setStatusDraft] = createSignal("active");
+  const [previewOpen, setPreviewOpen] = createSignal(false);
+  const [previewLoading, setPreviewLoading] = createSignal(false);
+  const [previewData, setPreviewData] = createSignal<{
+    existingSteps: number;
+    willCreateSteps: number;
+    willLoseProgressStepsDone: number;
+    sampleTitles: string[];
+  } | null>(null);
+  const [previewError, setPreviewError] = createSignal<string | null>(null);
+  const [previewConfirm, setPreviewConfirm] = createSignal("");
+  const [previewAcknowledge, setPreviewAcknowledge] = createSignal(false);
 
   const load = async () => {
     setLoading(true);
@@ -132,6 +154,11 @@ export function AdminStudentProfile() {
   });
 
   createEffect(() => {
+    const currentStatus = student()?.status || "active";
+    setStatusDraft(currentStatus);
+  });
+
+  createEffect(() => {
     const load = async () => {
       try {
         const [goalData, templateData] = await Promise.all([
@@ -159,6 +186,10 @@ export function AdminStudentProfile() {
     { value: "expert", label: "Expert" },
     { value: "admin", label: "Admin" },
   ];
+  const statusOptions: SelectOption[] = [
+    { value: "active", label: "Active" },
+    { value: "disabled", label: "Disabled" },
+  ];
   const goalOptions = createMemo<SelectOption[]>(() => [
     { value: "", label: "Select goal" },
     ...goals().map((goal) => ({
@@ -168,6 +199,9 @@ export function AdminStudentProfile() {
   ]);
   const selectedRoleOption = createMemo(() =>
     roleOptions.find((option) => option.value === roleDraft()) ?? null,
+  );
+  const selectedStatusOption = createMemo(() =>
+    statusOptions.find((option) => option.value === statusDraft()) ?? null,
   );
   const selectedGoalOption = createMemo(() =>
     goalOptions().find((option) => option.value === goalId()) ?? null,
@@ -194,6 +228,48 @@ export function AdminStudentProfile() {
       await load();
     } catch (err) {
       setError((err as Error).message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const openResetPreview = async () => {
+    if (!goalId()) {
+      setError("Select a goal first.");
+      return;
+    }
+    setPreviewLoading(true);
+    setPreviewError(null);
+    try {
+      const data = await previewResetFromGoal(uid(), goalId());
+      setPreviewData(data);
+      setPreviewConfirm("");
+      setPreviewAcknowledge(false);
+      setPreviewOpen(true);
+    } catch (err) {
+      setPreviewError((err as Error).message);
+      setPreviewOpen(true);
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
+
+  const confirmReset = async () => {
+    if (!goalId()) {
+      setPreviewError("Select a goal first.");
+      return;
+    }
+    setSaving(true);
+    setPreviewError(null);
+    try {
+      await assignPlan(uid(), goalId(), {
+        resetStepsFromGoalTemplate: true,
+        confirm: "RESET_STEPS",
+      });
+      setPreviewOpen(false);
+      await load();
+    } catch (err) {
+      setPreviewError((err as Error).message);
     } finally {
       setSaving(false);
     }
@@ -245,7 +321,7 @@ export function AdminStudentProfile() {
     setSavingProfile(true);
     setError(null);
     try {
-      await updateStudent(uid(), { role: roleDraft() });
+      await updateStudent(uid(), { role: roleDraft(), status: statusDraft() });
       await load();
     } catch (err) {
       setError((err as Error).message);
@@ -359,43 +435,87 @@ export function AdminStudentProfile() {
       <div class="space-y-6">
         <SectionCard title="Access">
           <div class="grid gap-4">
-            <div class="grid gap-2">
-              <Select
-                value={selectedRoleOption()}
-                onChange={(value) =>
-                  setRoleDraft((value as SelectOption | null)?.value ?? "student")
-                }
-                options={roleOptions}
-                optionValue={(option) =>
-                  (option as unknown as SelectOption).value
-                }
-                optionTextValue={(option) =>
-                  (option as unknown as SelectOption).label
-                }
-                itemComponent={(props) => (
-                  <SelectItem item={props.item}>
-                    {
-                      (props.item.rawValue as unknown as { label: string })
-                        .label
-                    }
-                  </SelectItem>
-                )}
-              >
-                <SelectLabel for="role-select">Role</SelectLabel>
-                <SelectHiddenSelect id="role-select" />
-                <SelectTrigger aria-label="Role">
-                  <SelectValue<string>>
-                    {(state) =>
-                      (
-                        (state?.selectedOption() || {}) as unknown as {
-                          label: string;
-                        }
-                      ).label ?? "Select role"
-                    }
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent />
-              </Select>
+            <div class="grid gap-4 md:grid-cols-2">
+              <div class="grid gap-2">
+                <Select
+                  value={selectedRoleOption()}
+                  onChange={(value) =>
+                    setRoleDraft(
+                      (value as SelectOption | null)?.value ?? "student",
+                    )
+                  }
+                  options={roleOptions}
+                  optionValue={(option) =>
+                    (option as unknown as SelectOption).value
+                  }
+                  optionTextValue={(option) =>
+                    (option as unknown as SelectOption).label
+                  }
+                  itemComponent={(props) => (
+                    <SelectItem item={props.item}>
+                      {
+                        (props.item.rawValue as unknown as { label: string })
+                          .label
+                      }
+                    </SelectItem>
+                  )}
+                >
+                  <SelectLabel for="role-select">Role</SelectLabel>
+                  <SelectHiddenSelect id="role-select" />
+                  <SelectTrigger aria-label="Role">
+                    <SelectValue<string>>
+                      {(state) =>
+                        (
+                          (state?.selectedOption() || {}) as unknown as {
+                            label: string;
+                          }
+                        ).label ?? "Select role"
+                      }
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent />
+                </Select>
+              </div>
+              <div class="grid gap-2">
+                <Select
+                  value={selectedStatusOption()}
+                  onChange={(value) =>
+                    setStatusDraft(
+                      (value as SelectOption | null)?.value ?? "active",
+                    )
+                  }
+                  options={statusOptions}
+                  optionValue={(option) =>
+                    (option as unknown as SelectOption).value
+                  }
+                  optionTextValue={(option) =>
+                    (option as unknown as SelectOption).label
+                  }
+                  itemComponent={(props) => (
+                    <SelectItem item={props.item}>
+                      {
+                        (props.item.rawValue as unknown as { label: string })
+                          .label
+                      }
+                    </SelectItem>
+                  )}
+                >
+                  <SelectLabel for="status-select">Status</SelectLabel>
+                  <SelectHiddenSelect id="status-select" />
+                  <SelectTrigger aria-label="Status">
+                    <SelectValue<string>>
+                      {(state) =>
+                        (
+                          (state?.selectedOption() || {}) as unknown as {
+                            label: string;
+                          }
+                        ).label ?? "Select status"
+                      }
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent />
+                </Select>
+              </div>
             </div>
             <Button
               onClick={() => void saveProfile()}
@@ -457,6 +577,13 @@ export function AdminStudentProfile() {
             <Button onClick={() => void saveGoal()} disabled={saving()}>
               Save goal
             </Button>
+            <Button
+              variant="destructive"
+              onClick={() => void openResetPreview()}
+              disabled={saving() || previewLoading()}
+            >
+              Assign goal + Replace steps from template
+            </Button>
           </div>
         </SectionCard>
 
@@ -488,6 +615,88 @@ export function AdminStudentProfile() {
           </div>
         </SectionCard>
       </div>
+
+      <Dialog open={previewOpen()} onOpenChange={setPreviewOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Replace steps from template?</DialogTitle>
+            <DialogDescription>
+              Review the impact before resetting the student plan steps.
+            </DialogDescription>
+          </DialogHeader>
+
+          <Show when={previewLoading()}>
+            <div class="text-sm text-muted-foreground">Loading preview…</div>
+          </Show>
+
+          <Show when={previewError()}>
+            <div class="rounded-xl border border-error bg-error/10 p-3 text-sm text-error-foreground">
+              {previewError()}
+            </div>
+          </Show>
+
+          <Show when={previewData()}>
+            <div class="space-y-3 text-sm">
+              <div class="rounded-lg border border-error/30 bg-error/10 p-3 text-error-foreground">
+                This will delete {previewData()!.existingSteps} steps including{" "}
+                {previewData()!.willLoseProgressStepsDone} done. Irreversible.
+              </div>
+              <Show when={previewData()!.sampleTitles.length > 0}>
+                <div class="rounded-lg border p-3">
+                  <div class="text-xs font-semibold uppercase text-muted-foreground">
+                    Sample template steps
+                  </div>
+                  <ul class="mt-2 list-disc space-y-1 pl-5 text-sm">
+                    {previewData()!.sampleTitles.map((title) => (
+                      <li>{title}</li>
+                    ))}
+                  </ul>
+                </div>
+              </Show>
+              <label class="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={previewAcknowledge()}
+                  onChange={(event) =>
+                    setPreviewAcknowledge(event.currentTarget.checked)
+                  }
+                  data-testid="reset-acknowledge"
+                />
+                I understand
+              </label>
+              <TextField>
+                <TextFieldLabel for="reset-confirm">Type RESET_STEPS</TextFieldLabel>
+                <TextFieldInput
+                  id="reset-confirm"
+                  value={previewConfirm()}
+                  onInput={(event) => setPreviewConfirm(event.currentTarget.value)}
+                  placeholder="RESET_STEPS"
+                  data-testid="reset-confirm-input"
+                />
+              </TextField>
+            </div>
+          </Show>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPreviewOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => void confirmReset()}
+              disabled={
+                saving() ||
+                previewLoading() ||
+                !previewAcknowledge() ||
+                previewConfirm() !== "RESET_STEPS"
+              }
+              data-testid="reset-confirm-button"
+            >
+              Confirm reset
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Page>
   );
 }

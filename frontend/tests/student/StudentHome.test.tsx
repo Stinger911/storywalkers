@@ -2,6 +2,7 @@ import { render, screen } from "@solidjs/testing-library";
 import { vi } from "vitest";
 
 import { StudentHome } from "../../src/routes/student/StudentHome";
+import { I18nProvider } from "../../src/lib/i18n";
 import { useMe } from "../../src/lib/useMe";
 import { useMyPlan } from "../../src/routes/student/studentPlanContext";
 
@@ -36,7 +37,11 @@ describe("StudentHome", () => {
   });
 
   it("renders greeting and steps", () => {
-    render(() => <StudentHome />);
+    render(() => (
+      <I18nProvider>
+        <StudentHome />
+      </I18nProvider>
+    ));
     expect(screen.getByText("Hi, Alex!")).toBeInTheDocument();
     expect(screen.getByText("Student Dashboard")).toBeInTheDocument();
     expect(screen.getByText("Import footage")).toBeInTheDocument();
@@ -53,7 +58,11 @@ describe("StudentHome", () => {
       markStepDone: vi.fn(),
       openMaterial: vi.fn(),
     });
-    render(() => <StudentHome />);
+    render(() => (
+      <I18nProvider>
+        <StudentHome />
+      </I18nProvider>
+    ));
     expect(screen.getByText("No goal assigned")).toBeInTheDocument();
   });
 });

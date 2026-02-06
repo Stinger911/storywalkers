@@ -75,7 +75,27 @@ Learning goals admins can assign to students.
 
 ---
 
-### 4) `step_templates/{templateId}`
+### 4) `goals/{goalId}/template_steps/{templateStepId}`
+
+Goal-specific template steps (ordered, used to seed student plans).
+
+**Fields**
+
+- `title`: `string`
+- `description`: `string`
+- `materialUrl`: `string` (URL)
+- `order`: `number` (integer, 0..N; used for sorting)
+- `createdAt`: `timestamp`
+- `updatedAt`: `timestamp`
+
+**Notes**
+
+- Stored as a subcollection under the goal for versioned templates.
+- Ordering is based on `order ASC`.
+
+---
+
+### 5) `step_templates/{templateId}`
 
 Reusable templates for plan steps.
 
@@ -99,7 +119,7 @@ Reusable templates for plan steps.
 
 ## Student plan model (core)
 
-### 5) `student_plans/{uid}`
+### 6) `student_plans/{uid}`
 
 Plan assigned to a specific student.
 
@@ -109,6 +129,9 @@ Plan assigned to a specific student.
 
 - `studentUid`: `string` (must equal doc id; kept for queries/debug)
 - `goalId`: `string` (logical FK to `goals/{goalId}`)
+- `lastResetAt`: `timestamp | null` (optional)
+- `lastResetBy`: `string | null` (optional, staff uid)
+- `sourceGoalTemplateVersion`: `string | number | null` (optional)
 - `createdAt`: `timestamp`
 - `updatedAt`: `timestamp`
 
@@ -119,7 +142,7 @@ Plan assigned to a specific student.
 
 ---
 
-### 6) `student_plans/{uid}/steps/{stepId}`
+### 7) `student_plans/{uid}/steps/{stepId}`
 
 Individual steps inside a student plan (copied from templates, but can be customized).
 
@@ -149,7 +172,7 @@ Individual steps inside a student plan (copied from templates, but can be custom
 
 ## Q&A
 
-### 7) `questions/{questionId}`
+### 8) `questions/{questionId}`
 
 Student questions with expert answers. Students can only access their own.
 
@@ -181,7 +204,7 @@ Student questions with expert answers. Students can only access their own.
 
 ## Library / Knowledge Base
 
-### 8) `library_entries/{entryId}`
+### 9) `library_entries/{entryId}`
 
 Published knowledge base entries, optionally derived from a question.
 
@@ -252,6 +275,22 @@ Create these if Firestore asks, or proactively:
 {
   "studentUid": "UID123",
   "goalId": "goal_video_editor",
+  "lastResetAt": "timestamp",
+  "lastResetBy": "admin_uid_1",
+  "sourceGoalTemplateVersion": "v2",
+  "createdAt": "timestamp",
+  "updatedAt": "timestamp"
+}
+```
+
+### `goals/{goalId}/template_steps/{templateStepId}`
+
+```json
+{
+  "title": "Edit interview b-roll",
+  "description": "Practice cutting b-roll to cover jump cuts",
+  "materialUrl": "https://...",
+  "order": 0,
   "createdAt": "timestamp",
   "updatedAt": "timestamp"
 }

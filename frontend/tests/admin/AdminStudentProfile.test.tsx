@@ -8,7 +8,9 @@ import {
   getStudentPlanSteps,
   listGoals,
   listStepTemplates,
+  previewResetFromGoal,
   updateStudent,
+  assignPlan,
 } from "../../src/lib/adminApi";
 
 vi.mock("@solidjs/router", () => ({
@@ -66,6 +68,7 @@ vi.mock("../../src/lib/adminApi", () => ({
   getStudentPlanSteps: vi.fn(),
   listGoals: vi.fn(),
   listStepTemplates: vi.fn(),
+  previewResetFromGoal: vi.fn(),
   reorderSteps: vi.fn(),
   updateStudent: vi.fn(),
 }));
@@ -76,6 +79,8 @@ const getStudentPlanStepsMock = getStudentPlanSteps as unknown as ReturnType<typ
 const listGoalsMock = listGoals as unknown as ReturnType<typeof vi.fn>;
 const listStepTemplatesMock = listStepTemplates as unknown as ReturnType<typeof vi.fn>;
 const updateStudentMock = updateStudent as unknown as ReturnType<typeof vi.fn>;
+const previewResetMock = previewResetFromGoal as unknown as ReturnType<typeof vi.fn>;
+const assignPlanMock = assignPlan as unknown as ReturnType<typeof vi.fn>;
 
 describe("AdminStudentProfile", () => {
   beforeEach(() => {
@@ -85,6 +90,8 @@ describe("AdminStudentProfile", () => {
     listGoalsMock.mockReset();
     listStepTemplatesMock.mockReset();
     updateStudentMock.mockReset();
+    previewResetMock.mockReset();
+    assignPlanMock.mockReset();
   });
 
   it("updates role via access controls", async () => {
@@ -111,7 +118,67 @@ describe("AdminStudentProfile", () => {
     fireEvent.click(saveButton);
 
     await waitFor(() => {
-      expect(updateStudentMock).toHaveBeenCalledWith("u1", { role: "expert" });
+      expect(updateStudentMock).toHaveBeenCalledWith("u1", {
+        role: "expert",
+        status: "active",
+      });
+    });
+  });
+
+  it("previews and confirms reset from goal template", async () => {
+    getStudentMock.mockResolvedValue({
+      uid: "u1",
+      displayName: "Student One",
+      email: "s1@x.com",
+      role: "student",
+    });
+    getStudentPlanMock.mockResolvedValue({ goalId: "" });
+    getStudentPlanStepsMock.mockResolvedValue({ items: [] });
+    listGoalsMock.mockResolvedValue({ items: [{ id: "g1", title: "Goal 1" }] });
+    listStepTemplatesMock.mockResolvedValue({ items: [] });
+    previewResetMock.mockResolvedValue({
+      existingSteps: 3,
+      willCreateSteps: 4,
+      willLoseProgressStepsDone: 1,
+      sampleTitles: ["Step A", "Step B"],
+    });
+    assignPlanMock.mockResolvedValue({ planId: "u1", goalId: "g1" });
+
+    render(() => <AdminStudentProfile />);
+
+    await screen.findByText("Goal 1");
+    const goalSelect = await screen.findByTestId("goal-select");
+    fireEvent.change(goalSelect, { target: { value: "g1" } });
+
+    const resetButton = await screen.findByText(
+      "Assign goal + Replace steps from template",
+    );
+    fireEvent.click(resetButton);
+
+    await waitFor(() => {
+      expect(previewResetMock).toHaveBeenCalledWith("u1", "g1");
+    });
+
+    expect(
+      await screen.findByText(
+        "This will delete 3 steps including 1 done. Irreversible.",
+      ),
+    ).toBeInTheDocument();
+
+    const acknowledge = screen.getByTestId("reset-acknowledge");
+    fireEvent.click(acknowledge);
+
+    const confirmInput = screen.getByTestId("reset-confirm-input");
+    fireEvent.input(confirmInput, { target: { value: "RESET_STEPS" } });
+
+    const confirmButton = screen.getByTestId("reset-confirm-button");
+    fireEvent.click(confirmButton);
+
+    await waitFor(() => {
+      expect(assignPlanMock).toHaveBeenCalledWith("u1", "g1", {
+        resetStepsFromGoalTemplate: true,
+        confirm: "RESET_STEPS",
+      });
     });
   });
 });

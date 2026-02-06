@@ -37,11 +37,15 @@ For MVP, the rules treat `admin` and `expert` as “staff”.
 
    - Staff can read/write all documents in all MVP collections.
 
-4. **Students cannot elevate privilege**
+4. **Thin client writes**
+
+   - Keep client-side writes minimal: student step progress toggles and question creation only.
+
+5. **Students cannot elevate privilege**
 
    - Students cannot write their own `users/{uid}.role` or set themselves to staff.
 
-5. **Server timestamps**
+6. **Server timestamps**
    - Where possible, enforce `createdAt/updatedAt` as server timestamps via backend (preferred).
    - If client writes are allowed (steps toggle), allow only safe fields.
 
@@ -110,7 +114,23 @@ For MVP, the rules treat `admin` and `expert` as “staff”.
 
 ---
 
-## 4) `step_templates/{templateId}`
+## 4) `goals/{goalId}/template_steps/{templateStepId}`
+
+Goal-specific template steps.
+
+### Student access
+
+- Read: ❌ denied
+- Write: ❌ denied
+
+### Staff access
+
+- Read: ✅ allowed
+- Write: ✅ full CRUD
+
+---
+
+## 5) `step_templates/{templateId}`
 
 ### Student access
 
@@ -128,7 +148,7 @@ For MVP, the rules treat `admin` and `expert` as “staff”.
 
 ---
 
-## 5) `student_plans/{uid}`
+## 6) `student_plans/{uid}`
 
 Plan document for the student.
 **Document id equals student uid.**
@@ -154,7 +174,7 @@ Plan document for the student.
 
 ---
 
-## 6) `student_plans/{uid}/steps/{stepId}`
+## 7) `student_plans/{uid}/steps/{stepId}`
 
 Steps are stored as a subcollection under the student plan.
 
@@ -196,7 +216,7 @@ When student updates step:
 
 ---
 
-## 7) `questions/{questionId}`
+## 8) `questions/{questionId}`
 
 ### Student access
 
@@ -233,7 +253,7 @@ When student updates step:
 
 ---
 
-## 8) `library_entries/{entryId}`
+## 9) `library_entries/{entryId}`
 
 ### Student access
 
@@ -260,6 +280,7 @@ When student updates step:
 - `users/{uid}`: read self; limited profile write (no role/status)
 - `categories`: read
 - `goals`: read (recommended)
+- `goals/{goalId}/template_steps`: no access
 - `step_templates`: read (optional)
 - `student_plans/{uid}`: read self; no write
 - `student_plans/{uid}/steps`: read self; update progress only (`isDone`, `doneAt`)

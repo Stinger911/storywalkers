@@ -25,6 +25,14 @@ type StepTemplate = {
   isActive: boolean
 }
 
+type GoalTemplateStep = {
+  id: string
+  title: string
+  description: string
+  materialUrl: string
+  order: number
+}
+
 type Student = {
   uid: string
   email?: string
@@ -41,6 +49,13 @@ type PlanResponse = {
   goalId: string
   createdAt?: unknown
   updatedAt?: unknown
+}
+
+type PreviewResetFromGoalResponse = {
+  existingSteps: number
+  willCreateSteps: number
+  willLoseProgressStepsDone: number
+  sampleTitles: string[]
 }
 
 async function handleJson<T>(response: Response): Promise<T> {
@@ -147,6 +162,22 @@ export async function deleteStepTemplate(id: string) {
   }
 }
 
+export async function listGoalTemplateSteps(goalId: string) {
+  const response = await apiFetch(`/api/admin/goals/${goalId}/template-steps`)
+  return handleJson<ApiList<GoalTemplateStep>>(response)
+}
+
+export async function replaceGoalTemplateSteps(
+  goalId: string,
+  payload: { items: { id?: string | null; title: string; description: string; materialUrl: string; order: number }[] },
+) {
+  const response = await apiFetch(`/api/admin/goals/${goalId}/template-steps`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  })
+  return handleJson<ApiList<GoalTemplateStep>>(response)
+}
+
 export async function listStudents(params?: {
   status?: string
   role?: string
@@ -190,12 +221,27 @@ export async function getStudentPlanSteps(uid: string) {
   )
 }
 
-export async function assignPlan(uid: string, goalId: string) {
+export async function assignPlan(
+  uid: string,
+  goalId: string,
+  options?: { resetStepsFromGoalTemplate?: boolean; confirm?: string },
+) {
   const response = await apiFetch(`/api/admin/students/${uid}/plan`, {
     method: 'POST',
-    body: JSON.stringify({ goalId }),
+    body: JSON.stringify({ goalId, ...(options ?? {}) }),
   })
   return handleJson<PlanResponse>(response)
+}
+
+export async function previewResetFromGoal(uid: string, goalId: string) {
+  const response = await apiFetch(
+    `/api/admin/students/${uid}/plan/preview-reset-from-goal`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ goalId }),
+    },
+  )
+  return handleJson<PreviewResetFromGoalResponse>(response)
 }
 
 export async function bulkAddSteps(

@@ -10,7 +10,7 @@ from app.core.config import get_settings
 from app.core.errors import AppError, error_payload
 from app.core.logging import get_logger, setup_logging
 from app.core.middleware import RequestIdMiddleware, RequestLoggingMiddleware
-from app.routers import admin_settings, admin_students, auth, library, questions
+from app.routers import admin_goals, admin_settings, admin_students, auth, library, questions
 
 setup_logging()
 logger = get_logger("app")
@@ -119,6 +119,7 @@ async def version():
 
 app.include_router(auth.router)
 app.include_router(admin_students.router)
+app.include_router(admin_goals.router)
 app.include_router(admin_settings.router)
 app.include_router(questions.router)
 app.include_router(library.router)

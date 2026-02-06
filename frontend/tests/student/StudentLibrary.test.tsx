@@ -2,6 +2,7 @@ import { render, screen, waitFor } from "@solidjs/testing-library";
 import { vi } from "vitest";
 
 import { StudentLibrary } from "../../src/routes/student/StudentLibrary";
+import { I18nProvider } from "../../src/lib/i18n";
 import { listCategories } from "../../src/lib/adminApi";
 import { listLibrary } from "../../src/lib/libraryApi";
 
@@ -37,7 +38,11 @@ describe("StudentLibrary", () => {
   });
 
   it("renders library entries", async () => {
-    render(() => <StudentLibrary />);
+    render(() => (
+      <I18nProvider>
+        <StudentLibrary />
+      </I18nProvider>
+    ));
     expect(await screen.findByText("Library")).toBeInTheDocument();
     await waitFor(() => {
       expect(screen.getByText("Noise reduction tips")).toBeInTheDocument();

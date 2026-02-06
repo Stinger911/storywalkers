@@ -2,6 +2,7 @@ import { render, screen, waitFor } from "@solidjs/testing-library";
 import { vi } from "vitest";
 
 import { StudentQuestionDetail } from "../../src/routes/student/StudentQuestionDetail";
+import { I18nProvider } from "../../src/lib/i18n";
 import { getQuestion } from "../../src/lib/questionsApi";
 
 vi.mock("@solidjs/router", () => ({
@@ -29,7 +30,11 @@ describe("StudentQuestionDetail", () => {
       answer: { text: "Use the razor tool." },
     });
 
-    render(() => <StudentQuestionDetail />);
+    render(() => (
+      <I18nProvider>
+        <StudentQuestionDetail />
+      </I18nProvider>
+    ));
 
     expect(await screen.findByText("Question detail")).toBeInTheDocument();
     await waitFor(() => {
