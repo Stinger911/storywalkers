@@ -18,9 +18,11 @@ import {
 } from "../../components/ui/select";
 import { listCategories, type Category } from "../../lib/adminApi";
 import { createQuestion } from "../../lib/questionsApi";
+import { useI18n } from "../../lib/i18n";
 
 export function StudentQuestionNew() {
   const navigate = useNavigate();
+  const { t } = useI18n();
   const [categories, setCategories] = createSignal<Category[]>([]);
   const [saving, setSaving] = createSignal(false);
   const [error, setError] = createSignal<string | null>(null);
@@ -47,7 +49,7 @@ export function StudentQuestionNew() {
     try {
       const payload = form();
       if (!payload.categoryId || !payload.title) {
-        throw new Error("Category and title are required.");
+        throw new Error(t("student.questionNew.requiredError"));
       }
       await createQuestion({
         categoryId: payload.categoryId,
@@ -65,13 +67,13 @@ export function StudentQuestionNew() {
   return (
     <section class="space-y-6">
       <div>
-        <h2 class="text-2xl font-semibold">Ask a question</h2>
+        <h2 class="text-2xl font-semibold">{t("student.questionNew.title")}</h2>
         <p class="text-sm text-muted-foreground">
-          Share details so mentors can help quickly.
+          {t("student.questionNew.subtitle")}
         </p>
       </div>
 
-      <SectionCard title="New question">
+      <SectionCard title={t("student.questionNew.cardTitle")}>
         <div class="grid gap-4">
           <div class="grid gap-2">
             <Select
@@ -83,7 +85,7 @@ export function StudentQuestionNew() {
                 setForm({ ...form(), categoryId: value?.id ?? "" })
               }
               options={[
-                { id: "", name: "Select category" },
+                { id: "", name: t("student.questionNew.selectCategory") },
                 ...categories().map((category) => ({
                   id: category.id,
                   name: category.name,
@@ -103,16 +105,16 @@ export function StudentQuestionNew() {
                 </SelectItem>
               )}
             >
-              <SelectLabel for="question-category">Category</SelectLabel>
+              <SelectLabel for="question-category">{t("common.category")}</SelectLabel>
               <SelectHiddenSelect id="question-category" />
-              <SelectTrigger aria-label="Category">
+              <SelectTrigger aria-label={t("common.category")}>
                 <SelectValue<{ id: string; name: string }>>
                   {(state) =>
                     (
                       (state?.selectedOption() || {}) as unknown as {
                         name: string;
                       }
-                    ).name ?? "Select category"
+                    ).name ?? t("student.questionNew.selectCategory")
                   }
                 </SelectValue>
               </SelectTrigger>
@@ -120,33 +122,33 @@ export function StudentQuestionNew() {
             </Select>
           </div>
           <TextField>
-            <TextFieldLabel for="question-title">Title</TextFieldLabel>
+            <TextFieldLabel for="question-title">{t("student.questionNew.titleLabel")}</TextFieldLabel>
             <TextFieldInput
               id="question-title"
               value={form().title}
               onInput={(e) =>
                 setForm({ ...form(), title: e.currentTarget.value })
               }
-              placeholder="How do I remove background noise?"
+              placeholder={t("student.questionNew.titlePlaceholder")}
             />
           </TextField>
           <TextField>
-            <TextFieldLabel for="question-body">Details</TextFieldLabel>
+            <TextFieldLabel for="question-body">{t("student.questionNew.detailsLabel")}</TextFieldLabel>
             <TextFieldInput
               id="question-body"
               value={form().body}
               onInput={(e) =>
                 setForm({ ...form(), body: e.currentTarget.value })
               }
-              placeholder="Explain your context"
+              placeholder={t("student.questionNew.detailsPlaceholder")}
             />
           </TextField>
           <div class="flex flex-wrap gap-2">
             <Button onClick={() => void submit()} disabled={saving()}>
-              Submit question
+              {t("student.questionNew.submit")}
             </Button>
             <Button variant="outline" onClick={() => navigate("/student/questions")}>
-              Cancel
+              {t("student.questionNew.cancel")}
             </Button>
           </div>
         </div>

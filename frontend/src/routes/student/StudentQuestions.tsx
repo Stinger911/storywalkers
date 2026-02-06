@@ -19,27 +19,29 @@ import { listCategories, type Category } from "../../lib/adminApi";
 import { type Question, listQuestions } from "../../lib/questionsApi";
 import { SectionCard } from "../../components/ui/section-card";
 import { SmallStatBadge } from "../../components/ui/small-stat-badge";
+import { useI18n } from "../../lib/i18n";
 
-const statusTabs = [
-  { id: "all", label: "All" },
-  { id: "new", label: "New" },
-  { id: "answered", label: "Answered" },
-] as const;
+type StatusId = "all" | "new" | "answered";
 
 export function StudentQuestions() {
+  const { t, formatDate } = useI18n();
   const [items, setItems] = createSignal<Question[]>([]);
   const [categories, setCategories] = createSignal<Category[]>([]);
   const [loading, setLoading] = createSignal(true);
   const [error, setError] = createSignal<string | null>(null);
   const [search, setSearch] = createSignal("");
   const [categoryId, setCategoryId] = createSignal("");
-  const [status, setStatus] = createSignal<(typeof statusTabs)[number]["id"]>(
-    "all",
-  );
+  const [status, setStatus] = createSignal<StatusId>("all");
+
+  const statusTabs = () => [
+    { id: "all" as const, label: t("student.questions.statusAll") },
+    { id: "new" as const, label: t("student.questions.statusNew") },
+    { id: "answered" as const, label: t("student.questions.statusAnswered") },
+  ];
 
   const categoryLabel = createMemo(() => {
     const match = categories().find((category) => category.id === categoryId());
-    return match?.name ?? "All categories";
+    return match?.name ?? t("common.allCategories");
   });
 
   const load = async () => {
@@ -79,37 +81,31 @@ export function StudentQuestions() {
   });
 
   const categoryName = (id?: string) =>
-    categories().find((category) => category.id === id)?.name ?? id ?? "General";
-
-  const formatDate = (value?: unknown) => {
-    if (!value) return "";
-    const maybe = value as { toDate?: () => Date };
-    if (maybe?.toDate) return maybe.toDate().toLocaleDateString();
-    if (typeof value === "string" || typeof value === "number") {
-      const date = new Date(value);
-      if (!Number.isNaN(date.getTime())) return date.toLocaleDateString();
-    }
-    return "";
-  };
+    categories().find((category) => category.id === id)?.name ??
+    id ??
+    t("student.questions.generalCategory");
 
   return (
     <section class="space-y-6">
       <div class="flex flex-wrap items-center justify-between gap-3">
-        <h2 class="text-2xl font-semibold">My Questions</h2>
+        <h2 class="text-2xl font-semibold">{t("student.questions.title")}</h2>
         <A href="/student/questions/new" class={buttonVariants()}>
-          Ask question
+          {t("student.questions.askQuestion")}
         </A>
       </div>
 
-      <SectionCard title="Filters" description="Find questions quickly.">
+      <SectionCard
+        title={t("common.filters")}
+        description={t("student.questions.filtersDescription")}
+      >
         <div class="grid gap-4 lg:grid-cols-[1.2fr_240px_auto] lg:items-end">
           <TextField>
-            <TextFieldLabel for="question-search">Search</TextFieldLabel>
+            <TextFieldLabel for="question-search">{t("common.search")}</TextFieldLabel>
             <TextFieldInput
               id="question-search"
               value={search()}
               onInput={(e) => setSearch(e.currentTarget.value)}
-              placeholder="Search by title or details"
+              placeholder={t("student.questions.searchPlaceholder")}
             />
           </TextField>
 
@@ -121,7 +117,7 @@ export function StudentQuestions() {
               }
               onChange={(value) => setCategoryId(value?.id ?? "")}
               options={[
-                { id: "", name: "All categories" },
+                { id: "", name: t("common.allCategories") },
                 ...categories().map((category) => ({
                   id: category.id,
                   name: category.name,
@@ -141,16 +137,16 @@ export function StudentQuestions() {
                 </SelectItem>
               )}
             >
-              <SelectLabel for="question-category">Category</SelectLabel>
+              <SelectLabel for="question-category">{t("common.category")}</SelectLabel>
               <SelectHiddenSelect id="question-category" />
-              <SelectTrigger aria-label="Category">
+              <SelectTrigger aria-label={t("common.category")}>
                 <SelectValue<{ id: string; name: string }>>
                   {(state) =>
                     (
                       (state?.selectedOption() || {}) as unknown as {
                         name: string;
                       }
-                    ).name ?? "All categories"
+                    ).name ?? t("common.allCategories")
                   }
                 </SelectValue>
               </SelectTrigger>
@@ -159,12 +155,12 @@ export function StudentQuestions() {
           </div>
 
           <Button variant="outline" onClick={() => void load()}>
-            Refresh
+            {t("common.refresh")}
           </Button>
         </div>
 
         <div class="mt-4 flex flex-wrap gap-2">
-          {statusTabs.map((tab) => (
+          {statusTabs().map((tab) => (
             <button
               class={`rounded-[var(--radius-md)] border px-3 py-1 text-xs font-semibold ${
                 status() === tab.id
@@ -188,8 +184,8 @@ export function StudentQuestions() {
         </div>
       </Show>
 
-      <SectionCard title="Questions">
-        <Show when={!loading()} fallback={<div class="text-sm">Loading…</div>}>
+      <SectionCard title={t("common.questions")}>
+        <Show when={!loading()} fallback={<div class="text-sm">{t("common.loading")}</div>}>
           <div class="grid gap-3">
             {items().map((question) => (
               <A
@@ -204,12 +200,16 @@ export function StudentQuestions() {
                         {categoryName(question.categoryId)}
                       </span>
                       <span class="rounded-full border border-border/70 bg-background px-2 py-0.5">
-                        {question.status === "answered" ? "Answered" : "New"}
+                        {question.status === "answered"
+                          ? t("common.status.answered")
+                          : t("common.status.new")}
                       </span>
                       <span>{formatDate(question.updatedAt || question.createdAt)}</span>
                     </div>
                   </div>
-                  <span class="text-xs font-semibold text-primary">Open</span>
+                  <span class="text-xs font-semibold text-primary">
+                    {t("common.open")}
+                  </span>
                 </div>
               </A>
             ))}

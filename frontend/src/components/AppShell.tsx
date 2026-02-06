@@ -2,6 +2,7 @@ import type { JSX } from "solid-js";
 import { createContext, createSignal, Show, useContext } from "solid-js";
 import { Button } from "../components/ui/button";
 import { Avatar, AvatarFallback } from "../components/ui/avatar";
+import { useI18n } from "../lib/i18n";
 
 type AppShellProps = {
   title: string;
@@ -30,6 +31,8 @@ export function AppShell(props: AppShellProps) {
   const [railContent, setRailContent] = createSignal<JSX.Element | null>(null);
   const activeRail = () => props.rightRail ?? railContent();
   const hasRail = () => Boolean(activeRail());
+  const { t } = useI18n();
+
   return (
     <div class="min-h-screen bg-background text-foreground">
       <header class="sticky top-0 z-30 border-b border-border/70 bg-background/95 backdrop-blur">
@@ -58,7 +61,7 @@ export function AppShell(props: AppShellProps) {
           <div class="flex items-center gap-3">
             <Show when={props.userMenuSlot}>{props.userMenuSlot}</Show>
             <Button variant="outline" onClick={props.onLogout}>
-              Logout
+              {t("student.layout.logout")}
             </Button>
           </div>
         </div>

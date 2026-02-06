@@ -5,15 +5,17 @@ import { Illustration } from '../../components/ui/illustration'
 import { SectionCard } from '../../components/ui/section-card'
 import { SmallStatBadge } from '../../components/ui/small-stat-badge'
 import { useMe } from '../../lib/useMe'
+import { useI18n } from '../../lib/i18n'
 import { useMyPlan } from './studentPlanContext'
 import { cn } from '../../lib/utils'
 
 export function StudentHome() {
   const { me } = useMe()
   const { plan, goal, steps, loading, error, progress, markStepDone, openMaterial } = useMyPlan()
+  const { t } = useI18n()
   const firstName = createMemo(() => {
     const raw = me()?.displayName ?? ''
-    return raw.trim().split(' ')[0] || 'there'
+    return raw.trim().split(' ')[0] || t('student.home.fallbackName')
   })
 
   return (
@@ -37,7 +39,9 @@ export function StudentHome() {
       >
         <div class="flex flex-wrap items-center justify-between gap-4">
           <div class="flex items-center gap-3">
-            <h1 class="text-3xl font-semibold tracking-tight">Hi, {firstName()}!</h1>
+            <h1 class="text-3xl font-semibold tracking-tight">
+              {t('student.home.greeting', { name: firstName() })}
+            </h1>
           <Show when={me()?.roleRaw && me()?.roleRaw !== 'student'}>
             <SmallStatBadge class="bg-card">
               <span class="material-symbols-outlined text-sm">school</span>
@@ -47,7 +51,7 @@ export function StudentHome() {
         </div>
           <Show when={me()}>
             <div class="text-sm text-muted-foreground">
-              Signed in as{" "}
+              {t('student.home.signedInAs')}{' '}
               <span class="font-medium text-foreground">
                 {me()?.displayName ?? me()?.email}
               </span>
@@ -64,30 +68,34 @@ export function StudentHome() {
         <Show
           when={plan()}
           fallback={
-            <SectionCard title="No goal assigned">
+            <SectionCard title={t('student.home.noGoalTitle')}>
               <div class="flex flex-wrap items-center justify-between gap-4 text-sm text-muted-foreground">
-                <span>We’ll notify you once a learning goal is assigned.</span>
+                <span>{t('student.home.noGoalBody')}</span>
                 <a href="/student/questions" class="text-primary underline">
-                  Contact admin
+                  {t('student.home.contactAdmin')}
                 </a>
               </div>
             </SectionCard>
           }
         >
           <div class="flex items-center justify-between gap-4">
-            <h2 class="text-lg font-semibold">Student Dashboard</h2>
-            <SmallStatBadge>{progress().percent}% complete</SmallStatBadge>
+            <h2 class="text-lg font-semibold">{t('student.home.dashboardTitle')}</h2>
+            <SmallStatBadge>
+              {t('student.home.progressComplete', { percent: progress().percent })}
+            </SmallStatBadge>
           </div>
 
           <Card class="border border-border/70">
             <CardContent class="grid gap-4 p-6 lg:grid-cols-[minmax(0,1fr)_140px] lg:items-center">
               <div class="space-y-2">
-                <div class="text-sm font-semibold text-muted-foreground">Goal</div>
+                <div class="text-sm font-semibold text-muted-foreground">
+                  {t('student.home.goalLabel')}
+                </div>
                 <h3 class="text-2xl font-semibold">
-                  {goal()?.title ?? 'Learning goal'}
+                  {goal()?.title ?? t('student.home.goalFallbackTitle')}
                 </h3>
                 <p class="text-sm text-muted-foreground">
-                  {goal()?.description ?? 'Your personalized learning path.'}
+                  {goal()?.description ?? t('student.home.goalFallbackDescription')}
                 </p>
                 <div class="mt-4 h-2 w-full overflow-hidden rounded-full bg-muted">
                   <div
@@ -99,25 +107,28 @@ export function StudentHome() {
               <div class="flex justify-start lg:justify-center">
                 <Illustration
                   src="/illustrations/goal-thumb.svg"
-                  alt="Goal thumbnail"
+                  alt={t('student.home.goalThumbnailAlt')}
                   class="h-20 w-20 shadow-rail lg:h-24 lg:w-24"
                 />
               </div>
             </CardContent>
           </Card>
 
-          <SectionCard title="Steps" description="Work through your path in order.">
+          <SectionCard
+            title={t('student.home.stepsTitle')}
+            description={t('student.home.stepsDescription')}
+          >
             <Show
               when={steps().length > 0}
               fallback={
                 <div class="flex flex-wrap items-center justify-between gap-4 text-sm text-muted-foreground">
-                  <span>No steps yet. Ask a question or explore the library.</span>
+                  <span>{t('student.home.stepsEmpty')}</span>
                   <div class="flex items-center gap-3">
                     <a href="/student/questions" class="text-primary underline">
-                      Ask a question
+                      {t('student.home.stepsAskQuestion')}
                     </a>
                     <a href="/student/library" class="text-primary underline">
-                      Browse library
+                      {t('student.home.stepsBrowseLibrary')}
                     </a>
                   </div>
                 </div>
@@ -149,18 +160,26 @@ export function StudentHome() {
                             class={buttonVariants({ size: "sm" })}
                             onClick={() => openMaterial(step.materialUrl)}
                           >
-                            Open
+                            {t('common.open')}
                           </button>
                         ) : (
                           <Button size="sm" disabled>
-                            Open
+                            {t('common.open')}
                           </Button>
                         )}
                         <Button
                           variant="outline"
                           size="icon"
-                          aria-label={step.isDone ? "Mark as not done" : "Mark as done"}
-                          title={step.isDone ? "Mark as not done" : "Mark as done"}
+                          aria-label={
+                            step.isDone
+                              ? t('student.home.markNotDone')
+                              : t('student.home.markDone')
+                          }
+                          title={
+                            step.isDone
+                              ? t('student.home.markNotDone')
+                              : t('student.home.markDone')
+                          }
                           onClick={() => void markStepDone(step.id, !step.isDone)}
                         >
                           <span class="material-symbols-outlined text-[18px]">check</span>
