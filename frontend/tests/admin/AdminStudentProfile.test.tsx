@@ -2,6 +2,8 @@ import { render, screen, waitFor, fireEvent } from "@solidjs/testing-library";
 import { vi } from "vitest";
 
 import { AdminStudentProfile } from "../../src/routes/admin/AdminStudentProfile";
+import { AppShell } from "../../src/components/AppShell";
+import { I18nProvider } from "../../src/lib/i18n";
 import {
   getStudent,
   getStudentPlan,
@@ -11,14 +13,11 @@ import {
   previewResetFromGoal,
   updateStudent,
   assignPlan,
+  deleteStudentPlanStep,
 } from "../../src/lib/adminApi";
 
 vi.mock("@solidjs/router", () => ({
   useParams: () => ({ uid: "u1" }),
-}));
-
-vi.mock("../../src/components/AppShell", () => ({
-  useAppShellRail: () => () => {},
 }));
 
 vi.mock("../../src/components/ui/select", () => {
@@ -63,6 +62,7 @@ vi.mock("../../src/components/ui/select", () => {
 vi.mock("../../src/lib/adminApi", () => ({
   assignPlan: vi.fn(),
   bulkAddSteps: vi.fn(),
+  deleteStudentPlanStep: vi.fn(),
   getStudent: vi.fn(),
   getStudentPlan: vi.fn(),
   getStudentPlanSteps: vi.fn(),
@@ -81,6 +81,18 @@ const listStepTemplatesMock = listStepTemplates as unknown as ReturnType<typeof 
 const updateStudentMock = updateStudent as unknown as ReturnType<typeof vi.fn>;
 const previewResetMock = previewResetFromGoal as unknown as ReturnType<typeof vi.fn>;
 const assignPlanMock = assignPlan as unknown as ReturnType<typeof vi.fn>;
+const deleteStudentPlanStepMock = deleteStudentPlanStep as unknown as ReturnType<
+  typeof vi.fn
+>;
+
+const renderWithShell = () =>
+  render(() => (
+    <I18nProvider>
+      <AppShell title="Admin" roleLabel="Admin" onLogout={() => {}}>
+        <AdminStudentProfile />
+      </AppShell>
+    </I18nProvider>
+  ));
 
 describe("AdminStudentProfile", () => {
   beforeEach(() => {
@@ -92,6 +104,7 @@ describe("AdminStudentProfile", () => {
     updateStudentMock.mockReset();
     previewResetMock.mockReset();
     assignPlanMock.mockReset();
+    deleteStudentPlanStepMock.mockReset();
   });
 
   it("updates role via access controls", async () => {
@@ -107,7 +120,7 @@ describe("AdminStudentProfile", () => {
     listStepTemplatesMock.mockResolvedValue({ items: [] });
     updateStudentMock.mockResolvedValue({ role: "expert" });
 
-    render(() => <AdminStudentProfile />);
+    renderWithShell();
 
     expect(await screen.findByText("Student profile")).toBeInTheDocument();
 
@@ -144,10 +157,18 @@ describe("AdminStudentProfile", () => {
     });
     assignPlanMock.mockResolvedValue({ planId: "u1", goalId: "g1" });
 
-    render(() => <AdminStudentProfile />);
+    renderWithShell();
 
     await screen.findByText("Goal 1");
-    const goalSelect = await screen.findByTestId("goal-select");
+    const goalSelects = await screen.findAllByTestId("goal-select");
+    const goalSelect = goalSelects.find((select) =>
+      Array.from((select as HTMLSelectElement).options).some(
+        (option) => option.value === "g1",
+      ),
+    );
+    if (!goalSelect) {
+      throw new Error("Goal select not found");
+    }
     fireEvent.change(goalSelect, { target: { value: "g1" } });
 
     const resetButton = await screen.findByText(
@@ -179,6 +200,42 @@ describe("AdminStudentProfile", () => {
         resetStepsFromGoalTemplate: true,
         confirm: "RESET_STEPS",
       });
+    });
+  });
+
+  it("deletes a step from the plan", async () => {
+    getStudentMock.mockResolvedValue({
+      uid: "u1",
+      displayName: "Student One",
+      email: "s1@x.com",
+      role: "student",
+    });
+    getStudentPlanMock.mockResolvedValue({ goalId: "g1" });
+    getStudentPlanStepsMock.mockResolvedValue({
+      items: [
+        {
+          stepId: "s1",
+          title: "Step One",
+          description: "Do it",
+          materialUrl: "",
+          order: 0,
+          isDone: false,
+        },
+      ],
+    });
+    listGoalsMock.mockResolvedValue({ items: [] });
+    listStepTemplatesMock.mockResolvedValue({ items: [] });
+    deleteStudentPlanStepMock.mockResolvedValue({ deleted: "s1" });
+
+    renderWithShell();
+
+    await screen.findByText("Step One");
+
+    const deleteButton = await screen.findByLabelText("Delete step");
+    fireEvent.click(deleteButton);
+
+    await waitFor(() => {
+      expect(deleteStudentPlanStepMock).toHaveBeenCalledWith("u1", "s1");
     });
   });
 });

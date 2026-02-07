@@ -270,3 +270,20 @@ def test_assign_non_reset_preserves_steps(monkeypatch):
     assert fake_db._plan_steps["u1"]["s1"]["isDone"] is True
 
     app.dependency_overrides.clear()
+
+
+def test_delete_plan_step(monkeypatch):
+    users = {"u1": {"role": "student", "status": "active"}}
+    plans = {"u1": {"studentUid": "u1", "goalId": "g1"}}
+    plan_steps = {"u1": {"s1": {"title": "Step 1", "isDone": False}}}
+    fake_db = FakeFirestore(users, plans=plans, plan_steps=plan_steps)
+    monkeypatch.setattr(admin_students, "get_firestore_client", lambda: fake_db)
+    app.dependency_overrides[require_staff] = _override_staff
+    client = TestClient(app)
+
+    response = client.delete("/api/admin/students/u1/plan/steps/s1")
+    assert response.status_code == 200
+    assert response.json() == {"deleted": "s1"}
+    assert "s1" not in fake_db._plan_steps["u1"]
+
+    app.dependency_overrides.clear()

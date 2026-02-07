@@ -62,6 +62,20 @@ Firestore rules and backend logic can be tested using the configuration in `test
     npm run test:emu
     ```
 
+Backend API tests (pytest):
+
+```bash
+cd backend
+uv run --group dev pytest
+```
+
+Frontend unit tests (Vitest + @solidjs/testing-library):
+
+```bash
+cd frontend
+npm test
+```
+
 ### Frontend
 
 The frontend is a Solid.js project.
@@ -89,3 +103,5 @@ See `docs/deployment.md` for Firebase Hosting and Cloud Run steps.
 - Student Q&A: submit questions and view expert answers.
 - Admin Q&A: list questions, answer, and optionally publish to library.
 - Library: students browse published entries; staff create/edit drafts and publish.
+- Student dashboard: goal overview, steps, right-rail layout, and learning progress.
+- Admin student management: assign goals/steps, reorder, and delete steps.

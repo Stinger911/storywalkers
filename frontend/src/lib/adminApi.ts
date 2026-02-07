@@ -266,4 +266,14 @@ export async function reorderSteps(
   return handleJson<{ updated: number }>(response)
 }
 
+export async function deleteStudentPlanStep(uid: string, stepId: string) {
+  const response = await apiFetch(
+    `/api/admin/students/${uid}/plan/steps/${stepId}`,
+    {
+      method: 'DELETE',
+    },
+  )
+  return handleJson<{ deleted: string }>(response)
+}
+
 export type { Category, Goal, StepTemplate, Student, PlanResponse }

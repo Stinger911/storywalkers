@@ -364,6 +364,21 @@ async def get_plan_steps(
     return {"items": items}
 
 
+@router.delete("/students/{uid}/plan/steps/{step_id}")
+async def delete_plan_step(
+    uid: str,
+    step_id: str,
+    user: dict = Depends(require_staff),
+):
+    db = get_firestore_client()
+    plan_ref = db.collection("student_plans").document(uid)
+    _doc_or_404(plan_ref)
+    step_ref = plan_ref.collection("steps").document(step_id)
+    _doc_or_404(step_ref)
+    step_ref.delete()
+    return {"deleted": step_id}
+
+
 @router.post("/students/{uid}/plan/steps", status_code=status.HTTP_201_CREATED)
 async def bulk_add_steps(
     uid: str,

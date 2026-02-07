@@ -53,6 +53,9 @@ The current project includes:
 - Documentation (API contract, architecture, Firestore rules/schema, OpenAPI spec)
 - Testing setup (Firestore rules tests in tests/firebase)
 - Admin Q&A + Library features (questions, answers, published entries)
+- Student dashboard UI with right-rail layout
+- Admin student management (roles, goals, step reorder + delete)
+- Frontend unit tests (Vitest + @solidjs/testing-library)
 - CI deployment on tags (GitHub Actions)
 
 Follow the above workflows and update documentation and test configuration as the project evolves.

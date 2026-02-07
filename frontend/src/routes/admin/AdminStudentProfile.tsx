@@ -40,6 +40,7 @@ import { TextField, TextFieldInput, TextFieldLabel } from "../../components/ui/t
 import {
   assignPlan,
   bulkAddSteps,
+  deleteStudentPlanStep,
   getStudent,
   getStudentPlan,
   getStudentPlanSteps,
@@ -317,6 +318,19 @@ export function AdminStudentProfile() {
     }
   };
 
+  const deleteStep = async (stepId: string) => {
+    setSaving(true);
+    setError(null);
+    try {
+      await deleteStudentPlanStep(uid(), stepId);
+      await load();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const saveProfile = async () => {
     setSavingProfile(true);
     setError(null);
@@ -401,6 +415,16 @@ export function AdminStudentProfile() {
                           onClick={() => void moveStep(index, 1)}
                         >
                           Down
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          disabled={saving()}
+                          aria-label="Delete step"
+                          title="Delete step"
+                          onClick={() => void deleteStep(step.id)}
+                        >
+                          Delete
                         </Button>
                       </div>
                     </div>
