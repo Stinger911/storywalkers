@@ -63,6 +63,23 @@ type RawDictionary = {
       stepsBrowseLibrary: string;
       markDone: string;
       markNotDone: string;
+      currentStepTitle: string;
+      currentStepDescription: string;
+      currentStepLabel: string;
+      currentStepMaterial: string;
+      currentStepMarkDone: string;
+      currentStepEmpty: string;
+    };
+    questionsRail: {
+      illustrationAlt: string;
+      tipsTitle: string;
+      tipOne: string;
+      tipTwo: string;
+      tipThree: string;
+      libraryTitle: string;
+      browseLibrary: string;
+      badgeNew: string;
+      saved: string;
     };
     library: {
       title: string;
@@ -73,6 +90,12 @@ type RawDictionary = {
       entryThumbnailAlt: string;
       updated: string;
       empty: string;
+    };
+    libraryRail: {
+      illustrationAlt: string;
+      askTitle: string;
+      askBody: string;
+      askCta: string;
     };
     libraryDetail: {
       title: string;
@@ -105,6 +128,14 @@ type RawDictionary = {
       cancel: string;
       requiredError: string;
     };
+    questionNewRail: {
+      examplesTitle: string;
+      exampleOne: string;
+      exampleTwo: string;
+      libraryTitle: string;
+      browseLibrary: string;
+      badgeRecent: string;
+    };
     questionDetail: {
       title: string;
       back: string;
@@ -113,6 +144,11 @@ type RawDictionary = {
       pending: string;
       watchVideo: string;
       noIdError: string;
+    };
+    questionDetailRail: {
+      relatedTitle: string;
+      relatedEmpty: string;
+      browseLibrary: string;
     };
     profileRail: {
       myQuestions: string;
@@ -187,6 +223,23 @@ const dictionaries: Record<Locale, RawDictionary> = {
         stepsBrowseLibrary: "Browse library",
         markDone: "Mark as done",
         markNotDone: "Mark as not done",
+        currentStepTitle: "Current step",
+        currentStepDescription: "Focus on the next unfinished step in your path.",
+        currentStepLabel: "Up next",
+        currentStepMaterial: "View material",
+        currentStepMarkDone: "Mark done",
+        currentStepEmpty: "You’ve completed every step. Nice work!",
+      },
+      questionsRail: {
+        illustrationAlt: "Questions illustration",
+        tipsTitle: "Tips",
+        tipOne: "Share what you tried already.",
+        tipTwo: "Attach references or examples.",
+        tipThree: "Keep one question per post.",
+        libraryTitle: "Library",
+        browseLibrary: "Browse Library",
+        badgeNew: "New",
+        saved: "Saved",
       },
       library: {
         title: "Library",
@@ -197,6 +250,12 @@ const dictionaries: Record<Locale, RawDictionary> = {
         entryThumbnailAlt: "Entry thumbnail",
         updated: "Updated {{ date }}",
         empty: "No entries match the current filters.",
+      },
+      libraryRail: {
+        illustrationAlt: "Library illustration",
+        askTitle: "Ask a question",
+        askBody: "Can’t find what you need?",
+        askCta: "Ask a mentor",
       },
       libraryDetail: {
         title: "Library entry",
@@ -229,6 +288,14 @@ const dictionaries: Record<Locale, RawDictionary> = {
         cancel: "Cancel",
         requiredError: "Category and title are required.",
       },
+      questionNewRail: {
+        examplesTitle: "Examples",
+        exampleOne: "“How do I trim silence in Premiere?”",
+        exampleTwo: "“Best export settings for Instagram reels?”",
+        libraryTitle: "Library",
+        browseLibrary: "Browse Library",
+        badgeRecent: "Recent",
+      },
       questionDetail: {
         title: "Question detail",
         back: "Back to questions",
@@ -237,6 +304,11 @@ const dictionaries: Record<Locale, RawDictionary> = {
         pending: "Pending response.",
         watchVideo: "Watch video",
         noIdError: "No question ID provided.",
+      },
+      questionDetailRail: {
+        relatedTitle: "Related library",
+        relatedEmpty: "Recommended entries will appear here.",
+        browseLibrary: "Browse library",
       },
       profileRail: {
         myQuestions: "My Questions",
@@ -307,6 +379,23 @@ const dictionaries: Record<Locale, RawDictionary> = {
         stepsBrowseLibrary: "Открыть библиотеку",
         markDone: "Отметить как выполненное",
         markNotDone: "Снять отметку выполнения",
+        currentStepTitle: "Текущий шаг",
+        currentStepDescription: "Следующий невыполненный шаг вашего пути.",
+        currentStepLabel: "Следующее действие",
+        currentStepMaterial: "Открыть материалы",
+        currentStepMarkDone: "Отметить выполненным",
+        currentStepEmpty: "Все шаги выполнены. Отличная работа!",
+      },
+      questionsRail: {
+        illustrationAlt: "Иллюстрация вопросов",
+        tipsTitle: "Подсказки",
+        tipOne: "Опишите, что вы уже попробовали.",
+        tipTwo: "Добавьте примеры или ссылки.",
+        tipThree: "Один вопрос на один запрос.",
+        libraryTitle: "Библиотека",
+        browseLibrary: "Открыть библиотеку",
+        badgeNew: "Новое",
+        saved: "Сохранённое",
       },
       library: {
         title: "Библиотека",
@@ -317,6 +406,12 @@ const dictionaries: Record<Locale, RawDictionary> = {
         entryThumbnailAlt: "Миниатюра записи",
         updated: "Обновлено {{ date }}",
         empty: "Нет записей, соответствующих фильтрам.",
+      },
+      libraryRail: {
+        illustrationAlt: "Иллюстрация библиотеки",
+        askTitle: "Задать вопрос",
+        askBody: "Не нашли нужное?",
+        askCta: "Спросить наставника",
       },
       libraryDetail: {
         title: "Запись библиотеки",
@@ -349,6 +444,14 @@ const dictionaries: Record<Locale, RawDictionary> = {
         cancel: "Отмена",
         requiredError: "Категория и заголовок обязательны.",
       },
+      questionNewRail: {
+        examplesTitle: "Примеры",
+        exampleOne: "«Как обрезать тишину в Premiere?»",
+        exampleTwo: "«Лучшие настройки экспорта для Reels?»",
+        libraryTitle: "Библиотека",
+        browseLibrary: "Открыть библиотеку",
+        badgeRecent: "Недавно",
+      },
       questionDetail: {
         title: "Детали вопроса",
         back: "Назад к вопросам",
@@ -357,6 +460,11 @@ const dictionaries: Record<Locale, RawDictionary> = {
         pending: "Ответ готовится.",
         watchVideo: "Смотреть видео",
         noIdError: "Не указан идентификатор вопроса.",
+      },
+      questionDetailRail: {
+        relatedTitle: "Похожие материалы",
+        relatedEmpty: "Рекомендуемые материалы появятся здесь.",
+        browseLibrary: "Открыть библиотеку",
       },
       profileRail: {
         myQuestions: "Мои вопросы",

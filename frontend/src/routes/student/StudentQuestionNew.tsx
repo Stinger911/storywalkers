@@ -6,6 +6,7 @@ import {
   TextField,
   TextFieldInput,
   TextFieldLabel,
+  TextFieldTextArea,
 } from "../../components/ui/text-field";
 import {
   Select,
@@ -134,13 +135,15 @@ export function StudentQuestionNew() {
           </TextField>
           <TextField>
             <TextFieldLabel for="question-body">{t("student.questionNew.detailsLabel")}</TextFieldLabel>
-            <TextFieldInput
+            <TextFieldTextArea
               id="question-body"
+              rows={2}
               value={form().body}
               onInput={(e) =>
                 setForm({ ...form(), body: e.currentTarget.value })
               }
               placeholder={t("student.questionNew.detailsPlaceholder")}
+              class="min-h-[56px]"
             />
           </TextField>
           <div class="flex flex-wrap gap-2">

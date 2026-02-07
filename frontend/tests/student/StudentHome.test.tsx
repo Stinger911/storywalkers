@@ -44,6 +44,7 @@ describe("StudentHome", () => {
     ));
     expect(screen.getByText("Hi, Alex!")).toBeInTheDocument();
     expect(screen.getByText("Student Dashboard")).toBeInTheDocument();
+    expect(screen.getByText("Current step")).toBeInTheDocument();
     expect(screen.getByText("Import footage")).toBeInTheDocument();
   });
 

@@ -18,8 +18,9 @@ import { StudentQuestionDetail } from "./routes/student/StudentQuestionDetail.ts
 import { StudentQuestionNew } from "./routes/student/StudentQuestionNew.tsx";
 import { StudentQuestions } from "./routes/student/StudentQuestions.tsx";
 import { RailCard } from "./components/ui/rail-card.tsx";
-import { Card, CardContent } from "./components/ui/card.tsx";
+import { Card, CardContent, CardTitle } from "./components/ui/card.tsx";
 import { Illustration } from "./components/ui/illustration.tsx";
+import { useI18n } from "./lib/i18n.tsx";
 import { StudentLibrary } from "./routes/student/StudentLibrary.tsx";
 import { StudentLibraryDetail } from "./routes/student/StudentLibraryDetail.tsx";
 import { AdminLibrary } from "./routes/admin/AdminLibrary.tsx";
@@ -79,70 +80,86 @@ const StudentProfileRoute = () => (
   </StudentLayout>
 );
 
-const StudentQuestionsRail = () => (
-  <>
-    <Card class="border border-border/70">
-      <CardContent class="p-3">
-        <Illustration
-          src="/illustrations/rail-hero.svg"
-          alt="Questions illustration"
-          class="h-32 w-full rounded-[var(--radius-lg)]"
-        />
-      </CardContent>
-    </Card>
-    <RailCard title="Tips">
-      <ul class="space-y-2 text-xs text-muted-foreground">
-        <li>Share what you tried already.</li>
-        <li>Attach references or examples.</li>
-        <li>Keep one question per post.</li>
-      </ul>
-    </RailCard>
-    <RailCard title="Library">
-      <div class="space-y-2 text-sm">
-        <a href="/student/library" class="flex items-center justify-between text-primary">
-          <span>Browse Library</span>
-          <span class="text-xs text-muted-foreground">New</span>
-        </a>
-        <a href="/student/library" class="flex items-center justify-between text-primary">
-          <span>Saved</span>
-          <span class="text-xs text-muted-foreground">0</span>
-        </a>
-      </div>
-    </RailCard>
-  </>
-);
+const StudentQuestionsRail = () => {
+  const { t } = useI18n();
+  return (
+    <>
+      <Card class="border border-border/70">
+        <CardTitle class="p-3">
+          <Illustration
+            src="/illustrations/rail-hero.png"
+            alt={t("student.questionsRail.illustrationAlt")}
+            class="h-32 w-full rounded-[var(--radius-lg)] no-border"
+          />
+        </CardTitle>
+        <CardContent class="p-3 flex flex-col gap-3">
+          
+      <RailCard title={t("student.questionsRail.tipsTitle")}>
+        <ul class="space-y-2 text-xs text-muted-foreground">
+          <li>{t("student.questionsRail.tipOne")}</li>
+          <li>{t("student.questionsRail.tipTwo")}</li>
+          <li>{t("student.questionsRail.tipThree")}</li>
+        </ul>
+      </RailCard>
+      <RailCard title={t("student.questionsRail.libraryTitle")}>
+        <div class="space-y-2 text-sm">
+          <a href="/student/library" class="flex items-center justify-between text-primary">
+            <span>{t("student.questionsRail.browseLibrary")}</span>
+            <span class="text-xs text-muted-foreground">
+              {t("student.questionsRail.badgeNew")}
+            </span>
+          </a>
+          <a href="/student/library" class="flex items-center justify-between text-primary">
+            <span>{t("student.questionsRail.saved")}</span>
+            <span class="text-xs text-muted-foreground">0</span>
+          </a>
+        </div>
+      </RailCard>
+        </CardContent>
+      </Card>
+    </>
+  );
+};
 
-const StudentQuestionNewRail = () => (
-  <>
-    <RailCard title="Examples">
-      <ul class="space-y-2 text-xs text-muted-foreground">
-        <li>“How do I trim silence in Premiere?”</li>
-        <li>“Best export settings for Instagram reels?”</li>
-      </ul>
-    </RailCard>
-    <RailCard title="Library">
-      <div class="space-y-2 text-sm">
-        <a href="/student/library" class="flex items-center justify-between text-primary">
-          <span>Browse Library</span>
-          <span class="text-xs text-muted-foreground">Recent</span>
-        </a>
-      </div>
-    </RailCard>
-  </>
-);
+const StudentQuestionNewRail = () => {
+  const { t } = useI18n();
+  return (
+    <>
+      <RailCard title={t("student.questionNewRail.examplesTitle")}>
+        <ul class="space-y-2 text-xs text-muted-foreground">
+          <li>{t("student.questionNewRail.exampleOne")}</li>
+          <li>{t("student.questionNewRail.exampleTwo")}</li>
+        </ul>
+      </RailCard>
+      <RailCard title={t("student.questionNewRail.libraryTitle")}>
+        <div class="space-y-2 text-sm">
+          <a href="/student/library" class="flex items-center justify-between text-primary">
+            <span>{t("student.questionNewRail.browseLibrary")}</span>
+            <span class="text-xs text-muted-foreground">
+              {t("student.questionNewRail.badgeRecent")}
+            </span>
+          </a>
+        </div>
+      </RailCard>
+    </>
+  );
+};
 
-const StudentQuestionDetailRail = () => (
-  <>
-    <RailCard title="Related library">
-      <div class="space-y-2 text-sm text-muted-foreground">
-        <span>Recommended entries will appear here.</span>
-        <a href="/student/library" class="text-primary underline">
-          Browse library
-        </a>
-      </div>
-    </RailCard>
-  </>
-);
+const StudentQuestionDetailRail = () => {
+  const { t } = useI18n();
+  return (
+    <>
+      <RailCard title={t("student.questionDetailRail.relatedTitle")}>
+        <div class="space-y-2 text-sm text-muted-foreground">
+          <span>{t("student.questionDetailRail.relatedEmpty")}</span>
+          <a href="/student/library" class="text-primary underline">
+            {t("student.questionDetailRail.browseLibrary")}
+          </a>
+        </div>
+      </RailCard>
+    </>
+  );
+};
 
 const StudentQuestionsRoute = () => (
   <StudentLayout rightRail={<StudentQuestionsRail />}>
@@ -162,27 +179,30 @@ const StudentQuestionDetailRoute = () => (
   </StudentLayout>
 );
 
-const StudentLibraryRail = () => (
-  <>
-    <Card class="border border-border/70">
-      <CardContent class="p-3">
-        <Illustration
-          src="/illustrations/rail-hero.svg"
-          alt="Library illustration"
-          class="h-32 w-full rounded-[var(--radius-lg)]"
-        />
-      </CardContent>
-    </Card>
-    <RailCard title="Ask a question">
-      <div class="space-y-2 text-sm text-muted-foreground">
-        <span>Can’t find what you need?</span>
-        <a href="/student/questions/new" class="text-primary underline">
-          Ask a mentor
-        </a>
-      </div>
-    </RailCard>
-  </>
-);
+const StudentLibraryRail = () => {
+  const { t } = useI18n();
+  return (
+    <>
+      <Card class="border border-border/70">
+        <CardContent class="p-3">
+          <Illustration
+            src="/illustrations/rail-hero.svg"
+            alt={t("student.libraryRail.illustrationAlt")}
+            class="h-32 w-full rounded-[var(--radius-lg)]"
+          />
+        </CardContent>
+      </Card>
+      <RailCard title={t("student.libraryRail.askTitle")}>
+        <div class="space-y-2 text-sm text-muted-foreground">
+          <span>{t("student.libraryRail.askBody")}</span>
+          <a href="/student/questions/new" class="text-primary underline">
+            {t("student.libraryRail.askCta")}
+          </a>
+        </div>
+      </RailCard>
+    </>
+  );
+};
 
 const StudentLibraryRoute = () => (
   <StudentLayout rightRail={<StudentLibraryRail />}>

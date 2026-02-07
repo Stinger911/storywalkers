@@ -17,6 +17,7 @@ export function StudentHome() {
     const raw = me()?.displayName ?? ''
     return raw.trim().split(' ')[0] || t('student.home.fallbackName')
   })
+  const currentStep = createMemo(() => steps().find((step) => !step.isDone) ?? null)
 
   return (
     <section class="space-y-6">
@@ -113,6 +114,68 @@ export function StudentHome() {
               </div>
             </CardContent>
           </Card>
+
+          <SectionCard
+            title={t('student.home.currentStepTitle')}
+            description={t('student.home.currentStepDescription')}
+          >
+            <Show
+              when={currentStep()}
+              fallback={
+                <div class="text-sm text-muted-foreground">
+                  {t('student.home.currentStepEmpty')}
+                </div>
+              }
+            >
+              {(step) => (
+                <div class="rounded-[var(--radius-lg)] border border-border/70 bg-card p-5 shadow-rail">
+                  <div class="flex flex-wrap items-start justify-between gap-4">
+                    <div class="min-w-0">
+                      <div class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        {t('student.home.currentStepLabel')}
+                      </div>
+                      <div class="mt-2 text-lg font-semibold">
+                        {step().title}
+                      </div>
+                      <div class="mt-2 text-sm text-muted-foreground">
+                        {step().description}
+                      </div>
+                      <Show when={step().materialUrl}>
+                        <button
+                          class="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-primary"
+                          onClick={() => openMaterial(step().materialUrl)}
+                        >
+                          <span class="material-symbols-outlined text-[18px]">open_in_new</span>
+                          {t('student.home.currentStepMaterial')}
+                        </button>
+                      </Show>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                      {step().materialUrl ? (
+                        <button
+                          class={buttonVariants({ size: 'sm' })}
+                          onClick={() => openMaterial(step().materialUrl)}
+                        >
+                          {t('common.open')}
+                        </button>
+                      ) : (
+                        <Button size="sm" disabled>
+                          {t('common.open')}
+                        </Button>
+                      )}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => void markStepDone(step().id, true)}
+                      >
+                        {t('student.home.currentStepMarkDone')}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </Show>
+          </SectionCard>
 
           <SectionCard
             title={t('student.home.stepsTitle')}
