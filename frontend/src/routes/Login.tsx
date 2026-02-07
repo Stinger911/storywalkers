@@ -28,41 +28,55 @@ import {
 import { Button } from "../components/ui/button";
 import { type MeProfile } from "../lib/auth";
 import { apiFetch } from "../lib/api";
+import { useI18n } from "../lib/i18n";
+import {
+  Select,
+  SelectContent,
+  SelectHiddenSelect,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "../components/ui/select";
 
-function friendlyAuthError(err: unknown): string {
+function friendlyAuthError(
+  err: unknown,
+  t: (key: string, params?: Record<string, string | number>) => string,
+): string {
   const e = err as Partial<FirebaseError> & { code?: string; message?: string };
 
   switch (e.code) {
     case "auth/unauthorized-domain":
-      return "Google login недоступен для этого домена. Добавь текущий домен (например, localhost или твой прод-домен) в Firebase Console → Authentication → Settings → Authorized domains.";
+      return t("login.errors.unauthorizedDomain");
 
     case "auth/account-exists-with-different-credential":
-      return "Аккаунт с этим email уже существует, но использует другой способ входа. Войди тем способом, который ты использовал ранее (например, Email/Password или Email link), а затем привяжи Google в настройках профиля.";
+      return t("login.errors.accountExists");
 
     case "auth/popup-closed-by-user":
-      return "Окно входа было закрыто. Попробуй ещё раз.";
+      return t("login.errors.popupClosed");
 
     case "auth/invalid-email":
-      return "Некорректный email.";
+      return t("login.errors.invalidEmail");
 
     case "auth/user-not-found":
     case "auth/wrong-password":
-      return "Неверный email или пароль.";
+      return t("login.errors.wrongPassword");
 
     case "auth/too-many-requests":
-      return "Слишком много попыток. Подожди немного и попробуй снова.";
+      return t("login.errors.tooManyRequests");
 
     case "auth/missing-email":
-      return "Укажи email.";
+      return t("login.errors.missingEmail");
 
     default:
       return e.message
-        ? `Ошибка входа: ${e.message}`
-        : "Не удалось выполнить вход. Попробуй ещё раз.";
+        ? t("login.errors.genericWithMessage", { message: e.message })
+        : t("login.errors.generic");
   }
 }
 
 export function Login() {
+  const { t, locale, setLocale } = useI18n();
   const [email, setEmail] = createSignal("");
   const [password, setPassword] = createSignal("");
   const [busy, setBusy] = createSignal(false);
@@ -86,10 +100,10 @@ export function Login() {
     setBusy(true);
     try {
       await signInWithEmailAndPassword(auth, email().trim(), password());
-      setInfo("Успешный вход.");
+      setInfo(t("login.messages.signedIn"));
       await redirectIfLoggedIn();
     } catch (e) {
-      setError(friendlyAuthError(e));
+      setError(friendlyAuthError(e, t));
     } finally {
       setBusy(false);
     }
@@ -102,10 +116,10 @@ export function Login() {
     setBusy(true);
     try {
       await createUserWithEmailAndPassword(auth, email().trim(), password());
-      setInfo("Аккаунт создан и выполнен вход.");
+      setInfo(t("login.messages.accountCreated"));
       await redirectIfLoggedIn();
     } catch (e) {
-      setError(friendlyAuthError(e));
+      setError(friendlyAuthError(e, t));
     } finally {
       setBusy(false);
     }
@@ -118,10 +132,10 @@ export function Login() {
     setBusy(true);
     try {
       await signInWithPopup(auth, googleProvider);
-      setInfo("Успешный вход через Google.");
+      setInfo(t("login.messages.googleSuccess"));
       await redirectIfLoggedIn();
     } catch (e) {
-      setError(friendlyAuthError(e));
+      setError(friendlyAuthError(e, t));
     } finally {
       setBusy(false);
     }
@@ -144,35 +158,31 @@ export function Login() {
       // Если у человека только password, он всё равно может использовать email-link (если включено в консоли)
       // Просто информируем, чтобы он не путался.
       if (methods.length > 0 && !methods.includes("emailLink")) {
-        setInfo(
-          "Мы отправим ссылку для входа. Если раньше ты входил паролем или Google — это тоже нормально.",
-        );
+        setInfo(t("login.messages.emailLinkHint"));
       }
 
       await sendSignInLinkToEmail(auth, e, actionCodeSettings());
       // надо сохранить email локально, чтобы подтвердить вход после перехода по ссылке
       window.localStorage.setItem("emailForSignIn", e);
-      setInfo(
-        "Ссылка для входа отправлена на email. Открой письмо и перейди по ссылке.",
-      );
+      setInfo(t("login.messages.emailLinkSent"));
     } catch (e) {
-      setError(friendlyAuthError(e));
+      setError(friendlyAuthError(e, t));
     } finally {
       setBusy(false);
     }
   }
 
   // redirect to dashboard if already logged in
-  async function redirectIfLoggedIn() {
+  async function redirectIfLoggedIn(silent = false) {
     const response = await apiFetch("/api/me");
     if (response.ok) {
       const data = (await response.json()) as MeProfile;
       if (!data) {
-        setError("Не удалось получить профиль пользователя после входа.");
+        if (!silent) setError(t("login.errors.profileMissing"));
         return;
       }
       if (!data.role) {
-        setError("Неверная роль пользователя.");
+        if (!silent) setError(t("login.errors.roleMissing"));
         return;
       }
       if (data.role === "staff") {
@@ -180,8 +190,8 @@ export function Login() {
       } else {
         window.location.href = "/student/home";
       }
-    } else {
-      setError("Не удалось получить профиль пользователя после входа.");
+    } else if (!silent) {
+      setError(t("login.errors.profileMissing"));
     }
   }
 
@@ -198,9 +208,7 @@ export function Login() {
       const e = storedEmail || email().trim();
 
       if (!e) {
-        setError(
-          "Введите email, на который пришла ссылка (мы не нашли сохранённый email в браузере).",
-        );
+        setError(t("login.errors.missingEmailForLink"));
         return;
       }
 
@@ -209,10 +217,10 @@ export function Login() {
 
       // Чтобы не оставлять query-параметры от email-link в адресе:
       window.history.replaceState({}, document.title, "/login");
-      setInfo("Успешный вход по ссылке.");
+      setInfo(t("login.messages.linkSignedIn"));
       await redirectIfLoggedIn();
     } catch (e) {
-      setError(friendlyAuthError(e));
+      setError(friendlyAuthError(e, t));
     } finally {
       setBusy(false);
     }
@@ -220,17 +228,58 @@ export function Login() {
 
   // запуск авто-завершения email-link логина при заходе по ссылке
   // (без onMount, чтобы избежать лишних импортов; Solid выполнит один раз при инициализации компонента)
-  void redirectIfLoggedIn();
+  void redirectIfLoggedIn(true);
   void tryCompleteEmailLinkSignIn();
 
   return (
     <div class="min-h-screen grid place-items-center p-6">
       <Card class="w-full max-w-md">
         <CardHeader>
-          <CardTitle>Sign in</CardTitle>
-          <CardDescription>
-            Email/Password, Email link или Google
-          </CardDescription>
+          <div class="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <CardTitle>{t("login.title")}</CardTitle>
+              <CardDescription>{t("login.subtitle")}</CardDescription>
+            </div>
+            <div class="min-w-[140px]">
+              <Select
+                value={{ value: locale(), label: locale() === "ru" ? "Русский" : "English" }}
+                onChange={(value) => {
+                  const next = value?.value === "ru" ? "ru" : "en";
+                  setLocale(next);
+                }}
+                options={[
+                  { value: "en", label: "English" },
+                  { value: "ru", label: "Русский" },
+                ]}
+                optionValue={(option) =>
+                  (option as unknown as { value: string; label: string }).value
+                }
+                optionTextValue={(option) =>
+                  (option as unknown as { value: string; label: string }).label
+                }
+                itemComponent={(props) => (
+                  <SelectItem item={props.item}>
+                    {(props.item.rawValue as unknown as { label: string }).label}
+                  </SelectItem>
+                )}
+              >
+                <SelectLabel for="login-language">{t("common.language")}</SelectLabel>
+                <SelectHiddenSelect id="login-language" />
+                <SelectTrigger aria-label={t("common.language")}>
+                  <SelectValue<string>>
+                    {(state) =>
+                      (
+                        (state?.selectedOption() || {}) as unknown as {
+                          label: string;
+                        }
+                      ).label ?? t("common.language")
+                    }
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent />
+              </Select>
+            </div>
+          </div>
         </CardHeader>
 
         <CardContent class="grid gap-4">
@@ -243,11 +292,11 @@ export function Login() {
           </Show>
 
           <TextField class="grid gap-2">
-            <TextFieldLabel for="email">Email</TextFieldLabel>
+            <TextFieldLabel for="email">{t("login.emailLabel")}</TextFieldLabel>
             <TextFieldInput
               id="email"
               type="email"
-              placeholder="you@example.com"
+              placeholder={t("login.emailPlaceholder")}
               value={email()}
               onInput={(e: { currentTarget: { value: any } }) =>
                 setEmail(e.currentTarget.value)
@@ -257,11 +306,11 @@ export function Login() {
           </TextField>
 
           <TextField class="grid gap-2">
-            <TextFieldLabel for="password">Password</TextFieldLabel>
+            <TextFieldLabel for="password">{t("login.passwordLabel")}</TextFieldLabel>
             <TextFieldInput
               id="password"
               type="password"
-              placeholder="••••••••"
+              placeholder={t("login.passwordPlaceholder")}
               value={password()}
               onInput={(e: { currentTarget: { value: any } }) =>
                 setPassword(e.currentTarget.value)
@@ -272,7 +321,7 @@ export function Login() {
 
           <div class="grid gap-2">
             <Button disabled={busy()} onClick={onEmailPasswordLogin}>
-              Sign in with password
+              {t("login.signInPassword")}
             </Button>
 
             <Button
@@ -280,7 +329,7 @@ export function Login() {
               variant="outline"
               onClick={onEmailPasswordRegister}
             >
-              Create account (email/password)
+              {t("login.createAccount")}
             </Button>
           </div>
 
@@ -290,7 +339,7 @@ export function Login() {
               variant="outline"
               onClick={onSendEmailLink}
             >
-              Send sign-in link (passwordless)
+              {t("login.sendLink")}
             </Button>
           </div>
 
@@ -299,12 +348,14 @@ export function Login() {
               <span class="w-full border-t" />
             </div>
             <div class="relative flex justify-center text-xs uppercase">
-              <span class="bg-background px-2 text-muted-foreground">or</span>
+              <span class="bg-background px-2 text-muted-foreground">
+                {t("login.or")}
+              </span>
             </div>
           </div>
 
           <Button disabled={busy()} onClick={onGoogleLogin}>
-            Continue with Google
+            {t("login.continueGoogle")}
           </Button>
         </CardContent>
       </Card>

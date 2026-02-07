@@ -31,6 +31,41 @@ type RawDictionary = {
       published: string;
     };
   };
+  login: {
+    title: string;
+    subtitle: string;
+    emailLabel: string;
+    emailPlaceholder: string;
+    passwordLabel: string;
+    passwordPlaceholder: string;
+    signInPassword: string;
+    createAccount: string;
+    sendLink: string;
+    or: string;
+    continueGoogle: string;
+    messages: {
+      signedIn: string;
+      accountCreated: string;
+      googleSuccess: string;
+      emailLinkHint: string;
+      emailLinkSent: string;
+      linkSignedIn: string;
+    };
+    errors: {
+      unauthorizedDomain: string;
+      accountExists: string;
+      popupClosed: string;
+      invalidEmail: string;
+      wrongPassword: string;
+      tooManyRequests: string;
+      missingEmail: string;
+      missingEmailForLink: string;
+      profileMissing: string;
+      roleMissing: string;
+      generic: string;
+      genericWithMessage: string;
+    };
+  };
   student: {
     layout: {
       title: string;
@@ -191,6 +226,46 @@ const dictionaries: Record<Locale, RawDictionary> = {
         published: "Published",
       },
     },
+    login: {
+      title: "Sign in",
+      subtitle: "Email/Password, Email link, or Google",
+      emailLabel: "Email",
+      emailPlaceholder: "you@example.com",
+      passwordLabel: "Password",
+      passwordPlaceholder: "••••••••",
+      signInPassword: "Sign in with password",
+      createAccount: "Create account (email/password)",
+      sendLink: "Send sign-in link (passwordless)",
+      or: "or",
+      continueGoogle: "Continue with Google",
+      messages: {
+        signedIn: "Signed in successfully.",
+        accountCreated: "Account created and signed in.",
+        googleSuccess: "Signed in with Google.",
+        emailLinkHint:
+          "We will send a sign-in link. If you used password or Google before, that is okay.",
+        emailLinkSent:
+          "Sign-in link sent. Open the email and follow the link to continue.",
+        linkSignedIn: "Signed in with the email link.",
+      },
+      errors: {
+        unauthorizedDomain:
+          "Google login is not available for this domain. Add the current domain (e.g., localhost) in Firebase Console → Authentication → Settings → Authorized domains.",
+        accountExists:
+          "An account with this email already exists with a different sign-in method. Use that method first, then link Google in profile settings.",
+        popupClosed: "The sign-in window was closed. Please try again.",
+        invalidEmail: "Invalid email.",
+        wrongPassword: "Incorrect email or password.",
+        tooManyRequests: "Too many attempts. Please wait and try again.",
+        missingEmail: "Enter your email.",
+        missingEmailForLink:
+          "Enter the email that received the link (no saved email found in this browser).",
+        profileMissing: "Could not load user profile after sign-in.",
+        roleMissing: "Invalid user role.",
+        generic: "Sign-in failed. Please try again.",
+        genericWithMessage: "Sign-in error: {{ message }}",
+      },
+    },
     student: {
       layout: {
         title: "Student Dashboard",
@@ -345,6 +420,46 @@ const dictionaries: Record<Locale, RawDictionary> = {
         answered: "Отвеченные",
         draft: "Черновик",
         published: "Опубликовано",
+      },
+    },
+    login: {
+      title: "Вход",
+      subtitle: "Email/Пароль, ссылка или Google",
+      emailLabel: "Email",
+      emailPlaceholder: "you@example.com",
+      passwordLabel: "Пароль",
+      passwordPlaceholder: "••••••••",
+      signInPassword: "Войти по паролю",
+      createAccount: "Создать аккаунт (email/пароль)",
+      sendLink: "Отправить ссылку для входа",
+      or: "или",
+      continueGoogle: "Продолжить с Google",
+      messages: {
+        signedIn: "Вход выполнен.",
+        accountCreated: "Аккаунт создан и выполнен вход.",
+        googleSuccess: "Вход через Google выполнен.",
+        emailLinkHint:
+          "Мы отправим ссылку для входа. Если раньше вы входили паролем или Google — это нормально.",
+        emailLinkSent:
+          "Ссылка для входа отправлена. Откройте письмо и перейдите по ссылке.",
+        linkSignedIn: "Вход по ссылке выполнен.",
+      },
+      errors: {
+        unauthorizedDomain:
+          "Google вход недоступен для этого домена. Добавьте текущий домен (например, localhost) в Firebase Console → Authentication → Settings → Authorized domains.",
+        accountExists:
+          "Аккаунт с этим email уже существует, но использует другой способ входа. Войдите тем способом, который использовали ранее, затем привяжите Google в профиле.",
+        popupClosed: "Окно входа было закрыто. Попробуйте ещё раз.",
+        invalidEmail: "Некорректный email.",
+        wrongPassword: "Неверный email или пароль.",
+        tooManyRequests: "Слишком много попыток. Подождите и попробуйте снова.",
+        missingEmail: "Укажите email.",
+        missingEmailForLink:
+          "Введите email, на который пришла ссылка (сохранённый email не найден).",
+        profileMissing: "Не удалось получить профиль пользователя после входа.",
+        roleMissing: "Неверная роль пользователя.",
+        generic: "Не удалось выполнить вход. Попробуйте ещё раз.",
+        genericWithMessage: "Ошибка входа: {{ message }}",
       },
     },
     student: {
