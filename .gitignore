@@ -4,6 +4,7 @@
 node_modules/
 dist/
 build/
+.firebase/
 .env
 .env.local
 .env.*.local
