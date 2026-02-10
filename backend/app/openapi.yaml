@@ -67,6 +67,15 @@ components:
           enum: [active, disabled]
           example: active
 
+    PatchMeRequest:
+      type: object
+      additionalProperties: false
+      required: [displayName]
+      properties:
+        displayName:
+          type: string
+          example: Alex Doe
+
     Paginated:
       type: object
       properties:
@@ -106,6 +115,18 @@ components:
           format: date-time
           nullable: true
           example: "2026-02-02T11:00:00Z"
+        progressPercent:
+          type: integer
+          nullable: true
+          example: 40
+        stepsDone:
+          type: integer
+          nullable: true
+          example: 2
+        stepsTotal:
+          type: integer
+          nullable: true
+          example: 5
 
     StudentsListResponse:
       allOf:
@@ -923,6 +944,29 @@ paths:
                 $ref: "#/components/schemas/MeResponse"
         "401":
           $ref: "#/components/responses/Unauthorized"
+    patch:
+      tags: [Auth]
+      summary: Update current user profile
+      operationId: patchMe
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatchMeRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MeResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   /admin/students:
     get:

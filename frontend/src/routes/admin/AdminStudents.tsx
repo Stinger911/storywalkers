@@ -3,6 +3,7 @@ import { A } from "@solidjs/router";
 import { Button } from "../../components/ui/button";
 import { Page } from "../../components/ui/page";
 import { SectionCard } from "../../components/ui/section-card";
+import { SmallStatBadge } from "../../components/ui/small-stat-badge";
 import {
   TextField,
   TextFieldInput,
@@ -114,12 +115,22 @@ export function AdminStudents() {
                           {student.role || "student"}
                         </div>
                       </div>
-                      <A
-                        href={`/admin/students/${student.uid}`}
-                        class="text-sm font-medium text-primary underline"
-                      >
-                        Open profile
-                      </A>
+                      <div class="flex flex-col items-end gap-2 text-right">
+                        <A
+                          href={`/admin/students/${student.uid}`}
+                          class="text-sm font-medium text-primary underline"
+                        >
+                          Open profile
+                        </A>
+                        <div class="flex flex-wrap justify-end gap-2">
+                          <SmallStatBadge>
+                            {student.progressPercent ?? 0}%
+                          </SmallStatBadge>
+                          <SmallStatBadge>
+                            {(student.stepsDone ?? 0)}/{student.stepsTotal ?? 0}
+                          </SmallStatBadge>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 ))}

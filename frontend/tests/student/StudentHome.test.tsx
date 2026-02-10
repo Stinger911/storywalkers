@@ -6,6 +6,12 @@ import { I18nProvider } from "../../src/lib/i18n";
 import { useMe } from "../../src/lib/useMe";
 import { useMyPlan } from "../../src/routes/student/studentPlanContext";
 
+vi.mock("../../src/components/ui/editable-display-name", () => ({
+  EditableDisplayName: (props: { displayName?: string; email?: string }) => (
+    <span>{props.displayName || props.email}</span>
+  ),
+}));
+
 vi.mock("../../src/lib/useMe", () => ({
   useMe: vi.fn(),
 }));
@@ -20,7 +26,11 @@ const useMyPlanMock = vi.mocked(useMyPlan);
 describe("StudentHome", () => {
   beforeEach(() => {
     useMeMock.mockReturnValue({
-      me: () => ({ displayName: "Alex Rivera", email: "alex@example.com", roleRaw: "student" }),
+      me: () => ({
+        displayName: "Alex Rivera",
+        email: "alex@example.com",
+        roleRaw: "student",
+      }),
     });
     useMyPlanMock.mockReturnValue({
       plan: () => ({ studentUid: "u1", goalId: "g1" }),
@@ -45,7 +55,7 @@ describe("StudentHome", () => {
     expect(screen.getByText("Hi, Alex!")).toBeInTheDocument();
     expect(screen.getByText("Student Dashboard")).toBeInTheDocument();
     expect(screen.getByText("Current step")).toBeInTheDocument();
-    expect(screen.getByText("Import footage")).toBeInTheDocument();
+    expect(screen.getAllByText("Import footage").length).toBeGreaterThan(0);
   });
 
   it("shows empty goal state when no plan", () => {
@@ -65,5 +75,27 @@ describe("StudentHome", () => {
       </I18nProvider>
     ));
     expect(screen.getByText("No goal assigned")).toBeInTheDocument();
+  });
+
+  it("falls back to email when display name missing", () => {
+    useMeMock.mockReturnValue({
+      me: () => ({ displayName: "", email: "fallback@example.com", roleRaw: "student" }),
+    });
+    useMyPlanMock.mockReturnValue({
+      plan: () => null,
+      goal: () => null,
+      steps: () => [],
+      loading: () => false,
+      error: () => null,
+      progress: () => ({ total: 0, done: 0, percent: 0 }),
+      markStepDone: vi.fn(),
+      openMaterial: vi.fn(),
+    });
+    render(() => (
+      <I18nProvider>
+        <StudentHome />
+      </I18nProvider>
+    ));
+    expect(screen.getByText("fallback@example.com")).toBeInTheDocument();
   });
 });

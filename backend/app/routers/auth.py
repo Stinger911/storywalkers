@@ -16,6 +16,50 @@ async def get_me(user: dict = Depends(get_current_user)) -> dict:
     return user
 
 
+class PatchMeRequest(BaseModel):
+    displayName: str
+
+    model_config = {"extra": "forbid"}
+
+
+@router.patch("/me")
+async def patch_me(
+    payload: PatchMeRequest,
+    user: dict = Depends(get_current_user),
+) -> dict:
+    display_name = payload.displayName.strip()
+    if not display_name:
+        raise AppError(
+            code="validation_error",
+            message="displayName is required",
+            status_code=400,
+        )
+    if len(display_name) > 60:
+        raise AppError(
+            code="validation_error",
+            message="displayName must be 60 characters or fewer",
+            status_code=400,
+        )
+    db = get_firestore_client()
+    doc_ref = db.collection("users").document(user["uid"])
+    if not doc_ref.get().exists:
+        raise AppError(code="not_found", message="User not found", status_code=404)
+    doc_ref.update(
+        {
+            "displayName": display_name,
+            "updatedAt": firestore.SERVER_TIMESTAMP,
+        }
+    )
+    updated = doc_ref.get().to_dict() or {}
+    return {
+        "uid": user["uid"],
+        "email": updated.get("email", user.get("email")),
+        "displayName": updated.get("displayName", display_name),
+        "role": user.get("roleRaw") or updated.get("role"),
+        "status": updated.get("status", user.get("status")),
+    }
+
+
 def _doc_or_404(
     doc_ref: firestore.DocumentReference, code: str, message: str
 ) -> dict[str, Any]:

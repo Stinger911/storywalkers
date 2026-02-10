@@ -1,7 +1,7 @@
 from fastapi.testclient import TestClient
 from google.cloud import firestore
 
-from app.auth.deps import require_staff
+from app.auth.deps import get_current_user, require_staff
 from app.main import app
 from app.routers import admin_students
 
@@ -156,5 +156,70 @@ def test_patch_student_role_updates(monkeypatch):
     assert response.status_code == 200
     assert response.json()["role"] == "expert"
     assert users["s1"]["role"] == "expert"
+
+    app.dependency_overrides.clear()
+
+
+def test_patch_student_requires_staff(monkeypatch):
+    users = {"s1": {"role": "student", "status": "active", "email": "s1@x.com"}}
+    fake_db = FakeFirestore(users)
+    monkeypatch.setattr(admin_students, "get_firestore_client", lambda: fake_db)
+
+    def _student_user():
+        return {
+            "uid": "u1",
+            "email": "u1@example.com",
+            "displayName": "Student",
+            "role": "student",
+            "status": "active",
+            "roleRaw": "student",
+        }
+
+    app.dependency_overrides[get_current_user] = _student_user
+    client = TestClient(app)
+
+    response = client.patch(
+        "/api/admin/students/s1", json={"displayName": "New Name"}
+    )
+    assert response.status_code == 403
+
+    app.dependency_overrides.clear()
+
+
+def test_patch_student_validates_display_name(monkeypatch):
+    users = {"s1": {"role": "student", "status": "active", "email": "s1@x.com"}}
+    fake_db = FakeFirestore(users)
+    monkeypatch.setattr(admin_students, "get_firestore_client", lambda: fake_db)
+    app.dependency_overrides[require_staff] = _override_staff
+    client = TestClient(app)
+
+    response = client.patch("/api/admin/students/s1", json={"displayName": "   "})
+    assert response.status_code == 400
+
+    response = client.patch(
+        "/api/admin/students/s1", json={"displayName": "x" * 61}
+    )
+    assert response.status_code == 400
+
+    app.dependency_overrides.clear()
+
+
+def test_patch_student_updates_display_name_and_timestamp(monkeypatch):
+    users = {
+        "s1": {"role": "student", "status": "active", "email": "s1@x.com"}
+    }
+    fake_db = FakeFirestore(users)
+    monkeypatch.setattr(admin_students, "get_firestore_client", lambda: fake_db)
+    app.dependency_overrides[require_staff] = _override_staff
+    client = TestClient(app)
+
+    response = client.patch(
+        "/api/admin/students/s1", json={"displayName": "  Alex  "}
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["displayName"] == "Alex"
+    assert users["s1"]["displayName"] == "Alex"
+    assert users["s1"]["updatedAt"] == "SERVER_TIMESTAMP"
 
     app.dependency_overrides.clear()

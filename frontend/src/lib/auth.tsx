@@ -32,6 +32,7 @@ type AuthContextValue = {
   loginWithGoogle: () => Promise<void>
   logout: () => Promise<void>
   refreshMe: () => Promise<void>
+  updateDisplayName: (displayName: string) => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextValue>()
@@ -65,6 +66,19 @@ export function AuthProvider(props: { children: JSX.Element }) {
     } finally {
       clearTimeout(timeout)
     }
+  }
+
+  const updateDisplayName = async (displayName: string) => {
+    const response = await apiFetch('/api/me', {
+      method: 'PATCH',
+      body: JSON.stringify({ displayName }),
+    })
+    if (!response.ok) {
+      const payload = await response.json().catch(() => ({}))
+      throw new Error(payload?.error?.message ?? 'Request failed')
+    }
+    const data = (await response.json()) as MeProfile
+    setMe(data)
   }
 
   const loginWithGoogle = async () => {
@@ -114,6 +128,7 @@ export function AuthProvider(props: { children: JSX.Element }) {
     loginWithGoogle,
     logout,
     refreshMe,
+    updateDisplayName,
   }
 
   return <AuthContext.Provider value={value}>{props.children}</AuthContext.Provider>

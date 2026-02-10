@@ -7,6 +7,8 @@ import { RightRail } from "../../components/ui/right-rail";
 import { RailCard } from "../../components/ui/rail-card";
 import { SectionCard } from "../../components/ui/section-card";
 import { SmallStatBadge } from "../../components/ui/small-stat-badge";
+import { EditableText } from "../../components/ui/editable-text";
+import { useAuth } from "../../lib/auth";
 import {
   Select,
   SelectContent,
@@ -82,6 +84,7 @@ type SelectOption = {
 };
 
 export function AdminStudentProfile() {
+  const auth = useAuth();
   const params = useParams();
   const uid = () => params.uid ?? "";
 
@@ -96,6 +99,8 @@ export function AdminStudentProfile() {
   const [error, setError] = createSignal<string | null>(null);
   const [saving, setSaving] = createSignal(false);
   const [savingProfile, setSavingProfile] = createSignal(false);
+  const [savingName, setSavingName] = createSignal(false);
+  const [nameError, setNameError] = createSignal<string | null>(null);
   const [roleDraft, setRoleDraft] = createSignal("student");
   const [statusDraft, setStatusDraft] = createSignal("active");
   const [previewOpen, setPreviewOpen] = createSignal(false);
@@ -344,6 +349,21 @@ export function AdminStudentProfile() {
     }
   };
 
+  const saveDisplayName = async (nextValue: string) => {
+    setSavingName(true);
+    setNameError(null);
+    try {
+      await updateStudent(uid(), { displayName: nextValue });
+      setStudent((prev) => (prev ? { ...prev, displayName: nextValue } : prev));
+      await load();
+    } catch (err) {
+      setNameError((err as Error).message);
+      throw err;
+    } finally {
+      setSavingName(false);
+    }
+  };
+
   return (
     <Page
       title="Student profile"
@@ -445,7 +465,21 @@ export function AdminStudentProfile() {
           fallback={<div class="text-sm">Loading student…</div>}
         >
           <div class="text-sm text-muted-foreground">
-            {student()?.displayName || "Unnamed student"} · {student()?.email}
+            <div class="flex flex-wrap items-center gap-2">
+              <EditableText
+                value={student()?.displayName || "Unnamed student"}
+                canEdit={auth.me()?.role === "staff"}
+                onSave={saveDisplayName}
+              />
+              <span class="text-muted-foreground">·</span>
+              <span>{student()?.email}</span>
+            </div>
+            <Show when={savingName()}>
+              <div class="mt-1 text-xs text-muted-foreground">Saving…</div>
+            </Show>
+            <Show when={nameError()}>
+              <div class="mt-1 text-xs text-error-foreground">{nameError()}</div>
+            </Show>
           </div>
         </Show>
       </SectionCard>

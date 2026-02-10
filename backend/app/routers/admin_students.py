@@ -96,6 +96,31 @@ async def list_students(
         data["uid"] = snap.id
         items.append(data)
 
+    if items:
+        for item in items:
+            if item.get("role") != "student":
+                item["progressPercent"] = 0
+                item["stepsDone"] = 0
+                item["stepsTotal"] = 0
+                continue
+            plan_ref = db.collection("student_plans").document(item["uid"])
+            if not plan_ref.get().exists:
+                item["progressPercent"] = 0
+                item["stepsDone"] = 0
+                item["stepsTotal"] = 0
+                continue
+            steps_ref = plan_ref.collection("steps")
+            total = 0
+            done = 0
+            for step_snap in steps_ref.stream():
+                total += 1
+                if (step_snap.to_dict() or {}).get("isDone"):
+                    done += 1
+            percent = round((done / total) * 100) if total else 0
+            item["progressPercent"] = percent
+            item["stepsDone"] = done
+            item["stepsTotal"] = total
+
     if q:
         q_lower = q.lower()
         items = [
@@ -161,6 +186,21 @@ async def update_student(
             message="Invalid role",
             status_code=400,
         )
+    if "displayName" in updates:
+        display_name = (updates.get("displayName") or "").strip()
+        if not display_name:
+            raise AppError(
+                code="validation_error",
+                message="displayName is required",
+                status_code=400,
+            )
+        if len(display_name) > 60:
+            raise AppError(
+                code="validation_error",
+                message="displayName must be 60 characters or fewer",
+                status_code=400,
+            )
+        updates["displayName"] = display_name
     status = updates.get("status")
     if status and status not in {"active", "disabled"}:
         raise AppError(

@@ -39,6 +39,9 @@ type Student = {
   displayName?: string
   role?: string
   status?: string
+  progressPercent?: number
+  stepsDone?: number
+  stepsTotal?: number
   createdAt?: unknown
   updatedAt?: unknown
 }

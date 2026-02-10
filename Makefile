@@ -40,18 +40,33 @@ cc: ## clean code
 	make format
 	make isort
 
-tests: ## run tests
+tests-frontend: ## run frontend tests
 	@echo "🧪 Running frontend tests..."
+	(cd frontend && \
+	npm install && \
+	npm run test \
+	)
 	@echo "✅ Frontend tests passed!"
+
+tests-backend: ## run backend tests
+	@echo "🐍 Running backend tests..."
+	(cd backend && \
+	uv run --group dev pytest tests \
+	)
+	@echo "✅ Backend tests passed!"
+
+tests-firestore: ## run firestore rules tests
 	@echo "🔥 Running firestore rules tests..."
 	(cd tests/firebase && \
 	npm install && \
-# 	npm run test:emu \
+	npm run test:emu \
 	)
 	@echo "✅ Firestore rules tests passed!"
-	@echo "🐍 Running backend tests..."
-	uv run --group dev pytest backend/tests
-	@echo "✅ Backend tests passed!"
+
+tests: ## run tests
+	@make tests-frontend
+# 	@make tests-firestore
+	@make tests-backend
 	@echo "🚀 All tests passed!"
 
 dev: ## run the development servers

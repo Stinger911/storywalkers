@@ -4,6 +4,7 @@ import { Card, CardContent } from '../../components/ui/card'
 import { Illustration } from '../../components/ui/illustration'
 import { SectionCard } from '../../components/ui/section-card'
 import { SmallStatBadge } from '../../components/ui/small-stat-badge'
+import { EditableDisplayName } from '../../components/ui/editable-display-name'
 import { useMe } from '../../lib/useMe'
 import { useI18n } from '../../lib/i18n'
 import { useMyPlan } from './studentPlanContext'
@@ -51,11 +52,13 @@ export function StudentHome() {
           </Show>
         </div>
           <Show when={me()}>
-            <div class="text-sm text-muted-foreground">
-              {t('student.home.signedInAs')}{' '}
-              <span class="font-medium text-foreground">
-                {me()?.displayName ?? me()?.email}
-              </span>
+            <div class="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+              <span>{t('student.home.signedInAs')}</span>
+              <EditableDisplayName
+                displayName={me()?.displayName}
+                email={me()?.email}
+                canEdit
+              />
             </div>
           </Show>
         </div>

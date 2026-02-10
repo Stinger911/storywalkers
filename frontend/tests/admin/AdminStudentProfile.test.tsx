@@ -20,6 +20,12 @@ vi.mock("@solidjs/router", () => ({
   useParams: () => ({ uid: "u1" }),
 }));
 
+vi.mock("../../src/lib/auth", () => ({
+  useAuth: () => ({
+    me: () => ({ role: "staff" }),
+  }),
+}));
+
 vi.mock("../../src/components/ui/select", () => {
   return {
     Select: (props: {
@@ -30,7 +36,13 @@ vi.mock("../../src/components/ui/select", () => {
     }) => {
       const isRole =
         (props.options || []).some((option) => option.label === "Student") ?? false;
-      const testId = isRole ? "role-select" : "goal-select";
+      const isStatus =
+        (props.options || []).some((option) => option.label === "Active") ?? false;
+      const testId = isRole
+        ? "role-select"
+        : isStatus
+          ? "status-select"
+          : "goal-select";
       const currentValue = props.value?.value ?? "";
       return (
         <select
@@ -58,6 +70,12 @@ vi.mock("../../src/components/ui/select", () => {
     SelectValue: (props: { children?: unknown }) => <>{props.children}</>,
   };
 });
+
+vi.mock("../../src/components/ui/editable-text", () => ({
+  EditableText: (props: { value: string; onSave: (value: string) => Promise<void> }) => (
+    <button onClick={() => void props.onSave("New Name")}>{props.value}</button>
+  ),
+}));
 
 vi.mock("../../src/lib/adminApi", () => ({
   assignPlan: vi.fn(),
@@ -134,6 +152,61 @@ describe("AdminStudentProfile", () => {
       expect(updateStudentMock).toHaveBeenCalledWith("u1", {
         role: "expert",
         status: "active",
+      });
+    });
+  });
+
+  it("updates status via access controls", async () => {
+    getStudentMock.mockResolvedValue({
+      uid: "u1",
+      displayName: "Student One",
+      email: "s1@x.com",
+      role: "student",
+      status: "active",
+    });
+    getStudentPlanMock.mockRejectedValue(new Error("no plan"));
+    getStudentPlanStepsMock.mockResolvedValue({ items: [] });
+    listGoalsMock.mockResolvedValue({ items: [] });
+    listStepTemplatesMock.mockResolvedValue({ items: [] });
+    updateStudentMock.mockResolvedValue({ role: "student", status: "disabled" });
+
+    renderWithShell();
+
+    const statusSelect = await screen.findByTestId("status-select");
+    fireEvent.change(statusSelect, { target: { value: "disabled" } });
+
+    const saveButton = screen.getByText("Save access");
+    fireEvent.click(saveButton);
+
+    await waitFor(() => {
+      expect(updateStudentMock).toHaveBeenCalledWith("u1", {
+        role: "student",
+        status: "disabled",
+      });
+    });
+  });
+
+  it("updates display name inline", async () => {
+    getStudentMock.mockResolvedValue({
+      uid: "u1",
+      displayName: "Student One",
+      email: "s1@x.com",
+      role: "student",
+    });
+    getStudentPlanMock.mockRejectedValue(new Error("no plan"));
+    getStudentPlanStepsMock.mockResolvedValue({ items: [] });
+    listGoalsMock.mockResolvedValue({ items: [] });
+    listStepTemplatesMock.mockResolvedValue({ items: [] });
+    updateStudentMock.mockResolvedValue({ displayName: "New Name" });
+
+    renderWithShell();
+
+    const nameButton = await screen.findByText("Student One");
+    fireEvent.click(nameButton);
+
+    await waitFor(() => {
+      expect(updateStudentMock).toHaveBeenCalledWith("u1", {
+        displayName: "New Name",
       });
     });
   });

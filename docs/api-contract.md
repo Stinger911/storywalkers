@@ -91,6 +91,39 @@ Returns current user profile and role.
 
 ---
 
+### PATCH `/me`
+
+Update current user profile (MVP: display name only).
+
+**Access:** any authenticated user
+
+**Request**
+
+```json
+{
+  "displayName": "Alex Doe"
+}
+```
+
+**Response 200**
+
+```json
+{
+  "uid": "UID123",
+  "email": "alex@example.com",
+  "displayName": "Alex Doe",
+  "role": "student",
+  "status": "active"
+}
+```
+
+**Notes**
+
+- Only `displayName` is accepted; any other fields are rejected.
+- `displayName` must be 1..60 chars after trimming.
+
+---
+
 ## 2) Admin: Students
 
 > Staff-only routes.
@@ -120,6 +153,9 @@ List students (and optionally staff, depending on implementation).
       "displayName": "Alex",
       "role": "student",
       "status": "active",
+      "progressPercent": 40,
+      "stepsDone": 2,
+      "stepsTotal": 5,
       "createdAt": "2026-02-02T10:15:30Z"
     }
   ],
@@ -194,6 +230,9 @@ Update student profile/status.
   "displayName": "Alex Doe",
   "role": "student",
   "status": "disabled",
+  "progressPercent": 40,
+  "stepsDone": 2,
+  "stepsTotal": 5,
   "updatedAt": "2026-02-02T11:00:00Z"
 }
 ```
