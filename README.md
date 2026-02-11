@@ -104,9 +104,14 @@ See `docs/deployment.md` for Firebase Hosting and Cloud Run steps.
 - Admin Q&A: list questions, answer, and optionally publish to library.
 - Library: students browse published entries; staff create/edit drafts and publish.
 - Student dashboard: goal overview, steps, right-rail layout, and learning progress.
-- Student profile: inline display name edit (PATCH /me).
+- Student profile: inline display name edit (`PATCH /me`).
+- Student step completion dialog with EN/RU i18n.
+- Student step completion submissions with optional comment/link (`POST /student/steps/{id}/complete`).
 - Student area i18n with EN/RU locale support.
-- Admin student management: assign goals/steps, reorder, delete steps, reset from goal template, and manage access (role/status).
+- Login supports multiple methods per email (email link + email/password linking flow).
+- Frontend data access is backend-mediated via `/api/*` (no direct Firestore reads/writes from UI code).
+- Admin student management: assign goals/steps, reorder, delete steps, reset from goal template, manage access (role/status), and delete students with double confirmation.
+- Admin step completions: list, inline edit comment/link, and revoke completion.
 - Admin goals: template path (template steps) editor with bulk save.
 - Admin students list: progress badges (percent and done/total).
 - CI: GitHub Actions runs tests on push/PR.
