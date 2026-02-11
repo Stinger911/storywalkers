@@ -215,6 +215,45 @@ async def update_student(
     return data
 
 
+@router.delete("/students/{uid}")
+async def delete_student(
+    uid: str,
+    user: dict = Depends(require_staff),
+):
+    db = get_firestore_client()
+    user_ref = db.collection("users").document(uid)
+    user_data = _doc_or_404(user_ref)
+
+    if user_data.get("role") != "student":
+        raise AppError(
+            code="validation_error",
+            message="Only student accounts can be deleted",
+            status_code=400,
+        )
+
+    deleted_steps = 0
+    plan_ref = db.collection("student_plans").document(uid)
+    plan_snap = plan_ref.get()
+    if plan_snap.exists:
+        for step_snap in plan_ref.collection("steps").stream():
+            step_snap.reference.delete()
+            deleted_steps += 1
+        plan_ref.delete()
+
+    deleted_completions = 0
+    completions_query = db.collection("step_completions").where("studentUid", "==", uid)
+    for completion_snap in completions_query.stream():
+        completion_snap.reference.delete()
+        deleted_completions += 1
+
+    user_ref.delete()
+    return {
+        "deleted": uid,
+        "deletedSteps": deleted_steps,
+        "deletedCompletions": deleted_completions,
+    }
+
+
 @router.post("/students/{uid}/plan")
 async def assign_plan(
     uid: str,

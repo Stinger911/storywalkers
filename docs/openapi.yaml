@@ -304,6 +304,80 @@ components:
           type: integer
           example: 2
 
+    CompleteStepRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        comment:
+          type: string
+          nullable: true
+          example: Finished exercises and reviewed notes.
+        link:
+          type: string
+          format: uri
+          nullable: true
+          example: https://example.com/proof
+
+    StepCompletionItem:
+      type: object
+      required: [id, stepId, studentUid, status, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          example: sc_001
+        stepId:
+          type: string
+          example: step_001
+        studentUid:
+          type: string
+          example: UID123
+        comment:
+          type: string
+          nullable: true
+          example: Finished exercises and reviewed notes.
+        link:
+          type: string
+          format: uri
+          nullable: true
+          example: https://example.com/proof
+        status:
+          type: string
+          enum: [completed, revoked]
+          example: completed
+        createdAt:
+          type: string
+          format: date-time
+          example: "2026-02-11T10:00:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2026-02-11T10:05:00Z"
+
+    StepCompletionList:
+      allOf:
+        - $ref: "#/components/schemas/Paginated"
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/StepCompletionItem"
+
+    PatchStepCompletionRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        comment:
+          type: string
+          nullable: true
+          example: Updated completion note.
+        link:
+          type: string
+          format: uri
+          nullable: true
+          example: https://example.com/updated-proof
+
     Category:
       type: object
       required: [id, name, slug, type]
@@ -1472,6 +1546,147 @@ paths:
       responses:
         "204":
           description: No Content
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /student/steps/{stepId}/complete:
+    post:
+      tags: [Admin - Students]
+      summary: Mark current student's step as completed
+      operationId: studentCompleteStep
+      parameters:
+        - in: path
+          name: stepId
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CompleteStepRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, id]
+                properties:
+                  status:
+                    type: string
+                    enum: [completed]
+                    example: completed
+                  id:
+                    type: string
+                    example: sc_001
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+
+  /admin/step-completions:
+    get:
+      tags: [Admin - Students]
+      summary: List step completions
+      operationId: adminListStepCompletions
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 50
+            maximum: 200
+        - in: query
+          name: cursor
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StepCompletionList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /admin/step-completions/{id}:
+    patch:
+      tags: [Admin - Students]
+      summary: Update step completion comment/link
+      operationId: adminPatchStepCompletion
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatchStepCompletionRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, id]
+                properties:
+                  status:
+                    type: string
+                    enum: [updated]
+                    example: updated
+                  id:
+                    type: string
+                    example: sc_001
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+
+  /admin/step-completions/{id}/revoke:
+    post:
+      tags: [Admin - Students]
+      summary: Revoke a step completion
+      operationId: adminRevokeStepCompletion
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, id]
+                properties:
+                  status:
+                    type: string
+                    enum: [revoked]
+                    example: revoked
+                  id:
+                    type: string
+                    example: sc_001
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":

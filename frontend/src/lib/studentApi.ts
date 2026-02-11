@@ -24,6 +24,18 @@ export type PlanStep = {
   order: number
   isDone: boolean
   doneAt?: unknown
+  doneComment?: string | null
+  doneLink?: string | null
+}
+
+export type CompleteStepRequest = {
+  comment?: string
+  link?: string
+}
+
+export type CompleteStepResponse = {
+  status: string
+  completionId: string
 }
 
 export async function getMyPlan() {
@@ -42,4 +54,12 @@ export async function updateMyStepProgress(stepId: string, isDone: boolean) {
     body: JSON.stringify({ isDone }),
   })
   return handleJson<PlanStep>(response)
+}
+
+export async function completeMyStep(stepId: string, payload: CompleteStepRequest) {
+  const response = await apiFetch(`/api/student/steps/${stepId}/complete`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+  return handleJson<CompleteStepResponse>(response)
 }

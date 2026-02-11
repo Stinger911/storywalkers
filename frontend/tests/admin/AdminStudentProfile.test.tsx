@@ -13,11 +13,15 @@ import {
   previewResetFromGoal,
   updateStudent,
   assignPlan,
+  deleteStudent,
   deleteStudentPlanStep,
 } from "../../src/lib/adminApi";
 
+const navigateMock = vi.fn();
+
 vi.mock("@solidjs/router", () => ({
   useParams: () => ({ uid: "u1" }),
+  useNavigate: () => navigateMock,
 }));
 
 vi.mock("../../src/lib/auth", () => ({
@@ -80,6 +84,7 @@ vi.mock("../../src/components/ui/editable-text", () => ({
 vi.mock("../../src/lib/adminApi", () => ({
   assignPlan: vi.fn(),
   bulkAddSteps: vi.fn(),
+  deleteStudent: vi.fn(),
   deleteStudentPlanStep: vi.fn(),
   getStudent: vi.fn(),
   getStudentPlan: vi.fn(),
@@ -99,6 +104,7 @@ const listStepTemplatesMock = listStepTemplates as unknown as ReturnType<typeof 
 const updateStudentMock = updateStudent as unknown as ReturnType<typeof vi.fn>;
 const previewResetMock = previewResetFromGoal as unknown as ReturnType<typeof vi.fn>;
 const assignPlanMock = assignPlan as unknown as ReturnType<typeof vi.fn>;
+const deleteStudentMock = deleteStudent as unknown as ReturnType<typeof vi.fn>;
 const deleteStudentPlanStepMock = deleteStudentPlanStep as unknown as ReturnType<
   typeof vi.fn
 >;
@@ -122,7 +128,9 @@ describe("AdminStudentProfile", () => {
     updateStudentMock.mockReset();
     previewResetMock.mockReset();
     assignPlanMock.mockReset();
+    deleteStudentMock.mockReset();
     deleteStudentPlanStepMock.mockReset();
+    navigateMock.mockReset();
   });
 
   it("updates role via access controls", async () => {
@@ -309,6 +317,44 @@ describe("AdminStudentProfile", () => {
 
     await waitFor(() => {
       expect(deleteStudentPlanStepMock).toHaveBeenCalledWith("u1", "s1");
+    });
+  });
+
+  it("deletes a student with double confirmation", async () => {
+    getStudentMock.mockResolvedValue({
+      uid: "u1",
+      displayName: "Student One",
+      email: "s1@x.com",
+      role: "student",
+    });
+    getStudentPlanMock.mockResolvedValue({ goalId: "g1" });
+    getStudentPlanStepsMock.mockResolvedValue({ items: [] });
+    listGoalsMock.mockResolvedValue({ items: [] });
+    listStepTemplatesMock.mockResolvedValue({ items: [] });
+    deleteStudentMock.mockResolvedValue({
+      deleted: "u1",
+      deletedSteps: 0,
+      deletedCompletions: 0,
+    });
+
+    renderWithShell();
+
+    const openDelete = await screen.findByTestId("open-delete-student");
+    fireEvent.click(openDelete);
+
+    const acknowledge = await screen.findByTestId("delete-student-acknowledge");
+    fireEvent.click(acknowledge);
+    const confirmInput = screen.getByTestId("delete-student-confirm-input");
+    fireEvent.input(confirmInput, { target: { value: "DELETE" } });
+
+    const confirmButton = screen.getByTestId("delete-student-confirm-button");
+    fireEvent.click(confirmButton);
+
+    await waitFor(() => {
+      expect(deleteStudentMock).toHaveBeenCalledWith("u1");
+      expect(navigateMock).toHaveBeenCalledWith("/admin/students", {
+        replace: true,
+      });
     });
   });
 });

@@ -1,6 +1,7 @@
 from typing import Any
+from urllib.parse import urlparse
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, status
 from google.cloud import firestore
 from pydantic import BaseModel
 
@@ -104,6 +105,34 @@ class UpdateStepProgressRequest(BaseModel):
     isDone: bool
 
 
+class CompleteStepRequest(BaseModel):
+    comment: str | None = None
+    link: str | None = None
+
+    model_config = {"extra": "forbid"}
+
+
+def _sanitize_optional_text(value: str | None) -> str | None:
+    if value is None:
+        return None
+    trimmed = value.strip()
+    return trimmed or None
+
+
+def _sanitize_link(value: str | None) -> str | None:
+    link = _sanitize_optional_text(value)
+    if link is None:
+        return None
+    parsed = urlparse(link)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        raise AppError(
+            code="validation_error",
+            message="link must be a valid URL",
+            status_code=400,
+        )
+    return link
+
+
 @router.patch("/me/plan/steps/{step_id}")
 async def update_my_step_progress(
     step_id: str,
@@ -124,3 +153,62 @@ async def update_my_step_progress(
     data = _doc_or_404(step_ref, "not_found", "Step not found")
     data["stepId"] = data.pop("id")
     return data
+
+
+@router.post("/student/steps/{step_id}/complete", status_code=status.HTTP_201_CREATED)
+async def complete_my_step(
+    step_id: str,
+    payload: CompleteStepRequest | None = None,
+    user: dict = Depends(get_current_user),
+):
+    db = get_firestore_client()
+    plan_ref = db.collection("student_plans").document(user["uid"])
+    plan = _doc_or_404(plan_ref, "not_found", "Plan not found")
+
+    step_ref = plan_ref.collection("steps").document(step_id)
+    step = _doc_or_404(step_ref, "not_found", "Step not found")
+
+    goal_id = plan.get("goalId")
+    goal_title = None
+    if goal_id:
+        goal_snap = db.collection("goals").document(goal_id).get()
+        if goal_snap.exists:
+            goal_title = (goal_snap.to_dict() or {}).get("title")
+
+    comment = _sanitize_optional_text(payload.comment if payload else None)
+    link = _sanitize_link(payload.link if payload else None)
+    now = firestore.SERVER_TIMESTAMP
+
+    completion_ref = db.collection("step_completions").document()
+    batch = db.batch()
+    batch.update(
+        step_ref,
+        {
+            "isDone": True,
+            "doneAt": now,
+            "doneComment": comment,
+            "doneLink": link,
+            "updatedAt": now,
+        },
+    )
+    batch.set(
+        completion_ref,
+        {
+            "studentUid": user["uid"],
+            "studentDisplayName": user.get("displayName"),
+            "goalId": goal_id,
+            "goalTitle": goal_title,
+            "stepId": step_id,
+            "stepTitle": step.get("title"),
+            "completedAt": now,
+            "comment": comment,
+            "link": link,
+            "status": "completed",
+            "revokedAt": None,
+            "revokedBy": None,
+            "updatedAt": now,
+        },
+    )
+    batch.commit()
+
+    return {"status": "ok", "completionId": completion_ref.id}

@@ -1,9 +1,19 @@
-import { Show, createMemo } from 'solid-js'
+import { Show, createMemo, createSignal } from 'solid-js'
 import { Button, buttonVariants } from '../../components/ui/button'
 import { Card, CardContent } from '../../components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../../components/ui/dialog'
 import { Illustration } from '../../components/ui/illustration'
 import { SectionCard } from '../../components/ui/section-card'
 import { SmallStatBadge } from '../../components/ui/small-stat-badge'
+import { TextField, TextFieldInput, TextFieldLabel, TextFieldTextArea } from '../../components/ui/text-field'
+import { showToast } from '../../components/ui/toast'
 import { EditableDisplayName } from '../../components/ui/editable-display-name'
 import { useMe } from '../../lib/useMe'
 import { useI18n } from '../../lib/i18n'
@@ -12,13 +22,53 @@ import { cn } from '../../lib/utils'
 
 export function StudentHome() {
   const { me } = useMe()
-  const { plan, goal, steps, loading, error, progress, markStepDone, openMaterial } = useMyPlan()
+  const { plan, goal, steps, loading, error, progress, markStepDone, completeStep, openMaterial } = useMyPlan()
   const { t } = useI18n()
+  const [completeDialogOpen, setCompleteDialogOpen] = createSignal(false)
+  const [pendingStepId, setPendingStepId] = createSignal<string | null>(null)
+  const [doneComment, setDoneComment] = createSignal('')
+  const [doneLink, setDoneLink] = createSignal('')
+  const [submittingComplete, setSubmittingComplete] = createSignal(false)
   const firstName = createMemo(() => {
     const raw = me()?.displayName ?? ''
     return raw.trim().split(' ')[0] || t('student.home.fallbackName')
   })
   const currentStep = createMemo(() => steps().find((step) => !step.isDone) ?? null)
+
+  const openCompleteDialog = (stepId: string) => {
+    setPendingStepId(stepId)
+    setDoneComment('')
+    setDoneLink('')
+    setCompleteDialogOpen(true)
+  }
+
+  const closeCompleteDialog = () => {
+    setCompleteDialogOpen(false)
+    setPendingStepId(null)
+    setDoneComment('')
+    setDoneLink('')
+    setSubmittingComplete(false)
+  }
+
+  const submitComplete = async () => {
+    if (!pendingStepId()) return
+    setSubmittingComplete(true)
+    try {
+      await completeStep(pendingStepId()!, {
+        comment: doneComment(),
+        link: doneLink(),
+      })
+      closeCompleteDialog()
+    } catch (err) {
+      showToast({
+        variant: 'error',
+        title: t('student.home.completeDialogErrorTitle'),
+        description:
+          (err as Error).message || t('student.home.completeDialogErrorBody'),
+      })
+      setSubmittingComplete(false)
+    }
+  }
 
   return (
     <section class="space-y-6">
@@ -169,7 +219,7 @@ export function StudentHome() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => void markStepDone(step().id, true)}
+                        onClick={() => openCompleteDialog(step().id)}
                       >
                         {t('student.home.currentStepMarkDone')}
                       </Button>
@@ -218,6 +268,25 @@ export function StudentHome() {
                           <div class="line-clamp-2 text-xs text-muted-foreground">
                             {step.description}
                           </div>
+                          <Show when={step.isDone && step.doneComment}>
+                            <div class="mt-2 text-xs">
+                              <span class="font-semibold">Комментарий: </span>
+                              <span class="text-muted-foreground">{step.doneComment}</span>
+                            </div>
+                          </Show>
+                          <Show when={step.isDone && step.doneLink}>
+                            <div class="mt-1 text-xs">
+                              <span class="font-semibold">Ссылка: </span>
+                              <a
+                                href={step.doneLink ?? "#"}
+                                target="_blank"
+                                rel="noopener"
+                                class="text-primary underline"
+                              >
+                                {step.doneLink}
+                              </a>
+                            </div>
+                          </Show>
                         </div>
                       </div>
                       <div class="flex items-center gap-2">
@@ -246,7 +315,13 @@ export function StudentHome() {
                               ? t('student.home.markNotDone')
                               : t('student.home.markDone')
                           }
-                          onClick={() => void markStepDone(step.id, !step.isDone)}
+                          onClick={() => {
+                            if (step.isDone) {
+                              void markStepDone(step.id, false)
+                              return
+                            }
+                            openCompleteDialog(step.id)
+                          }}
                         >
                           <span class="material-symbols-outlined text-[18px]">check</span>
                         </Button>
@@ -259,6 +334,77 @@ export function StudentHome() {
           </SectionCard>
         </Show>
       </Show>
+
+      <Dialog
+        open={completeDialogOpen()}
+        onOpenChange={(open) => {
+          if (!open && !submittingComplete()) {
+            closeCompleteDialog()
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('student.home.completeDialogTitle')}</DialogTitle>
+            <DialogDescription>
+              {t('student.home.completeDialogDescription')}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div class="space-y-3">
+            <TextField>
+              <TextFieldLabel for="step-done-comment">
+                {t('student.home.completeDialogCommentLabel')}
+              </TextFieldLabel>
+              <TextFieldTextArea
+                id="step-done-comment"
+                value={doneComment()}
+                onInput={(event) => setDoneComment(event.currentTarget.value)}
+                rows={4}
+                disabled={submittingComplete()}
+              />
+            </TextField>
+
+            <TextField>
+              <TextFieldLabel for="step-done-link">
+                {t('student.home.completeDialogLinkLabel')}
+              </TextFieldLabel>
+              <TextFieldInput
+                id="step-done-link"
+                type="url"
+                value={doneLink()}
+                onInput={(event) => setDoneLink(event.currentTarget.value)}
+                placeholder={t('student.home.completeDialogLinkPlaceholder')}
+                disabled={submittingComplete()}
+              />
+            </TextField>
+
+            <details class="rounded-[var(--radius-md)] border border-border/70 p-3 text-sm">
+              <summary class="cursor-pointer font-semibold">
+                {t('student.home.completeDialogDriveHelpTitle')}
+              </summary>
+              <ol class="mt-2 list-decimal space-y-1 pl-5 text-muted-foreground">
+                <li>{t('student.home.completeDialogDriveHelpStep1')}</li>
+                <li>{t('student.home.completeDialogDriveHelpStep2')}</li>
+                <li>{t('student.home.completeDialogDriveHelpStep3')}</li>
+                <li>{t('student.home.completeDialogDriveHelpStep4')}</li>
+              </ol>
+            </details>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={closeCompleteDialog} disabled={submittingComplete()}>
+              {t('student.home.completeDialogCancel')}
+            </Button>
+            <Button onClick={() => void submitComplete()} disabled={submittingComplete()}>
+              <Show when={submittingComplete()}>
+                <span class="mr-2 inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+              </Show>
+              {t('student.home.completeDialogConfirm')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </section>
   )
 }

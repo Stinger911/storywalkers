@@ -49,7 +49,9 @@ type RawDictionary = {
       googleSuccess: string;
       emailLinkHint: string;
       emailLinkSent: string;
+      emailLinkSentSetPassword: string;
       linkSignedIn: string;
+      linkSignedInPasswordEnabled: string;
     };
     errors: {
       unauthorizedDomain: string;
@@ -59,6 +61,8 @@ type RawDictionary = {
       wrongPassword: string;
       tooManyRequests: string;
       missingEmail: string;
+      emailAlreadyInUse: string;
+      weakPassword: string;
       missingEmailForLink: string;
       profileMissing: string;
       roleMissing: string;
@@ -104,6 +108,20 @@ type RawDictionary = {
       currentStepMaterial: string;
       currentStepMarkDone: string;
       currentStepEmpty: string;
+      completeDialogTitle: string;
+      completeDialogDescription: string;
+      completeDialogCommentLabel: string;
+      completeDialogLinkLabel: string;
+      completeDialogLinkPlaceholder: string;
+      completeDialogDriveHelpTitle: string;
+      completeDialogDriveHelpStep1: string;
+      completeDialogDriveHelpStep2: string;
+      completeDialogDriveHelpStep3: string;
+      completeDialogDriveHelpStep4: string;
+      completeDialogCancel: string;
+      completeDialogConfirm: string;
+      completeDialogErrorTitle: string;
+      completeDialogErrorBody: string;
     };
     questionsRail: {
       illustrationAlt: string;
@@ -246,7 +264,11 @@ const dictionaries: Record<Locale, RawDictionary> = {
           "We will send a sign-in link. If you used password or Google before, that is okay.",
         emailLinkSent:
           "Sign-in link sent. Open the email and follow the link to continue.",
+        emailLinkSentSetPassword:
+          "This email already exists. We sent a sign-in link. Open it to sign in and enable password login.",
         linkSignedIn: "Signed in with the email link.",
+        linkSignedInPasswordEnabled:
+          "Signed in with email link. Password login is now enabled for this email.",
       },
       errors: {
         unauthorizedDomain:
@@ -258,6 +280,8 @@ const dictionaries: Record<Locale, RawDictionary> = {
         wrongPassword: "Incorrect email or password.",
         tooManyRequests: "Too many attempts. Please wait and try again.",
         missingEmail: "Enter your email.",
+        emailAlreadyInUse: "An account with this email already exists.",
+        weakPassword: "Password is too weak (minimum 6 characters).",
         missingEmailForLink:
           "Enter the email that received the link (no saved email found in this browser).",
         profileMissing: "Could not load user profile after sign-in.",
@@ -304,6 +328,20 @@ const dictionaries: Record<Locale, RawDictionary> = {
         currentStepMaterial: "View material",
         currentStepMarkDone: "Mark done",
         currentStepEmpty: "You’ve completed every step. Nice work!",
+        completeDialogTitle: "Complete step",
+        completeDialogDescription: "Add a comment and link if needed.",
+        completeDialogCommentLabel: "Comment (optional)",
+        completeDialogLinkLabel: "Link (optional)",
+        completeDialogLinkPlaceholder: "https://...",
+        completeDialogDriveHelpTitle: "How to add a Google Drive link?",
+        completeDialogDriveHelpStep1: "Upload your file to Google Drive.",
+        completeDialogDriveHelpStep2: "Open link sharing.",
+        completeDialogDriveHelpStep3: "Set access to “Viewer”.",
+        completeDialogDriveHelpStep4: "Copy the link and paste it above.",
+        completeDialogCancel: "Cancel",
+        completeDialogConfirm: "Complete step",
+        completeDialogErrorTitle: "Error",
+        completeDialogErrorBody: "Could not complete step",
       },
       questionsRail: {
         illustrationAlt: "Questions illustration",
@@ -442,7 +480,11 @@ const dictionaries: Record<Locale, RawDictionary> = {
           "Мы отправим ссылку для входа. Если раньше вы входили паролем или Google — это нормально.",
         emailLinkSent:
           "Ссылка для входа отправлена. Откройте письмо и перейдите по ссылке.",
+        emailLinkSentSetPassword:
+          "Этот email уже существует. Мы отправили ссылку для входа. Откройте её, чтобы войти и включить вход по паролю.",
         linkSignedIn: "Вход по ссылке выполнен.",
+        linkSignedInPasswordEnabled:
+          "Вход по ссылке выполнен. Вход по паролю для этого email теперь включён.",
       },
       errors: {
         unauthorizedDomain:
@@ -454,6 +496,8 @@ const dictionaries: Record<Locale, RawDictionary> = {
         wrongPassword: "Неверный email или пароль.",
         tooManyRequests: "Слишком много попыток. Подождите и попробуйте снова.",
         missingEmail: "Укажите email.",
+        emailAlreadyInUse: "Аккаунт с таким email уже существует.",
+        weakPassword: "Слишком простой пароль (минимум 6 символов).",
         missingEmailForLink:
           "Введите email, на который пришла ссылка (сохранённый email не найден).",
         profileMissing: "Не удалось получить профиль пользователя после входа.",
@@ -500,6 +544,22 @@ const dictionaries: Record<Locale, RawDictionary> = {
         currentStepMaterial: "Открыть материалы",
         currentStepMarkDone: "Отметить выполненным",
         currentStepEmpty: "Все шаги выполнены. Отличная работа!",
+        completeDialogTitle: "Завершить шаг",
+        completeDialogDescription:
+          "Добавьте комментарий и ссылку при необходимости.",
+        completeDialogCommentLabel: "Комментарий (опц.)",
+        completeDialogLinkLabel: "Ссылка (опц.)",
+        completeDialogLinkPlaceholder: "https://...",
+        completeDialogDriveHelpTitle: "Как добавить ссылку Google Drive?",
+        completeDialogDriveHelpStep1: "Загрузите файл на Google Drive.",
+        completeDialogDriveHelpStep2: "Откройте доступ по ссылке.",
+        completeDialogDriveHelpStep3: "Установите доступ “Просматривать”.",
+        completeDialogDriveHelpStep4:
+          "Скопируйте ссылку и вставьте в поле выше.",
+        completeDialogCancel: "Отмена",
+        completeDialogConfirm: "Завершить шаг",
+        completeDialogErrorTitle: "Ошибка",
+        completeDialogErrorBody: "Не удалось завершить шаг",
       },
       questionsRail: {
         illustrationAlt: "Иллюстрация вопросов",

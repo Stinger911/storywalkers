@@ -8,6 +8,7 @@ import {
   isSignInWithEmailLink,
   signInWithEmailLink,
   fetchSignInMethodsForEmail,
+  updatePassword,
 } from "firebase/auth";
 import type { FirebaseError } from "firebase/app";
 import { auth } from "../lib/firebase";
@@ -68,6 +69,12 @@ function friendlyAuthError(
     case "auth/missing-email":
       return t("login.errors.missingEmail");
 
+    case "auth/email-already-in-use":
+      return t("login.errors.emailAlreadyInUse");
+
+    case "auth/weak-password":
+      return t("login.errors.weakPassword");
+
     default:
       return e.message
         ? t("login.errors.genericWithMessage", { message: e.message })
@@ -83,6 +90,7 @@ export function Login() {
 
   const [info, setInfo] = createSignal<string | null>(null);
   const [error, setError] = createSignal<string | null>(null);
+  const pendingPasswordStorageKey = "pendingPasswordForSignIn";
 
   const googleProvider = new GoogleAuthProvider();
 
@@ -115,10 +123,40 @@ export function Login() {
     setInfo(null);
     setBusy(true);
     try {
-      await createUserWithEmailAndPassword(auth, email().trim(), password());
+      const userEmail = email().trim();
+      const userPassword = password();
+      await createUserWithEmailAndPassword(auth, userEmail, userPassword);
       setInfo(t("login.messages.accountCreated"));
       await redirectIfLoggedIn();
     } catch (e) {
+      const authError = e as Partial<FirebaseError> & { code?: string };
+      const userEmail = email().trim();
+      const userPassword = password();
+      if (authError.code === "auth/email-already-in-use" && userEmail) {
+        try {
+          const methods = await fetchSignInMethodsForEmail(auth, userEmail);
+
+          if (methods.includes("password")) {
+            await signInWithEmailAndPassword(auth, userEmail, userPassword);
+            setInfo(t("login.messages.signedIn"));
+            await redirectIfLoggedIn();
+            return;
+          }
+
+          if (methods.includes("emailLink")) {
+            window.localStorage.setItem("emailForSignIn", userEmail);
+            window.localStorage.setItem(
+              pendingPasswordStorageKey,
+              userPassword,
+            );
+            await sendSignInLinkToEmail(auth, userEmail, actionCodeSettings());
+            setInfo(t("login.messages.emailLinkSentSetPassword"));
+            return;
+          }
+        } catch {
+          // Fall through to standard error mapping below.
+        }
+      }
       setError(friendlyAuthError(e, t));
     } finally {
       setBusy(false);
@@ -164,6 +202,7 @@ export function Login() {
       await sendSignInLinkToEmail(auth, e, actionCodeSettings());
       // надо сохранить email локально, чтобы подтвердить вход после перехода по ссылке
       window.localStorage.setItem("emailForSignIn", e);
+      window.localStorage.removeItem(pendingPasswordStorageKey);
       setInfo(t("login.messages.emailLinkSent"));
     } catch (e) {
       setError(friendlyAuthError(e, t));
@@ -214,10 +253,21 @@ export function Login() {
 
       await signInWithEmailLink(auth, e, window.location.href);
       window.localStorage.removeItem("emailForSignIn");
+      const pendingPassword = window.localStorage.getItem(
+        pendingPasswordStorageKey,
+      );
+      if (pendingPassword && auth.currentUser) {
+        await updatePassword(auth.currentUser, pendingPassword);
+        window.localStorage.removeItem(pendingPasswordStorageKey);
+      }
 
       // Чтобы не оставлять query-параметры от email-link в адресе:
       window.history.replaceState({}, document.title, "/login");
-      setInfo(t("login.messages.linkSignedIn"));
+      setInfo(
+        pendingPassword
+          ? t("login.messages.linkSignedInPasswordEnabled")
+          : t("login.messages.linkSignedIn"),
+      );
       await redirectIfLoggedIn();
     } catch (e) {
       setError(friendlyAuthError(e, t));

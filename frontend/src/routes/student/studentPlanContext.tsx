@@ -3,6 +3,7 @@ import { createContext, createEffect, createMemo, createSignal, useContext, type
 import { listGoals, type Goal } from "../../lib/adminApi";
 import { useAuth } from "../../lib/auth";
 import {
+  completeMyStep,
   getMyPlan,
   getMyPlanSteps,
   updateMyStepProgress,
@@ -22,6 +23,8 @@ type PlanStep = {
   order: number;
   isDone: boolean;
   doneAt?: { toDate?: () => Date } | null;
+  doneComment?: string | null;
+  doneLink?: string | null;
 };
 
 type StudentPlanState = {
@@ -33,6 +36,7 @@ type StudentPlanState = {
   progress: () => { total: number; done: number; percent: number };
   reload: () => Promise<void>;
   markStepDone: (stepId: string, done: boolean) => Promise<void>;
+  completeStep: (stepId: string, payload: { comment?: string; link?: string }) => Promise<void>;
   openMaterial: (url?: string | null) => void;
 };
 
@@ -76,6 +80,8 @@ export function StudentPlanProvider(props: { children: JSX.Element }) {
             order: step.order,
             isDone: step.isDone,
             doneAt: step.doneAt as { toDate?: () => Date } | null,
+            doneComment: step.doneComment ?? null,
+            doneLink: step.doneLink ?? null,
           })),
       );
     } catch (err) {
@@ -118,6 +124,29 @@ export function StudentPlanProvider(props: { children: JSX.Element }) {
     }
   };
 
+  const completeStep = async (
+    stepId: string,
+    payload: { comment?: string; link?: string },
+  ) => {
+    await completeMyStep(stepId, payload);
+    const now = new Date();
+    const normalizedComment = payload.comment?.trim() || null;
+    const normalizedLink = payload.link?.trim() || null;
+    setSteps((current) =>
+      current.map((step) =>
+        step.id === stepId
+          ? {
+              ...step,
+              isDone: true,
+              doneAt: { toDate: () => now },
+              doneComment: normalizedComment,
+              doneLink: normalizedLink,
+            }
+          : step,
+      ),
+    );
+  };
+
   const openMaterial = (url?: string | null) => {
     if (!url) return;
     window.open(url, "_blank", "noopener,noreferrer");
@@ -132,6 +161,7 @@ export function StudentPlanProvider(props: { children: JSX.Element }) {
     progress,
     reload,
     markStepDone,
+    completeStep,
     openMaterial,
   };
 

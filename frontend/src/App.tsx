@@ -9,6 +9,7 @@ import { AdminStudentProfile } from "./routes/admin/AdminStudentProfile.tsx";
 import { AdminStudents } from "./routes/admin/AdminStudents.tsx";
 import { AdminQuestions } from "./routes/admin/AdminQuestions.tsx";
 import { AdminQuestionDetail } from "./routes/admin/AdminQuestionDetail.tsx";
+import { AdminStepCompletions } from "./routes/admin/AdminStepCompletions.tsx";
 import { Landing } from "./routes/Landing.tsx";
 import { Login } from "./routes/Login.tsx";
 import { NotFound } from "./routes/NotFound.tsx";
@@ -20,6 +21,7 @@ import { StudentQuestions } from "./routes/student/StudentQuestions.tsx";
 import { RailCard } from "./components/ui/rail-card.tsx";
 import { Card, CardContent, CardTitle } from "./components/ui/card.tsx";
 import { Illustration } from "./components/ui/illustration.tsx";
+import { Toaster } from "./components/ui/toast.tsx";
 import { useI18n } from "./lib/i18n.tsx";
 import { StudentLibrary } from "./routes/student/StudentLibrary.tsx";
 import { StudentLibraryDetail } from "./routes/student/StudentLibraryDetail.tsx";
@@ -71,6 +73,12 @@ const AdminQuestionsRoute = () => (
 const AdminQuestionDetailRoute = () => (
   <AdminLayout>
     <AdminQuestionDetail />
+  </AdminLayout>
+);
+
+const AdminStepCompletionsRoute = () => (
+  <AdminLayout>
+    <AdminStepCompletions />
   </AdminLayout>
 );
 
@@ -231,29 +239,33 @@ const AdminLibraryDetailRoute = () => (
 
 export default function App() {
   return (
-    <Router>
-      <Route path="/" component={Landing} />
-      <Route path="/login" component={Login} />
-      <Route path="/student" component={StudentProfileRoute} />
-      <Route path="/student/home" component={StudentProfileRoute} />
-      <Route path="/student/profile" component={StudentProfileRoute} />
-      <Route path="/student/questions" component={StudentQuestionsRoute} />
-      <Route path="/student/questions/new" component={StudentQuestionNewRoute} />
-      <Route path="/student/questions/:id" component={StudentQuestionDetailRoute} />
-      <Route path="/student/library" component={StudentLibraryRoute} />
-      <Route path="/student/library/:id" component={StudentLibraryDetailRoute} />
-      <Route path="/admin" component={AdminHomeRoute} />
-      <Route path="/admin/home" component={AdminHomeRoute} />
-      <Route path="/admin/students" component={AdminStudentsRoute} />
-      <Route path="/admin/students/:uid" component={AdminStudentProfileRoute} />
-      <Route path="/admin/questions" component={AdminQuestionsRoute} />
-      <Route path="/admin/questions/:id" component={AdminQuestionDetailRoute} />
-      <Route path="/admin/library" component={AdminLibraryRoute} />
-      <Route path="/admin/library/:id" component={AdminLibraryDetailRoute} />
-      <Route path="/admin/categories" component={AdminCategoriesRoute} />
-      <Route path="/admin/goals" component={AdminGoalsRoute} />
-      <Route path="/admin/step-templates" component={AdminStepTemplatesRoute} />
-      <Route path="*" component={NotFound} />
-    </Router>
+    <>
+      <Router>
+        <Route path="/" component={Landing} />
+        <Route path="/login" component={Login} />
+        <Route path="/student" component={StudentProfileRoute} />
+        <Route path="/student/home" component={StudentProfileRoute} />
+        <Route path="/student/profile" component={StudentProfileRoute} />
+        <Route path="/student/questions" component={StudentQuestionsRoute} />
+        <Route path="/student/questions/new" component={StudentQuestionNewRoute} />
+        <Route path="/student/questions/:id" component={StudentQuestionDetailRoute} />
+        <Route path="/student/library" component={StudentLibraryRoute} />
+        <Route path="/student/library/:id" component={StudentLibraryDetailRoute} />
+        <Route path="/admin" component={AdminHomeRoute} />
+        <Route path="/admin/home" component={AdminHomeRoute} />
+        <Route path="/admin/students" component={AdminStudentsRoute} />
+        <Route path="/admin/students/:uid" component={AdminStudentProfileRoute} />
+        <Route path="/admin/questions" component={AdminQuestionsRoute} />
+        <Route path="/admin/questions/:id" component={AdminQuestionDetailRoute} />
+        <Route path="/admin/step-completions" component={AdminStepCompletionsRoute} />
+        <Route path="/admin/library" component={AdminLibraryRoute} />
+        <Route path="/admin/library/:id" component={AdminLibraryDetailRoute} />
+        <Route path="/admin/categories" component={AdminCategoriesRoute} />
+        <Route path="/admin/goals" component={AdminGoalsRoute} />
+        <Route path="/admin/step-templates" component={AdminStepTemplatesRoute} />
+        <Route path="*" component={NotFound} />
+      </Router>
+      <Toaster />
+    </>
   );
 }

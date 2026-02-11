@@ -54,6 +54,22 @@ type PlanResponse = {
   updatedAt?: unknown
 }
 
+type StepCompletion = {
+  id: string
+  stepId: string
+  studentUid: string
+  studentDisplayName?: string
+  goalId?: string
+  goalTitle?: string
+  stepTitle?: string
+  comment?: string | null
+  link?: string | null
+  status: 'completed' | 'revoked'
+  completedAt?: unknown
+  createdAt?: unknown
+  updatedAt?: unknown
+}
+
 type PreviewResetFromGoalResponse = {
   existingSteps: number
   willCreateSteps: number
@@ -207,6 +223,17 @@ export async function updateStudent(
   return handleJson<Student>(response)
 }
 
+export async function deleteStudent(uid: string) {
+  const response = await apiFetch(`/api/admin/students/${uid}`, {
+    method: 'DELETE',
+  })
+  return handleJson<{
+    deleted: string
+    deletedSteps: number
+    deletedCompletions: number
+  }>(response)
+}
+
 export async function getStudent(uid: string) {
   const response = await apiFetch(`/api/admin/students/${uid}`)
   return handleJson<Student>(response)
@@ -279,4 +306,45 @@ export async function deleteStudentPlanStep(uid: string, stepId: string) {
   return handleJson<{ deleted: string }>(response)
 }
 
-export type { Category, Goal, StepTemplate, Student, PlanResponse }
+export async function listStepCompletions(params?: {
+  status?: 'completed' | 'revoked' | 'all'
+  limit?: number
+  cursor?: string
+}) {
+  const query = new URLSearchParams()
+  if (params?.status) query.set('status', params.status)
+  if (params?.limit) query.set('limit', String(params.limit))
+  if (params?.cursor) query.set('cursor', params.cursor)
+  const suffix = query.toString()
+  const response = await apiFetch(
+    `/api/admin/step-completions${suffix ? `?${suffix}` : ''}`,
+  )
+  return handleJson<ApiList<StepCompletion>>(response)
+}
+
+export async function patchStepCompletion(
+  id: string,
+  payload: { comment?: string | null; link?: string | null },
+) {
+  const response = await apiFetch(`/api/admin/step-completions/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  })
+  return handleJson<{ status: 'updated'; id: string }>(response)
+}
+
+export async function revokeStepCompletion(id: string) {
+  const response = await apiFetch(`/api/admin/step-completions/${id}/revoke`, {
+    method: 'POST',
+  })
+  return handleJson<{ status: 'ok' }>(response)
+}
+
+export type {
+  Category,
+  Goal,
+  StepTemplate,
+  Student,
+  PlanResponse,
+  StepCompletion,
+}

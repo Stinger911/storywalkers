@@ -7,9 +7,14 @@ from app.routers import admin_students
 
 
 class FakeSnap:
-    def __init__(self, doc_id, data):
-        self.id = doc_id
-        self._data = data
+    def __init__(self, doc):
+        self._doc = doc
+        self.id = doc.id
+        self._data = doc._store.get(doc.id)
+
+    @property
+    def reference(self):
+        return self._doc
 
     @property
     def exists(self):
@@ -20,12 +25,13 @@ class FakeSnap:
 
 
 class FakeDoc:
-    def __init__(self, store, doc_id):
+    def __init__(self, store, doc_id, subcollections=None):
         self._store = store
         self.id = doc_id
+        self._subcollections = subcollections or {}
 
     def get(self):
-        return FakeSnap(self.id, self._store.get(self.id))
+        return FakeSnap(self)
 
     def set(self, data):
         self._store[self.id] = _normalize(data)
@@ -34,6 +40,15 @@ class FakeDoc:
         if self.id not in self._store:
             raise KeyError("missing doc")
         self._store[self.id].update(_normalize(data))
+
+    def delete(self):
+        self._store.pop(self.id, None)
+
+    def collection(self, name):
+        per_doc = self._subcollections.setdefault(self.id, {})
+        if name not in per_doc:
+            per_doc[name] = {}
+        return FakeCollection(per_doc[name])
 
 
 class FakeQuery:
@@ -69,27 +84,41 @@ class FakeQuery:
                 if not include:
                     break
             if include:
-                items.append(FakeSnap(doc_id, data))
+                items.append(FakeSnap(FakeDoc(self._store, doc_id)))
         if self._limit is not None:
             items = items[: self._limit]
         return items
 
 
 class FakeCollection(FakeQuery):
+    def __init__(self, store, subcollections=None):
+        super().__init__(store)
+        self._subcollections = subcollections or {}
+
     def document(self, doc_id=None):
         if doc_id is None:
             raise ValueError("doc_id required for tests")
-        return FakeDoc(self._store, doc_id)
+        return FakeDoc(self._store, doc_id, self._subcollections)
 
 
 class FakeFirestore:
-    def __init__(self, users):
+    def __init__(self, users, plans=None, steps=None, completions=None):
         self._users = users
+        self._plans = plans or {}
+        self._steps = steps or {}
+        self._completions = completions or {}
 
     def collection(self, name):
-        if name != "users":
-            raise ValueError("only users collection supported in tests")
-        return FakeCollection(self._users)
+        if name == "users":
+            return FakeCollection(self._users)
+        if name == "student_plans":
+            return FakeCollection(
+                self._plans,
+                {uid: {"steps": step_store} for uid, step_store in self._steps.items()},
+            )
+        if name == "step_completions":
+            return FakeCollection(self._completions)
+        raise ValueError(f"unsupported collection {name}")
 
 
 def _normalize(data):
@@ -221,5 +250,60 @@ def test_patch_student_updates_display_name_and_timestamp(monkeypatch):
     assert payload["displayName"] == "Alex"
     assert users["s1"]["displayName"] == "Alex"
     assert users["s1"]["updatedAt"] == "SERVER_TIMESTAMP"
+
+    app.dependency_overrides.clear()
+
+
+def test_delete_student_removes_user_related_data(monkeypatch):
+    users = {"s1": {"role": "student", "status": "active", "email": "s1@x.com"}}
+    plans = {"s1": {"goalId": "g1"}}
+    steps = {
+        "s1": {
+            "step1": {"title": "A"},
+            "step2": {"title": "B"},
+        }
+    }
+    completions = {
+        "c1": {"studentUid": "s1", "stepId": "step1"},
+        "c2": {"studentUid": "s1", "stepId": "step2"},
+        "c3": {"studentUid": "other", "stepId": "x"},
+    }
+    fake_db = FakeFirestore(
+        users=users,
+        plans=plans,
+        steps=steps,
+        completions=completions,
+    )
+    monkeypatch.setattr(admin_students, "get_firestore_client", lambda: fake_db)
+    app.dependency_overrides[require_staff] = _override_staff
+    client = TestClient(app)
+
+    response = client.delete("/api/admin/students/s1")
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["deleted"] == "s1"
+    assert payload["deletedSteps"] == 2
+    assert payload["deletedCompletions"] == 2
+
+    assert "s1" not in users
+    assert "s1" not in plans
+    assert "step1" not in steps["s1"]
+    assert "step2" not in steps["s1"]
+    assert "c1" not in completions
+    assert "c2" not in completions
+    assert "c3" in completions
+
+    app.dependency_overrides.clear()
+
+
+def test_delete_student_rejects_non_student(monkeypatch):
+    users = {"a1": {"role": "admin", "status": "active", "email": "a1@x.com"}}
+    fake_db = FakeFirestore(users)
+    monkeypatch.setattr(admin_students, "get_firestore_client", lambda: fake_db)
+    app.dependency_overrides[require_staff] = _override_staff
+    client = TestClient(app)
+
+    response = client.delete("/api/admin/students/a1")
+    assert response.status_code == 400
 
     app.dependency_overrides.clear()

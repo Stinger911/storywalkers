@@ -1,5 +1,5 @@
 import { createEffect, createMemo, createSignal, Show } from "solid-js";
-import { useParams } from "@solidjs/router";
+import { useNavigate, useParams } from "@solidjs/router";
 
 import { Button } from "../../components/ui/button";
 import { Page } from "../../components/ui/page";
@@ -43,6 +43,7 @@ import {
   assignPlan,
   bulkAddSteps,
   deleteStudentPlanStep,
+  deleteStudent,
   getStudent,
   getStudentPlan,
   getStudentPlanSteps,
@@ -86,6 +87,7 @@ type SelectOption = {
 export function AdminStudentProfile() {
   const auth = useAuth();
   const params = useParams();
+  const navigate = useNavigate();
   const uid = () => params.uid ?? "";
 
   const [student, setStudent] = createSignal<StudentProfile | null>(null);
@@ -114,6 +116,10 @@ export function AdminStudentProfile() {
   const [previewError, setPreviewError] = createSignal<string | null>(null);
   const [previewConfirm, setPreviewConfirm] = createSignal("");
   const [previewAcknowledge, setPreviewAcknowledge] = createSignal(false);
+  const [deleteOpen, setDeleteOpen] = createSignal(false);
+  const [deleteConfirm, setDeleteConfirm] = createSignal("");
+  const [deleteAcknowledge, setDeleteAcknowledge] = createSignal(false);
+  const [deletingStudent, setDeletingStudent] = createSignal(false);
 
   const load = async () => {
     setLoading(true);
@@ -364,6 +370,32 @@ export function AdminStudentProfile() {
     }
   };
 
+  const openDeleteDialog = () => {
+    setDeleteConfirm("");
+    setDeleteAcknowledge(false);
+    setDeleteOpen(true);
+  };
+
+  const closeDeleteDialog = () => {
+    if (deletingStudent()) return;
+    setDeleteOpen(false);
+    setDeleteConfirm("");
+    setDeleteAcknowledge(false);
+  };
+
+  const confirmDeleteStudent = async () => {
+    setDeletingStudent(true);
+    setError(null);
+    try {
+      await deleteStudent(uid());
+      navigate("/admin/students", { replace: true });
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setDeletingStudent(false);
+    }
+  };
+
   return (
     <Page
       title="Student profile"
@@ -584,6 +616,23 @@ export function AdminStudentProfile() {
           </div>
         </SectionCard>
 
+        <SectionCard title="Danger zone">
+          <div class="space-y-3 text-sm text-muted-foreground">
+            <div>
+              Deleting this student removes their account, plan, steps, and step
+              completion records.
+            </div>
+            <Button
+              variant="destructive"
+              onClick={openDeleteDialog}
+              disabled={deletingStudent()}
+              data-testid="open-delete-student"
+            >
+              Delete student
+            </Button>
+          </div>
+        </SectionCard>
+
         <SectionCard title="Assign goal">
           <div class="grid gap-4">
             <div class="grid gap-2">
@@ -751,6 +800,69 @@ export function AdminStudentProfile() {
               data-testid="reset-confirm-button"
             >
               Confirm reset
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={deleteOpen()}
+        onOpenChange={(open) => {
+          if (!deletingStudent()) setDeleteOpen(open);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete student account?</DialogTitle>
+            <DialogDescription>
+              This permanently deletes the student user and their learning data.
+              This cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div class="space-y-3 text-sm">
+            <label class="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={deleteAcknowledge()}
+                onChange={(event) =>
+                  setDeleteAcknowledge(event.currentTarget.checked)
+                }
+                data-testid="delete-student-acknowledge"
+              />
+              I understand this action is permanent.
+            </label>
+            <TextField>
+              <TextFieldLabel for="delete-student-confirm">Type DELETE</TextFieldLabel>
+              <TextFieldInput
+                id="delete-student-confirm"
+                value={deleteConfirm()}
+                onInput={(event) => setDeleteConfirm(event.currentTarget.value)}
+                placeholder="DELETE"
+                data-testid="delete-student-confirm-input"
+              />
+            </TextField>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={closeDeleteDialog}
+              disabled={deletingStudent()}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => void confirmDeleteStudent()}
+              disabled={
+                deletingStudent() ||
+                !deleteAcknowledge() ||
+                deleteConfirm() !== "DELETE"
+              }
+              data-testid="delete-student-confirm-button"
+            >
+              Confirm delete
             </Button>
           </DialogFooter>
         </DialogContent>

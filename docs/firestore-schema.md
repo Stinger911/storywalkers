@@ -155,6 +155,8 @@ Individual steps inside a student plan (copied from templates, but can be custom
 - `order`: `number` (integer, 0..N; used for sorting)
 - `isDone`: `boolean`
 - `doneAt`: `timestamp | null`
+- `doneComment`: `string | null`
+- `doneLink`: `string | null`
 - `createdAt`: `timestamp`
 - `updatedAt`: `timestamp`
 
@@ -170,9 +172,36 @@ Individual steps inside a student plan (copied from templates, but can be custom
 
 ---
 
+### 8) `step_completions/{completionId}`
+
+Admin feed of student step completions with denormalized snapshots for quick staff review.
+
+**Fields**
+
+- `studentUid`: `string`
+- `studentDisplayName`: `string | null` (snapshot)
+- `goalId`: `string | null` (snapshot)
+- `goalTitle`: `string | null` (snapshot)
+- `stepId`: `string`
+- `stepTitle`: `string | null` (snapshot)
+- `completedAt`: `timestamp`
+- `comment`: `string | null`
+- `link`: `string | null`
+- `status`: `"completed" | "revoked"`
+- `revokedAt`: `timestamp | null`
+- `revokedBy`: `string | null`
+- `updatedAt`: `timestamp`
+
+**Notes**
+
+- Feed entries are immutable history records except admin moderation fields (`comment`, `link`, revoke metadata).
+- Keep `completedAt` as the main sort field for admin feed queries.
+
+---
+
 ## Q&A
 
-### 8) `questions/{questionId}`
+### 9) `questions/{questionId}`
 
 Student questions with expert answers. Students can only access their own.
 
@@ -204,7 +233,7 @@ Student questions with expert answers. Students can only access their own.
 
 ## Library / Knowledge Base
 
-### 9) `library_entries/{entryId}`
+### 10) `library_entries/{entryId}`
 
 Published knowledge base entries, optionally derived from a question.
 
@@ -251,6 +280,10 @@ Create these if Firestore asks, or proactively:
 ### Student steps ordering
 
 5. Subcollection `student_plans/{uid}/steps`: single-field index on `order` usually works; if Firestore requires composite for additional filters, add as needed.
+
+### Step completions feed
+
+6. `step_completions`: index/query on `completedAt DESC` for admin feed.
 
 ---
 

@@ -12,10 +12,6 @@ vi.mock("firebase/auth", () => ({
   browserLocalPersistence: {},
 }));
 
-vi.mock("firebase/firestore", () => ({
-  getFirestore: () => ({}),
-}));
-
 const storage = new Map<string, string>();
 
 Object.defineProperty(window, "localStorage", {
