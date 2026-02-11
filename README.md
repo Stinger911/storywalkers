@@ -104,4 +104,9 @@ See `docs/deployment.md` for Firebase Hosting and Cloud Run steps.
 - Admin Q&A: list questions, answer, and optionally publish to library.
 - Library: students browse published entries; staff create/edit drafts and publish.
 - Student dashboard: goal overview, steps, right-rail layout, and learning progress.
-- Admin student management: assign goals/steps, reorder, and delete steps.
+- Student profile: inline display name edit (PATCH /me).
+- Student area i18n with EN/RU locale support.
+- Admin student management: assign goals/steps, reorder, delete steps, reset from goal template, and manage access (role/status).
+- Admin goals: template path (template steps) editor with bulk save.
+- Admin students list: progress badges (percent and done/total).
+- CI: GitHub Actions runs tests on push/PR.

@@ -54,8 +54,12 @@ The current project includes:
 - Testing setup (Firestore rules tests in tests/firebase)
 - Admin Q&A + Library features (questions, answers, published entries)
 - Student dashboard UI with right-rail layout
-- Admin student management (roles, goals, step reorder + delete)
+- Student profile display name editing (PATCH /me)
+- Student area i18n (EN/RU)
+- Admin goals template path editor (template steps)
+- Admin student management (roles, status, goals, step reorder + delete, reset from template)
+- Admin students list progress metrics (percent + done/total)
 - Frontend unit tests (Vitest + @solidjs/testing-library)
-- CI deployment on tags (GitHub Actions)
+- CI tests on push/PR (GitHub Actions)
 
 Follow the above workflows and update documentation and test configuration as the project evolves.

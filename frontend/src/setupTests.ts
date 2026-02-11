@@ -1,4 +1,20 @@
 import "@testing-library/jest-dom/vitest";
+import { vi } from "vitest";
+
+vi.mock("firebase/app", () => ({
+  getApps: () => [],
+  initializeApp: () => ({ name: "test-app" }),
+}));
+
+vi.mock("firebase/auth", () => ({
+  getAuth: () => ({ currentUser: null }),
+  setPersistence: () => Promise.resolve(),
+  browserLocalPersistence: {},
+}));
+
+vi.mock("firebase/firestore", () => ({
+  getFirestore: () => ({}),
+}));
 
 const storage = new Map<string, string>();
 
