@@ -3,7 +3,7 @@ name: Deploy on Tag
 on:
   push:
     tags:
-      - 'v*'
+      - "v*"
 
 jobs:
   verify-tag:
@@ -39,26 +39,18 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: "20"
+          cache: "npm"
           cache-dependency-path: frontend/package-lock.json
-      - name: Authenticate to Google Cloud
-        id: auth
-        uses: google-github-actions/auth@v2
-        with:
-          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
-          service_account: ${{ secrets.GCP_WIF_SERVICE_ACCOUNT }}
-          create_credentials_file: true
-          export_environment_variables: true
-      - name: Set up gcloud
-        uses: google-github-actions/setup-gcloud@v2
-      - name: Install Firebase CLI
-        run: npm install -g firebase-tools
+      - name: Build frontend
+        run: make build-frontend
       - name: Deploy frontend
-        env:
-          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
-          GOOGLE_APPLICATION_CREDENTIALS: ${{ steps.auth.outputs.credentials_file_path }}
-        run: make deploy-frontend
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_STORYWALKERS_B4FDF }}
+          channelId: live
+          projectId: ${{ secrets.FIREBASE_PROJECT_ID }}
 
   deploy-backend:
     name: Deploy backend (Cloud Run)
@@ -74,18 +66,20 @@ jobs:
           fetch-depth: 0
       - name: Authenticate to Google Cloud
         id: auth
-        uses: google-github-actions/auth@v2
+        uses: google-github-actions/auth@v3
         with:
+          project_id: ${{ secrets.PROJECT_ID }}
           workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
           service_account: ${{ secrets.GCP_WIF_SERVICE_ACCOUNT }}
-          create_credentials_file: true
-          export_environment_variables: true
-      - name: Set up gcloud
-        uses: google-github-actions/setup-gcloud@v2
-      - name: Deploy backend
-        env:
-          PROJECT_ID: ${{ secrets.PROJECT_ID }}
-          CLOUD_RUN_SERVICE: ${{ secrets.CLOUD_RUN_SERVICE }}
-          CLOUD_RUN_REGION: ${{ secrets.CLOUD_RUN_REGION }}
-          GOOGLE_APPLICATION_CREDENTIALS: ${{ steps.auth.outputs.credentials_file_path }}
-        run: make deploy-backend
+        # WIF через service account описан в README auth-action :contentReference[oaicite:8]{index=8}
+
+      - id: deploy
+        uses: google-github-actions/deploy-cloudrun@v3
+        with:
+          service: ${{ secrets.CLOUD_RUN_SERVICE }}
+          region: ${{ secrets.CLOUD_RUN_REGION }}
+          source: backend
+        # source=path поддерживается официально :contentReference[oaicite:9]{index=9}
+
+      - name: Show URL
+        run: echo "Deployed to ${{ steps.deploy.outputs.url }}"
