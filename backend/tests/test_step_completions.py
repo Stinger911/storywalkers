@@ -348,6 +348,71 @@ def test_admin_patch_and_revoke_updates_feed_and_step(monkeypatch):
     app.dependency_overrides.clear()
 
 
+def test_revoked_step_can_be_completed_again_and_listed_in_admin(monkeypatch):
+    fake_db = FakeFirestore(
+        plans={"u1": {"goalId": "g1"}},
+        steps={
+            "u1": {
+                "s1": {
+                    "title": "Step One",
+                    "isDone": True,
+                    "doneAt": "t1",
+                    "doneComment": "Old",
+                    "doneLink": "https://old",
+                }
+            }
+        },
+        goals={"g1": {"title": "Goal One"}},
+        completions={
+            "c1": {
+                "studentUid": "u1",
+                "studentDisplayName": "User One",
+                "goalId": "g1",
+                "goalTitle": "Goal One",
+                "stepId": "s1",
+                "stepTitle": "Step One",
+                "status": "completed",
+                "comment": "Old",
+                "link": "https://old",
+                "completedAt": "2026-02-11T10:00:00Z",
+            }
+        },
+        users={"u1": {"stepsDone": 1, "stepsTotal": 1}},
+    )
+    monkeypatch.setattr(auth, "get_firestore_client", lambda: fake_db)
+    monkeypatch.setattr(
+        admin_step_completions, "get_firestore_client", lambda: fake_db
+    )
+    client = TestClient(app)
+
+    app.dependency_overrides[require_staff] = _override_staff
+    revoke_response = client.post("/api/admin/step-completions/c1/revoke")
+    assert revoke_response.status_code == 200
+    assert fake_db._steps["u1"]["s1"]["isDone"] is False
+    assert fake_db._completions["c1"]["status"] == "revoked"
+
+    app.dependency_overrides[get_current_user] = _override_student
+    complete_response = client.post(
+        "/api/student/steps/s1/complete",
+        json={"comment": "Done again", "link": "https://example.com/new-proof"},
+    )
+    assert complete_response.status_code == 201
+    new_completion_id = complete_response.json()["completionId"]
+    assert fake_db._steps["u1"]["s1"]["isDone"] is True
+    assert fake_db._completions[new_completion_id]["status"] == "completed"
+
+    app.dependency_overrides[require_staff] = _override_staff
+    list_response = client.get("/api/admin/step-completions?status=all")
+    assert list_response.status_code == 200
+    listed = list_response.json()["items"]
+    listed_ids = {item["id"] for item in listed}
+    assert "c1" in listed_ids
+    assert new_completion_id in listed_ids
+    assert any(item["id"] == new_completion_id and item["status"] == "completed" for item in listed)
+
+    app.dependency_overrides.clear()
+
+
 def test_admin_list_step_completions_default_completed_with_cursor(monkeypatch):
     t1 = datetime(2026, 2, 11, 12, 0, tzinfo=timezone.utc)
     t2 = datetime(2026, 2, 11, 11, 0, tzinfo=timezone.utc)

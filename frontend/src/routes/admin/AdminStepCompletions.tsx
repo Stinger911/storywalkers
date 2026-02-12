@@ -35,10 +35,14 @@ import {
 } from "../../lib/adminApi";
 import { formatDate } from "../../lib/utils";
 
+type CompletionStatusFilter = "completed" | "revoked" | "all";
+
 export function AdminStepCompletions() {
   const [items, setItems] = createSignal<StepCompletion[]>([]);
   const [loading, setLoading] = createSignal(true);
   const [error, setError] = createSignal<string | null>(null);
+  const [statusFilter, setStatusFilter] =
+    createSignal<CompletionStatusFilter>("completed");
   const [editingId, setEditingId] = createSignal<string | null>(null);
   const [commentDraft, setCommentDraft] = createSignal("");
   const [linkDraft, setLinkDraft] = createSignal("");
@@ -51,7 +55,10 @@ export function AdminStepCompletions() {
     setLoading(true);
     setError(null);
     try {
-      const data = await listStepCompletions({ limit: 100, status: "all" });
+      const data = await listStepCompletions({
+        limit: 100,
+        status: statusFilter(),
+      });
       setItems(data.items);
     } catch (err) {
       setError((err as Error).message);
@@ -61,6 +68,7 @@ export function AdminStepCompletions() {
   };
 
   createEffect(() => {
+    statusFilter();
     void load();
   });
 
@@ -138,16 +146,20 @@ export function AdminStepCompletions() {
     setRevokingId(target.id);
     try {
       await revokeStepCompletion(target.id);
-      setItems((prev) =>
-        prev.map((row) =>
-          row.id === target.id
-            ? {
-                ...row,
-                status: "revoked",
-              }
-            : row,
-        ),
-      );
+      if (statusFilter() === "all") {
+        setItems((prev) =>
+          prev.map((row) =>
+            row.id === target.id
+              ? {
+                  ...row,
+                  status: "revoked",
+                }
+              : row,
+          ),
+        );
+      } else {
+        setItems((prev) => prev.filter((row) => row.id !== target.id));
+      }
       if (editingId() === target.id) {
         setEditingId(null);
         setCommentDraft("");
@@ -201,16 +213,33 @@ export function AdminStepCompletions() {
       </Show>
 
       <SectionCard title="Recent completions">
+        <div class="mb-4 flex max-w-[260px] flex-col gap-2">
+          <label class="text-sm font-medium" for="step-completions-status-filter">
+            Status
+          </label>
+          <select
+            id="step-completions-status-filter"
+            class="h-10 rounded-md border border-input bg-background px-3 text-sm"
+            value={statusFilter()}
+            onChange={(event) =>
+              setStatusFilter(event.currentTarget.value as CompletionStatusFilter)
+            }
+          >
+            <option value="completed">Completed</option>
+            <option value="revoked">Revoked</option>
+            <option value="all">All</option>
+          </select>
+        </div>
         <Show when={!loading()} fallback={<div class="text-sm">Loading…</div>}>
-          <Table>
+          <Table class="table-fixed">
             <TableHeader>
               <TableRow>
-                <TableHead>Student</TableHead>
-                <TableHead>Step</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Completed</TableHead>
-                <TableHead>Comment</TableHead>
-                <TableHead>Link</TableHead>
+                <TableHead class="w-[16%]">Student</TableHead>
+                <TableHead class="w-[16%]">Step</TableHead>
+                <TableHead class="w-[10%]">Status</TableHead>
+                <TableHead class="w-[16%]">Completed</TableHead>
+                <TableHead class="w-[16%]">Comment</TableHead>
+                <TableHead class="w-[16%]">Link</TableHead>
                 <TableHead class="w-[220px] text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -225,19 +254,31 @@ export function AdminStepCompletions() {
                     null) as Date | string | number | { toDate?: () => Date } | null;
                 return (
                   <TableRow>
-                    <TableCell>
-                      <div class="font-medium">{item.studentDisplayName || item.studentUid}</div>
-                      <div class="text-xs text-muted-foreground">{item.studentUid}</div>
+                    <TableCell class="w-[16%]">
+                      <a
+                        href={`/admin/students/${item.studentUid}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="inline-flex items-center gap-1 font-medium text-primary underline"
+                      >
+                        <span>{item.studentDisplayName || "Student"}</span>
+                        <span
+                          class="material-symbols-outlined text-[14px]"
+                          aria-hidden="true"
+                        >
+                          open_in_new
+                        </span>
+                      </a>
                     </TableCell>
-                    <TableCell>
+                    <TableCell class="w-[16%]">
                       <div class="font-medium">{item.stepTitle || item.stepId}</div>
                       <Show when={item.goalTitle}>
                         <div class="text-xs text-muted-foreground">{item.goalTitle}</div>
                       </Show>
                     </TableCell>
-                    <TableCell>{item.status}</TableCell>
-                    <TableCell>{formatDate(completedDate())}</TableCell>
-                    <TableCell class="max-w-[340px]">
+                    <TableCell class="w-[10%]">{item.status}</TableCell>
+                    <TableCell class="w-[16%]">{formatDate(completedDate())}</TableCell>
+                    <TableCell class="w-[16%]">
                       <Show
                         when={isEditing()}
                         fallback={
@@ -259,7 +300,7 @@ export function AdminStepCompletions() {
                         />
                       </Show>
                     </TableCell>
-                    <TableCell class="max-w-[280px]">
+                    <TableCell class="w-[16%]">
                       <Show
                         when={isEditing()}
                         fallback={

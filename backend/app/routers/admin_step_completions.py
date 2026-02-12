@@ -202,9 +202,7 @@ async def revoke_step_completion(
 ):
     db = get_firestore_client()
     completion_ref = db.collection("step_completions").document(completion_id)
-    transaction = db.transaction()
-
-    completion_snap = completion_ref.get(transaction=transaction)
+    completion_snap = completion_ref.get()
     if not completion_snap.exists:
         raise AppError(code="not_found", message="Resource not found", status_code=404)
     completion = completion_snap.to_dict() or {}
@@ -220,7 +218,7 @@ async def revoke_step_completion(
         .collection("steps")
         .document(step_id)
     )
-    step_snap = step_ref.get(transaction=transaction)
+    step_snap = step_ref.get()
     if not step_snap.exists:
         raise AppError(code="not_found", message="Resource not found", status_code=404)
     step_data = step_snap.to_dict() or {}
@@ -228,7 +226,8 @@ async def revoke_step_completion(
         step_data.get("isDone")
     )
 
-    transaction.update(
+    batch = db.batch()
+    batch.update(
         completion_ref,
         {
             "status": "revoked",
@@ -237,7 +236,7 @@ async def revoke_step_completion(
             "updatedAt": firestore.SERVER_TIMESTAMP,
         },
     )
-    transaction.update(
+    batch.update(
         step_ref,
         {
             "isDone": False,
@@ -247,7 +246,7 @@ async def revoke_step_completion(
             "updatedAt": firestore.SERVER_TIMESTAMP,
         },
     )
-    transaction.commit()
+    batch.commit()
     if should_decrement:
         _sync_user_progress(db, student_uid, done_delta=-1)
 

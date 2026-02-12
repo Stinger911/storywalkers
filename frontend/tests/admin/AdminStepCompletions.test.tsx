@@ -63,6 +63,14 @@ describe("AdminStepCompletions", () => {
     render(() => <AdminStepCompletions />);
 
     expect(await screen.findByText("Old comment")).toBeInTheDocument();
+    expect(listStepCompletionsMock).toHaveBeenCalledWith({
+      limit: 100,
+      status: "completed",
+    });
+    expect(screen.queryByText("u1")).not.toBeInTheDocument();
+    const profileLink = screen.getByRole("link", { name: "Student One" });
+    expect(profileLink).toHaveAttribute("href", "/admin/students/u1");
+    expect(profileLink).toHaveAttribute("target", "_blank");
 
     fireEvent.click(screen.getByLabelText("Edit completion c1"));
 
@@ -124,7 +132,7 @@ describe("AdminStepCompletions", () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText("revoked")).toBeInTheDocument();
+      expect(screen.queryByText("Step Two")).not.toBeInTheDocument();
     });
 
     expect(showToastMock).toHaveBeenCalledWith(
@@ -132,5 +140,35 @@ describe("AdminStepCompletions", () => {
         variant: "success",
       }),
     );
+  });
+
+  it("filters by status with completed as default", async () => {
+    listStepCompletionsMock.mockResolvedValue({ items: [] });
+
+    render(() => <AdminStepCompletions />);
+
+    await waitFor(() => {
+      expect(listStepCompletionsMock).toHaveBeenCalledWith({
+        limit: 100,
+        status: "completed",
+      });
+    });
+
+    const statusSelect = screen.getByLabelText("Status");
+    fireEvent.change(statusSelect, { target: { value: "revoked" } });
+    await waitFor(() => {
+      expect(listStepCompletionsMock).toHaveBeenCalledWith({
+        limit: 100,
+        status: "revoked",
+      });
+    });
+
+    fireEvent.change(statusSelect, { target: { value: "all" } });
+    await waitFor(() => {
+      expect(listStepCompletionsMock).toHaveBeenCalledWith({
+        limit: 100,
+        status: "all",
+      });
+    });
   });
 });
