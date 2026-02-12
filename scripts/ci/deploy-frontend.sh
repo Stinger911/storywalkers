@@ -12,4 +12,5 @@ mv -f frontend/dist firebase/dist
 firebase deploy \
   --project "${FIREBASE_PROJECT_ID}" \
   --only hosting,firestore:rules \
+  --non-interactive \
   --config firebase/firebase.json

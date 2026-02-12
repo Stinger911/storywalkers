@@ -43,10 +43,13 @@ jobs:
           cache: 'npm'
           cache-dependency-path: frontend/package-lock.json
       - name: Authenticate to Google Cloud
+        id: auth
         uses: google-github-actions/auth@v2
         with:
           workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
           service_account: ${{ secrets.GCP_WIF_SERVICE_ACCOUNT }}
+          create_credentials_file: true
+          export_environment_variables: true
       - name: Set up gcloud
         uses: google-github-actions/setup-gcloud@v2
       - name: Install Firebase CLI
@@ -54,6 +57,7 @@ jobs:
       - name: Deploy frontend
         env:
           FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ steps.auth.outputs.credentials_file_path }}
         run: make deploy-frontend
 
   deploy-backend:
@@ -69,10 +73,13 @@ jobs:
         with:
           fetch-depth: 0
       - name: Authenticate to Google Cloud
+        id: auth
         uses: google-github-actions/auth@v2
         with:
           workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
           service_account: ${{ secrets.GCP_WIF_SERVICE_ACCOUNT }}
+          create_credentials_file: true
+          export_environment_variables: true
       - name: Set up gcloud
         uses: google-github-actions/setup-gcloud@v2
       - name: Deploy backend
@@ -80,4 +87,5 @@ jobs:
           PROJECT_ID: ${{ secrets.PROJECT_ID }}
           CLOUD_RUN_SERVICE: ${{ secrets.CLOUD_RUN_SERVICE }}
           CLOUD_RUN_REGION: ${{ secrets.CLOUD_RUN_REGION }}
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ steps.auth.outputs.credentials_file_path }}
         run: make deploy-backend

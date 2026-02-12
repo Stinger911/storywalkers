@@ -60,9 +60,11 @@ The current project includes:
 - Login account linking for same email across methods (email link + email/password)
 - Admin goals template path editor (template steps)
 - Admin student management (roles, status, goals, step reorder + delete, reset from template, delete student with double confirmation)
-- Admin step completions moderation (list, patch comment/link, revoke)
+- Admin step completions moderation (status filter with default completed, patch comment/link, revoke, and student profile link in new tab)
 - Admin students list progress metrics (percent + done/total)
 - Frontend data access routed via backend APIs (`/api/*`)
+- Firestore DB selection by `ENV` (`local` -> `testing`, non-local -> `pathways`)
+- Release workflow deploy auth via Google Workload Identity Federation with credentials file export for Firebase CLI + gcloud
 - Frontend unit tests (Vitest + @solidjs/testing-library)
 - CI tests on push/PR (GitHub Actions)
 

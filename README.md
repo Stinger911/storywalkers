@@ -98,6 +98,21 @@ The frontend is a Solid.js project.
 
 See `docs/deployment.md` for Firebase Hosting and Cloud Run steps.
 
+CI release deploy (`.github/workflows/release.yml`) uses Google Workload Identity Federation for both frontend and backend deploy jobs.
+Required GitHub secrets:
+
+- `GCP_WIF_PROVIDER`
+- `GCP_WIF_SERVICE_ACCOUNT`
+- `FIREBASE_PROJECT_ID`
+- `PROJECT_ID`
+- `CLOUD_RUN_SERVICE`
+- `CLOUD_RUN_REGION`
+
+The backend selects Firestore database by environment:
+
+- `ENV=local` -> Firestore database `testing`
+- `ENV=production` (and other non-local values) -> Firestore database `pathways`
+
 ## Features (current)
 
 - Student Q&A: submit questions and view expert answers.
@@ -111,7 +126,7 @@ See `docs/deployment.md` for Firebase Hosting and Cloud Run steps.
 - Login supports multiple methods per email (email link + email/password linking flow).
 - Frontend data access is backend-mediated via `/api/*` (no direct Firestore reads/writes from UI code).
 - Admin student management: assign goals/steps, reorder, delete steps, reset from goal template, manage access (role/status), and delete students with double confirmation.
-- Admin step completions: list, inline edit comment/link, and revoke completion.
+- Admin step completions: status filter (Completed/Revoked/All, default Completed), student profile link in new tab from student name, inline edit comment/link, and revoke completion.
 - Admin goals: template path (template steps) editor with bulk save.
 - Admin students list: progress badges (percent and done/total).
 - CI: GitHub Actions runs tests on push/PR.
