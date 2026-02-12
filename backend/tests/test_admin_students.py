@@ -101,6 +101,19 @@ class FakeCollection(FakeQuery):
         return FakeDoc(self._store, doc_id, self._subcollections)
 
 
+class FakeBatch:
+    def __init__(self):
+        self._ops = []
+
+    def delete(self, doc_ref):
+        self._ops.append(("delete", doc_ref))
+
+    def commit(self):
+        for op, doc_ref in self._ops:
+            if op == "delete":
+                doc_ref.delete()
+
+
 class FakeFirestore:
     def __init__(self, users, plans=None, steps=None, completions=None):
         self._users = users
@@ -119,6 +132,9 @@ class FakeFirestore:
         if name == "step_completions":
             return FakeCollection(self._completions)
         raise ValueError(f"unsupported collection {name}")
+
+    def batch(self):
+        return FakeBatch()
 
 
 def _normalize(data):

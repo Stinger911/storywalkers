@@ -1,3 +1,4 @@
+import time
 from typing import Any
 
 from fastapi import APIRouter, Depends, Query, status
@@ -7,10 +8,12 @@ from pydantic import BaseModel
 from app.auth.deps import require_staff
 from app.auth.firebase import get_or_create_user
 from app.core.errors import AppError
+from app.core.logging import get_logger
 from app.db.firestore import get_firestore_client
 from app.services.goal_template_steps import list_steps
 
 router = APIRouter(prefix="/api/admin", tags=["Admin - Students"])
+logger = get_logger("app.db")
 
 
 class CreateStudentRequest(BaseModel):
@@ -70,15 +73,87 @@ def _ensure_user_exists(db: firestore.Client, uid: str) -> None:
     _doc_or_404(doc_ref)
 
 
+def _progress_percent(done: int, total: int) -> int:
+    if total <= 0:
+        return 0
+    return round((done / total) * 100)
+
+
+def _sync_user_progress(
+    db: firestore.Client,
+    uid: str,
+    *,
+    done_delta: int = 0,
+    total_delta: int = 0,
+    absolute_done: int | None = None,
+    absolute_total: int | None = None,
+) -> None:
+    user_ref = db.collection("users").document(uid)
+    snap = user_ref.get()
+    if not snap.exists:
+        return
+    data = snap.to_dict() or {}
+    prev_done = int(data.get("stepsDone") or 0)
+    prev_total = int(data.get("stepsTotal") or 0)
+    next_done = absolute_done if absolute_done is not None else prev_done + done_delta
+    next_total = (
+        absolute_total if absolute_total is not None else prev_total + total_delta
+    )
+    next_done = max(0, int(next_done))
+    next_total = max(0, int(next_total))
+    if next_done > next_total:
+        next_done = next_total
+    user_ref.update(
+        {
+            "stepsDone": next_done,
+            "stepsTotal": next_total,
+            "progressPercent": _progress_percent(next_done, next_total),
+            "updatedAt": firestore.SERVER_TIMESTAMP,
+        }
+    )
+
+
+def _recalculate_progress_from_steps(db: firestore.Client, uid: str) -> tuple[int, int, int]:
+    plan_ref = db.collection("student_plans").document(uid)
+    if not plan_ref.get().exists:
+        _sync_user_progress(db, uid, absolute_done=0, absolute_total=0)
+        return 0, 0, 0
+    total = 0
+    done = 0
+    for step_snap in plan_ref.collection("steps").stream():
+        total += 1
+        if (step_snap.to_dict() or {}).get("isDone"):
+            done += 1
+    percent = _progress_percent(done, total)
+    _sync_user_progress(db, uid, absolute_done=done, absolute_total=total)
+    return done, total, percent
+
+
+def _commit_deletes_in_batches(
+    db: firestore.Client,
+    refs: list[firestore.DocumentReference],
+    *,
+    batch_limit: int = 450,
+) -> None:
+    if not refs:
+        return
+    for i in range(0, len(refs), batch_limit):
+        batch = db.batch()
+        for ref in refs[i : i + batch_limit]:
+            batch.delete(ref)
+        batch.commit()
+
+
 @router.get("/students")
 async def list_students(
     user: dict = Depends(require_staff),
     status_filter: str | None = Query(None, alias="status"),
     role: str | None = Query("student"),
     q: str | None = Query(None),
-    limit: int = Query(50, ge=1, le=200),
+    limit: int = Query(50, ge=1, le=100),
     cursor: str | None = Query(None),
 ):
+    started = time.perf_counter()
     db = get_firestore_client()
     query = db.collection("users")
     if role:
@@ -103,23 +178,24 @@ async def list_students(
                 item["stepsDone"] = 0
                 item["stepsTotal"] = 0
                 continue
-            plan_ref = db.collection("student_plans").document(item["uid"])
-            if not plan_ref.get().exists:
-                item["progressPercent"] = 0
-                item["stepsDone"] = 0
-                item["stepsTotal"] = 0
+            has_cached_progress = (
+                item.get("stepsDone") is not None and item.get("stepsTotal") is not None
+            )
+            if not has_cached_progress:
+                done, total, percent = _recalculate_progress_from_steps(db, item["uid"])
+                item["stepsDone"] = done
+                item["stepsTotal"] = total
+                item["progressPercent"] = percent
                 continue
-            steps_ref = plan_ref.collection("steps")
-            total = 0
-            done = 0
-            for step_snap in steps_ref.stream():
-                total += 1
-                if (step_snap.to_dict() or {}).get("isDone"):
-                    done += 1
-            percent = round((done / total) * 100) if total else 0
-            item["progressPercent"] = percent
+            done = int(item.get("stepsDone") or 0)
+            total = int(item.get("stepsTotal") or 0)
             item["stepsDone"] = done
             item["stepsTotal"] = total
+            item["progressPercent"] = int(
+                item.get("progressPercent")
+                if item.get("progressPercent") is not None
+                else _progress_percent(done, total)
+            )
 
     if q:
         q_lower = q.lower()
@@ -130,6 +206,16 @@ async def list_students(
             or q_lower in (item.get("displayName") or "").lower()
         ]
 
+    logger.info(
+        "students_list_db_timing",
+        extra={
+            "duration_ms": round((time.perf_counter() - started) * 1000, 2),
+            "returned": len(items),
+            "limit": limit,
+            "db_reads_estimate": len(items),
+            "db_writes_estimate": 0,
+        },
+    )
     return {"items": items, "nextCursor": None}
 
 
@@ -160,6 +246,9 @@ async def create_student(
         "displayName": payload.displayName,
         "role": role,
         "status": "active",
+        "stepsDone": 0,
+        "stepsTotal": 0,
+        "progressPercent": 0,
         "createdAt": created_at,
         "updatedAt": now,
     }
@@ -234,17 +323,21 @@ async def delete_student(
     deleted_steps = 0
     plan_ref = db.collection("student_plans").document(uid)
     plan_snap = plan_ref.get()
+    step_refs: list[firestore.DocumentReference] = []
     if plan_snap.exists:
         for step_snap in plan_ref.collection("steps").stream():
-            step_snap.reference.delete()
+            step_refs.append(step_snap.reference)
             deleted_steps += 1
+        _commit_deletes_in_batches(db, step_refs)
         plan_ref.delete()
 
     deleted_completions = 0
     completions_query = db.collection("step_completions").where("studentUid", "==", uid)
+    completion_refs: list[firestore.DocumentReference] = []
     for completion_snap in completions_query.stream():
-        completion_snap.reference.delete()
+        completion_refs.append(completion_snap.reference)
         deleted_completions += 1
+    _commit_deletes_in_batches(db, completion_refs)
 
     user_ref.delete()
     return {
@@ -325,6 +418,12 @@ async def assign_plan(
             }
             batch.set(step_doc, data)
         batch.commit()
+        _sync_user_progress(
+            db,
+            uid,
+            absolute_done=0,
+            absolute_total=len(template_steps),
+        )
 
         plan = _doc_or_404(plan_ref)
     else:
@@ -348,6 +447,7 @@ async def assign_plan(
                     "updatedAt": now,
                 }
             )
+            _sync_user_progress(db, uid, absolute_done=0, absolute_total=0)
 
         plan = _doc_or_404(plan_ref)
 
@@ -453,8 +553,14 @@ async def delete_plan_step(
     plan_ref = db.collection("student_plans").document(uid)
     _doc_or_404(plan_ref)
     step_ref = plan_ref.collection("steps").document(step_id)
-    _doc_or_404(step_ref)
+    step = _doc_or_404(step_ref)
     step_ref.delete()
+    _sync_user_progress(
+        db,
+        uid,
+        done_delta=-1 if step.get("isDone") else 0,
+        total_delta=-1,
+    )
     return {"deleted": step_id}
 
 
@@ -533,6 +639,7 @@ async def bulk_add_steps(
         order += 1
 
     batch.commit()
+    _sync_user_progress(db, uid, total_delta=len(created))
     return {"created": created}
 
 

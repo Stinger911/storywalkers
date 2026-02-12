@@ -1,3 +1,4 @@
+import time
 from typing import Any
 import base64
 import json
@@ -9,9 +10,11 @@ from pydantic import BaseModel
 
 from app.auth.deps import require_staff
 from app.core.errors import AppError
+from app.core.logging import get_logger
 from app.db.firestore import get_firestore_client
 
 router = APIRouter(prefix="/api/admin", tags=["Admin - Students"])
+logger = get_logger("app.db")
 
 
 def _doc_or_404(doc_ref: firestore.DocumentReference) -> tuple[firestore.DocumentSnapshot, dict[str, Any]]:
@@ -62,13 +65,46 @@ def _decode_cursor(cursor: str) -> tuple[datetime, str]:
     return completed_at, doc_id
 
 
+def _progress_percent(done: int, total: int) -> int:
+    if total <= 0:
+        return 0
+    return round((done / total) * 100)
+
+
+def _sync_user_progress(
+    db: firestore.Client,
+    uid: str,
+    *,
+    done_delta: int = 0,
+) -> None:
+    user_ref = db.collection("users").document(uid)
+    snap = user_ref.get()
+    if not snap.exists:
+        return
+    data = snap.to_dict() or {}
+    prev_done = int(data.get("stepsDone") or 0)
+    prev_total = int(data.get("stepsTotal") or 0)
+    next_done = max(0, prev_done + done_delta)
+    if next_done > prev_total:
+        next_done = prev_total
+    user_ref.update(
+        {
+            "stepsDone": next_done,
+            "stepsTotal": prev_total,
+            "progressPercent": _progress_percent(next_done, prev_total),
+            "updatedAt": firestore.SERVER_TIMESTAMP,
+        }
+    )
+
+
 @router.get("/step-completions")
 async def list_step_completions(
     user: dict = Depends(require_staff),
-    limit: int = Query(50, ge=1, le=200),
+    limit: int = Query(50, ge=1, le=100),
     cursor: str | None = Query(None),
     status_filter: str = Query("completed", alias="status"),
 ):
+    started = time.perf_counter()
     db = get_firestore_client()
     if status_filter not in {"completed", "revoked", "all"}:
         raise AppError(
@@ -98,6 +134,16 @@ async def list_step_completions(
     if len(items) == limit:
         last = items[-1]
         next_cursor = _encode_cursor(last.get("completedAt"), last["id"])
+    logger.info(
+        "step_completions_list_db_timing",
+        extra={
+            "duration_ms": round((time.perf_counter() - started) * 1000, 2),
+            "returned": len(items),
+            "limit": limit,
+            "db_reads_estimate": len(items),
+            "db_writes_estimate": 0,
+        },
+    )
     return {"items": items, "nextCursor": next_cursor}
 
 
@@ -177,6 +223,10 @@ async def revoke_step_completion(
     step_snap = step_ref.get(transaction=transaction)
     if not step_snap.exists:
         raise AppError(code="not_found", message="Resource not found", status_code=404)
+    step_data = step_snap.to_dict() or {}
+    should_decrement = completion.get("status") == "completed" and bool(
+        step_data.get("isDone")
+    )
 
     transaction.update(
         completion_ref,
@@ -198,5 +248,7 @@ async def revoke_step_completion(
         },
     )
     transaction.commit()
+    if should_decrement:
+        _sync_user_progress(db, student_uid, done_delta=-1)
 
     return {"status": "ok"}

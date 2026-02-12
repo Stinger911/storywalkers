@@ -51,13 +51,12 @@ async def patch_me(
             "updatedAt": firestore.SERVER_TIMESTAMP,
         }
     )
-    updated = doc_ref.get().to_dict() or {}
     return {
         "uid": user["uid"],
-        "email": updated.get("email", user.get("email")),
-        "displayName": updated.get("displayName", display_name),
-        "role": user.get("roleRaw") or updated.get("role"),
-        "status": updated.get("status", user.get("status")),
+        "email": user.get("email"),
+        "displayName": display_name,
+        "role": user.get("roleRaw"),
+        "status": user.get("status"),
     }
 
 
@@ -70,6 +69,40 @@ def _doc_or_404(
     data = snap.to_dict() or {}
     data["id"] = snap.id
     return data
+
+
+def _progress_percent(done: int, total: int) -> int:
+    if total <= 0:
+        return 0
+    return round((done / total) * 100)
+
+
+def _sync_user_progress(
+    db: firestore.Client,
+    uid: str,
+    *,
+    done_delta: int = 0,
+    total_delta: int = 0,
+) -> None:
+    user_ref = db.collection("users").document(uid)
+    snap = user_ref.get()
+    if not snap.exists:
+        return
+    data = snap.to_dict() or {}
+    prev_done = int(data.get("stepsDone") or 0)
+    prev_total = int(data.get("stepsTotal") or 0)
+    next_done = max(0, prev_done + done_delta)
+    next_total = max(0, prev_total + total_delta)
+    if next_done > next_total:
+        next_done = next_total
+    user_ref.update(
+        {
+            "stepsDone": next_done,
+            "stepsTotal": next_total,
+            "progressPercent": _progress_percent(next_done, next_total),
+            "updatedAt": firestore.SERVER_TIMESTAMP,
+        }
+    )
 
 
 @router.get("/me/plan")
@@ -143,13 +176,21 @@ async def update_my_step_progress(
     plan_ref = db.collection("student_plans").document(user["uid"])
     _doc_or_404(plan_ref, "not_found", "Plan not found")
     step_ref = plan_ref.collection("steps").document(step_id)
-    _doc_or_404(step_ref, "not_found", "Step not found")
+    prev = _doc_or_404(step_ref, "not_found", "Step not found")
+    prev_done = bool(prev.get("isDone"))
+    next_done = payload.isDone
     update = {
-        "isDone": payload.isDone,
-        "doneAt": firestore.SERVER_TIMESTAMP if payload.isDone else None,
+        "isDone": next_done,
+        "doneAt": firestore.SERVER_TIMESTAMP if next_done else None,
         "updatedAt": firestore.SERVER_TIMESTAMP,
     }
     step_ref.update(update)
+    if prev_done != next_done:
+        _sync_user_progress(
+            db,
+            user["uid"],
+            done_delta=1 if next_done else -1,
+        )
     data = _doc_or_404(step_ref, "not_found", "Step not found")
     data["stepId"] = data.pop("id")
     return data
@@ -167,6 +208,7 @@ async def complete_my_step(
 
     step_ref = plan_ref.collection("steps").document(step_id)
     step = _doc_or_404(step_ref, "not_found", "Step not found")
+    was_done = bool(step.get("isDone"))
 
     goal_id = plan.get("goalId")
     goal_title = None
@@ -210,5 +252,7 @@ async def complete_my_step(
         },
     )
     batch.commit()
+    if not was_done:
+        _sync_user_progress(db, user["uid"], done_delta=1)
 
     return {"status": "ok", "completionId": completion_ref.id}

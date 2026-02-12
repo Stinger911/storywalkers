@@ -63,7 +63,7 @@ def _doc_or_404(doc_ref: firestore.DocumentReference) -> dict[str, Any]:
 @router.get("/categories")
 async def list_categories(
     user: dict = Depends(get_current_user),
-    limit: int = Query(200, ge=1, le=200),
+    limit: int = Query(100, ge=1, le=100),
 ):
     db = get_firestore_client()
     query = db.collection("categories").order_by("name").limit(limit)
@@ -129,7 +129,7 @@ async def delete_category(
 @router.get("/goals")
 async def list_goals(
     user: dict = Depends(get_current_user),
-    limit: int = Query(200, ge=1, le=200),
+    limit: int = Query(100, ge=1, le=100),
 ):
     db = get_firestore_client()
     query = db.collection("goals").order_by("createdAt").limit(limit)
@@ -191,7 +191,7 @@ async def list_step_templates(
     user: dict = Depends(require_staff),
     is_active: bool | None = Query(None, alias="isActive"),
     category_id: str | None = Query(None, alias="categoryId"),
-    limit: int = Query(200, ge=1, le=200),
+    limit: int = Query(100, ge=1, le=100),
     cursor: str | None = Query(None),
 ):
     db = get_firestore_client()

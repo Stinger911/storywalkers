@@ -1,4 +1,5 @@
 import re
+import time
 from typing import Any
 
 from fastapi import APIRouter, Depends, Query, status
@@ -7,9 +8,11 @@ from pydantic import BaseModel
 
 from app.auth.deps import get_current_user, require_staff
 from app.core.errors import AppError
+from app.core.logging import get_logger
 from app.db.firestore import get_firestore_client
 
 router = APIRouter(prefix="/api", tags=["Questions"])
+logger = get_logger("app.db")
 
 
 class CreateQuestionRequest(BaseModel):
@@ -65,13 +68,14 @@ def _normalize_keywords(*values: str, existing: list[str] | None = None) -> list
 @router.get("/questions")
 async def list_questions(
     user: dict = Depends(get_current_user),
-    limit: int = Query(50, ge=1, le=200),
+    limit: int = Query(50, ge=1, le=100),
     status: str | None = Query(None),
     categoryId: str | None = Query(None),
     studentUid: str | None = Query(None),
     studentName: str | None = Query(None),
     cursor: str | None = Query(None),
 ):
+    started = time.perf_counter()
     db = get_firestore_client()
     query = db.collection("questions")
     if user.get("role") != "staff":
@@ -114,6 +118,16 @@ async def list_questions(
                         for item in items
                         if needle in str(item.get("studentUid", "")).lower()
                     ]
+    logger.info(
+        "questions_list_db_timing",
+        extra={
+            "duration_ms": round((time.perf_counter() - started) * 1000, 2),
+            "returned": len(items),
+            "limit": limit,
+            "db_reads_estimate": len(items),
+            "db_writes_estimate": 0,
+        },
+    )
     return {"items": items, "nextCursor": None}
 
 

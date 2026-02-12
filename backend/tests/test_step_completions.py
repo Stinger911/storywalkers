@@ -165,11 +165,12 @@ class FakeTransaction:
 
 
 class FakeFirestore:
-    def __init__(self, plans=None, steps=None, goals=None, completions=None):
+    def __init__(self, plans=None, steps=None, goals=None, completions=None, users=None):
         self._plans = plans or {}
         self._steps = steps or {}
         self._goals = goals or {}
         self._completions = completions or {}
+        self._users = users or {}
 
     def collection(self, name):
         if name == "student_plans":
@@ -181,6 +182,8 @@ class FakeFirestore:
             return FakeCollection(self._goals)
         if name == "step_completions":
             return FakeCollection(self._completions)
+        if name == "users":
+            return FakeCollection(self._users)
         raise ValueError(f"unsupported collection {name}")
 
     def batch(self):
@@ -248,6 +251,7 @@ def test_student_complete_step_writes_step_and_feed(monkeypatch):
         plans={"u1": {"goalId": "g1"}},
         steps={"u1": {"s1": {"title": "Step One", "isDone": False}}},
         goals={"g1": {"title": "Goal One"}},
+        users={"u1": {"stepsDone": 0, "stepsTotal": 1}},
     )
     monkeypatch.setattr(auth, "get_firestore_client", lambda: fake_db)
     app.dependency_overrides[get_current_user] = _override_student
@@ -311,6 +315,7 @@ def test_admin_patch_and_revoke_updates_feed_and_step(monkeypatch):
                 "completedAt": 10,
             }
         },
+        users={"u1": {"stepsDone": 1, "stepsTotal": 1}},
     )
     monkeypatch.setattr(
         admin_step_completions, "get_firestore_client", lambda: fake_db

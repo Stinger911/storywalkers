@@ -1,4 +1,5 @@
 import re
+import time
 from typing import Any
 
 from fastapi import APIRouter, Depends, Query, status
@@ -7,9 +8,11 @@ from pydantic import BaseModel
 
 from app.auth.deps import get_current_user, require_staff
 from app.core.errors import AppError
+from app.core.logging import get_logger
 from app.db.firestore import get_firestore_client
 
 router = APIRouter(prefix="/api", tags=["Library"])
+logger = get_logger("app.db")
 
 
 class CreateLibraryEntryRequest(BaseModel):
@@ -64,12 +67,13 @@ def _normalize_keywords(*values: str, existing: list[str] | None = None) -> list
 @router.get("/library")
 async def library_root(
     user: dict = Depends(get_current_user),
-    limit: int = Query(50, ge=1, le=200),
+    limit: int = Query(50, ge=1, le=100),
     status: str | None = Query(None),
     categoryId: str | None = Query(None),
     q: str | None = Query(None),
     cursor: str | None = Query(None),
 ):
+    started = time.perf_counter()
     db = get_firestore_client()
     query = db.collection("library_entries")
     if user.get("role") != "staff":
@@ -99,6 +103,16 @@ async def library_root(
                 "updatedAt": data.get("updatedAt"),
             }
         )
+    logger.info(
+        "library_list_db_timing",
+        extra={
+            "duration_ms": round((time.perf_counter() - started) * 1000, 2),
+            "returned": len(items),
+            "limit": limit,
+            "db_reads_estimate": len(items),
+            "db_writes_estimate": 0,
+        },
+    )
     return {"items": items, "nextCursor": None}
 
 
