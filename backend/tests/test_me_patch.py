@@ -93,6 +93,20 @@ def test_patch_me_rejects_extra_fields(monkeypatch):
     app.dependency_overrides.clear()
 
 
+def test_patch_me_rejects_forbidden_fields(monkeypatch):
+    users = {"u1": {"displayName": "User One", "email": "u1@example.com"}}
+    fake_db = FakeFirestore(users)
+    monkeypatch.setattr(auth, "get_firestore_client", lambda: fake_db)
+    app.dependency_overrides[auth_deps.get_current_user] = _override_user
+    client = TestClient(app)
+
+    for field, value in [("role", "admin"), ("status", "disabled"), ("email", "x@y.z")]:
+        response = client.patch("/api/me", json={field: value})
+        assert response.status_code == 400
+
+    app.dependency_overrides.clear()
+
+
 def test_patch_me_validates_display_name(monkeypatch):
     users = {"u1": {"displayName": "User One", "email": "u1@example.com"}}
     fake_db = FakeFirestore(users)
@@ -176,5 +190,31 @@ def test_patch_me_updates_onboarding_fields(monkeypatch):
     assert users["u1"]["profileForm"]["telegram"] == "@new"
     assert users["u1"]["profileForm"]["experienceLevel"] == "advanced"
     assert users["u1"]["updatedAt"] == "SERVER_TIMESTAMP"
+
+    app.dependency_overrides.clear()
+
+
+def test_patch_me_validates_onboarding_fields(monkeypatch):
+    users = {"u1": {"displayName": "User One", "email": "u1@example.com"}}
+    fake_db = FakeFirestore(users)
+    monkeypatch.setattr(auth, "get_firestore_client", lambda: fake_db)
+    app.dependency_overrides[auth_deps.get_current_user] = _override_user
+    client = TestClient(app)
+
+    long_notes = "x" * 1001
+    too_many_courses = [f"c{i}" for i in range(21)]
+    cases = [
+        {"profileForm": {"telegram": "bad-telegram"}},
+        {"profileForm": {"telegram": "@" + ("a" * 65)}},
+        {"profileForm": {"socialUrl": "notaurl"}},
+        {"profileForm": {"socialUrl": "https://example.com/" + ("x" * 190)}},
+        {"profileForm": {"notes": long_notes}},
+        {"selectedGoalId": "x" * 65},
+        {"selectedCourses": ["c1", "c1"]},
+        {"selectedCourses": too_many_courses},
+    ]
+    for payload in cases:
+        response = client.patch("/api/me", json=payload)
+        assert response.status_code == 400
 
     app.dependency_overrides.clear()

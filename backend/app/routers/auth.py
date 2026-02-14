@@ -1,9 +1,11 @@
+import re
 from typing import Any, Literal
 from urllib.parse import urlparse
 
 from fastapi import APIRouter, Depends, status
 from google.cloud import firestore
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+from pydantic_core import PydanticCustomError
 
 from app.auth.deps import get_current_user
 from app.core.errors import AppError
@@ -13,6 +15,7 @@ router = APIRouter(prefix="/api", tags=["Auth"])
 
 
 ExperienceLevel = Literal["beginner", "intermediate", "advanced"]
+TELEGRAM_HANDLE_RE = re.compile(r"^@[A-Za-z0-9_]{1,32}$")
 
 
 class ProfileFormModel(BaseModel):
@@ -22,6 +25,81 @@ class ProfileFormModel(BaseModel):
     notes: str | None = None
 
     model_config = {"extra": "forbid"}
+
+    @field_validator("telegram", mode="before")
+    @classmethod
+    def _trim_telegram(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        trimmed = value.strip()
+        return trimmed or None
+
+    @field_validator("telegram")
+    @classmethod
+    def _validate_telegram(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        if len(value) > 64:
+            raise PydanticCustomError(
+                "telegram_max_length", "telegram must be 64 characters or fewer"
+            )
+        if TELEGRAM_HANDLE_RE.match(value):
+            return value
+        parsed = urlparse(value)
+        host = (parsed.netloc or "").lower()
+        path = (parsed.path or "").strip("/")
+        if (
+            parsed.scheme in {"http", "https"}
+            and host in {"t.me", "www.t.me", "telegram.me", "www.telegram.me"}
+            and path
+        ):
+            return value
+        raise PydanticCustomError(
+            "telegram_invalid", "telegram must be @handle or t.me link"
+        )
+
+    @field_validator("socialUrl", mode="before")
+    @classmethod
+    def _trim_social_url(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        trimmed = value.strip()
+        return trimmed or None
+
+    @field_validator("socialUrl")
+    @classmethod
+    def _validate_social_url(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        if len(value) > 200:
+            raise PydanticCustomError(
+                "social_url_max_length", "socialUrl must be 200 characters or fewer"
+            )
+        parsed = urlparse(value)
+        if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+            raise PydanticCustomError(
+                "social_url_invalid", "socialUrl must be a valid URL"
+            )
+        return value
+
+    @field_validator("notes", mode="before")
+    @classmethod
+    def _trim_notes(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        trimmed = value.strip()
+        return trimmed or None
+
+    @field_validator("notes")
+    @classmethod
+    def _validate_notes(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        if len(value) > 1000:
+            raise PydanticCustomError(
+                "notes_max_length", "notes must be 1000 characters or fewer"
+            )
+        return value
 
 
 class MeResponse(BaseModel):
@@ -51,6 +129,76 @@ class PatchMeRequest(BaseModel):
 
     model_config = {"extra": "forbid"}
 
+    @field_validator("displayName", mode="before")
+    @classmethod
+    def _trim_display_name(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        trimmed = value.strip()
+        return trimmed or None
+
+    @field_validator("displayName")
+    @classmethod
+    def _validate_display_name(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        if len(value) > 60:
+            raise PydanticCustomError(
+                "display_name_max_length",
+                "displayName must be 60 characters or fewer",
+            )
+        return value
+
+    @field_validator("selectedGoalId", mode="before")
+    @classmethod
+    def _trim_selected_goal_id(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        trimmed = value.strip()
+        return trimmed or None
+
+    @field_validator("selectedGoalId")
+    @classmethod
+    def _validate_selected_goal_id(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        if len(value) > 64:
+            raise PydanticCustomError(
+                "selected_goal_id_max_length",
+                "selectedGoalId must be 64 characters or fewer",
+            )
+        return value
+
+    @field_validator("selectedCourses", mode="before")
+    @classmethod
+    def _normalize_selected_courses(cls, value: list[str] | None) -> list[str] | None:
+        if value is None:
+            return None
+        normalized: list[str] = []
+        for item in value:
+            if not isinstance(item, str):
+                continue
+            trimmed = item.strip()
+            if trimmed:
+                normalized.append(trimmed)
+        return normalized
+
+    @field_validator("selectedCourses")
+    @classmethod
+    def _validate_selected_courses(cls, value: list[str] | None) -> list[str] | None:
+        if value is None:
+            return None
+        if len(value) > 20:
+            raise PydanticCustomError(
+                "selected_courses_max_items",
+                "selectedCourses must contain at most 20 items",
+            )
+        if len(set(value)) != len(value):
+            raise PydanticCustomError(
+                "selected_courses_unique", "selectedCourses must be unique"
+            )
+        return value
+
 
 def _sanitize_optional_text(value: object) -> str | None:
     if value is None:
@@ -72,16 +220,33 @@ def _sanitize_profile_form(
             merged[key] = _sanitize_optional_text(value)
         else:
             merged[key] = value
-    return {
+    normalized = {
         "telegram": _sanitize_optional_text(merged.get("telegram")),
         "socialUrl": _sanitize_optional_text(merged.get("socialUrl")),
         "experienceLevel": merged.get("experienceLevel"),
         "notes": _sanitize_optional_text(merged.get("notes")),
     }
+    # Keep read path backward-compatible with legacy/invalid stored values.
+    try:
+        return ProfileFormModel.model_validate(normalized).model_dump()
+    except Exception:
+        return {
+            "telegram": None,
+            "socialUrl": None,
+            "experienceLevel": None,
+            "notes": None,
+        }
 
 
 def _sanitize_selected_courses(value: list[str]) -> list[str]:
-    return [item.strip() for item in value if item.strip()]
+    normalized = [item.strip() for item in value if item.strip()]
+    unique: list[str] = []
+    seen: set[str] = set()
+    for item in normalized:
+        if item not in seen:
+            seen.add(item)
+            unique.append(item)
+    return unique
 
 
 @router.patch("/me", response_model=MeResponse)
@@ -100,17 +265,11 @@ async def patch_me(
         )
 
     if "displayName" in payload_data:
-        display_name = _sanitize_optional_text(payload.displayName)
+        display_name = payload.displayName
         if not display_name:
             raise AppError(
                 code="validation_error",
                 message="displayName is required",
-                status_code=400,
-            )
-        if len(display_name) > 60:
-            raise AppError(
-                code="validation_error",
-                message="displayName must be 60 characters or fewer",
                 status_code=400,
             )
         updates["displayName"] = display_name
