@@ -23,6 +23,15 @@ export type MeProfile = {
   role: 'student' | 'staff'
   status: 'active' | 'disabled'
   roleRaw?: 'student' | 'admin' | 'expert'
+  selectedGoalId?: string | null
+  profileForm?: {
+    telegram?: string | null
+    socialUrl?: string | null
+    experienceLevel?: 'beginner' | 'intermediate' | 'advanced' | null
+    notes?: string | null
+  }
+  selectedCourses?: string[]
+  subscriptionSelected?: boolean | null
 }
 
 type AuthContextValue = {

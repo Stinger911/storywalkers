@@ -18,3 +18,4 @@ lerna-debug.log*
 *.sublime-workspace
 *.sublime-project
 *.log
+*.nogit.*

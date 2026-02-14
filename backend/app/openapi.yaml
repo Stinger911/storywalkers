@@ -66,15 +66,72 @@ components:
           type: string
           enum: [active, disabled]
           example: active
+        roleRaw:
+          type: string
+          nullable: true
+          enum: [student, admin, expert]
+          example: student
+        selectedGoalId:
+          type: string
+          nullable: true
+          example: goal_video_editor
+        profileForm:
+          $ref: "#/components/schemas/ProfileForm"
+        selectedCourses:
+          type: array
+          items:
+            type: string
+          example: [course_1, course_2]
+        subscriptionSelected:
+          type: boolean
+          nullable: true
+          example: true
+
+    ProfileForm:
+      type: object
+      additionalProperties: false
+      properties:
+        telegram:
+          type: string
+          nullable: true
+          example: "@alex"
+        socialUrl:
+          type: string
+          nullable: true
+          example: "https://t.me/alex"
+        experienceLevel:
+          type: string
+          nullable: true
+          enum: [beginner, intermediate, advanced]
+          example: intermediate
+        notes:
+          type: string
+          nullable: true
+          example: "Prefers short assignments."
 
     PatchMeRequest:
       type: object
       additionalProperties: false
-      required: [displayName]
       properties:
         displayName:
           type: string
+          nullable: true
           example: Alex Doe
+        selectedGoalId:
+          type: string
+          nullable: true
+          example: goal_video_editor
+        profileForm:
+          $ref: "#/components/schemas/ProfileForm"
+        selectedCourses:
+          type: array
+          items:
+            type: string
+          example: [course_1, course_2]
+        subscriptionSelected:
+          type: boolean
+          nullable: true
+          example: false
 
     Paginated:
       type: object

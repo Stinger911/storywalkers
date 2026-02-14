@@ -1,9 +1,9 @@
-from typing import Any
+from typing import Any, Literal
 from urllib.parse import urlparse
 
 from fastapi import APIRouter, Depends, status
 from google.cloud import firestore
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.auth.deps import get_current_user
 from app.core.errors import AppError
@@ -12,51 +12,165 @@ from app.db.firestore import get_firestore_client
 router = APIRouter(prefix="/api", tags=["Auth"])
 
 
-@router.get("/me")
-async def get_me(user: dict = Depends(get_current_user)) -> dict:
-    return user
+ExperienceLevel = Literal["beginner", "intermediate", "advanced"]
 
 
-class PatchMeRequest(BaseModel):
-    displayName: str
+class ProfileFormModel(BaseModel):
+    telegram: str | None = None
+    socialUrl: str | None = None
+    experienceLevel: ExperienceLevel | None = None
+    notes: str | None = None
 
     model_config = {"extra": "forbid"}
 
 
-@router.patch("/me")
+class MeResponse(BaseModel):
+    uid: str
+    email: str
+    displayName: str
+    role: str
+    status: str
+    roleRaw: str | None = None
+    selectedGoalId: str | None = None
+    profileForm: ProfileFormModel = Field(default_factory=ProfileFormModel)
+    selectedCourses: list[str] = Field(default_factory=list)
+    subscriptionSelected: bool | None = None
+
+
+@router.get("/me", response_model=MeResponse)
+async def get_me(user: dict = Depends(get_current_user)) -> MeResponse:
+    return user
+
+
+class PatchMeRequest(BaseModel):
+    displayName: str | None = None
+    selectedGoalId: str | None = None
+    profileForm: ProfileFormModel | None = None
+    selectedCourses: list[str] | None = None
+    subscriptionSelected: bool | None = None
+
+    model_config = {"extra": "forbid"}
+
+
+def _sanitize_optional_text(value: object) -> str | None:
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        return None
+    trimmed = value.strip()
+    return trimmed or None
+
+
+def _sanitize_profile_form(
+    existing: dict[str, Any] | None,
+    incoming: ProfileFormModel,
+) -> dict[str, Any]:
+    merged = dict(existing or {})
+    payload = incoming.model_dump(exclude_unset=True)
+    for key, value in payload.items():
+        if key in {"telegram", "socialUrl", "notes"}:
+            merged[key] = _sanitize_optional_text(value)
+        else:
+            merged[key] = value
+    return {
+        "telegram": _sanitize_optional_text(merged.get("telegram")),
+        "socialUrl": _sanitize_optional_text(merged.get("socialUrl")),
+        "experienceLevel": merged.get("experienceLevel"),
+        "notes": _sanitize_optional_text(merged.get("notes")),
+    }
+
+
+def _sanitize_selected_courses(value: list[str]) -> list[str]:
+    return [item.strip() for item in value if item.strip()]
+
+
+@router.patch("/me", response_model=MeResponse)
 async def patch_me(
     payload: PatchMeRequest,
     user: dict = Depends(get_current_user),
-) -> dict:
-    display_name = payload.displayName.strip()
-    if not display_name:
+) -> MeResponse:
+    updates: dict[str, Any] = {}
+    payload_data = payload.model_dump(exclude_unset=True)
+
+    if not payload_data:
         raise AppError(
             code="validation_error",
-            message="displayName is required",
+            message="At least one allowed field is required",
             status_code=400,
         )
-    if len(display_name) > 60:
-        raise AppError(
-            code="validation_error",
-            message="displayName must be 60 characters or fewer",
-            status_code=400,
+
+    if "displayName" in payload_data:
+        display_name = _sanitize_optional_text(payload.displayName)
+        if not display_name:
+            raise AppError(
+                code="validation_error",
+                message="displayName is required",
+                status_code=400,
+            )
+        if len(display_name) > 60:
+            raise AppError(
+                code="validation_error",
+                message="displayName must be 60 characters or fewer",
+                status_code=400,
+            )
+        updates["displayName"] = display_name
+
+    if "selectedGoalId" in payload_data:
+        updates["selectedGoalId"] = _sanitize_optional_text(payload.selectedGoalId)
+
+    if "selectedCourses" in payload_data:
+        updates["selectedCourses"] = _sanitize_selected_courses(
+            payload.selectedCourses or []
         )
+
+    if "subscriptionSelected" in payload_data:
+        updates["subscriptionSelected"] = payload.subscriptionSelected
+
     db = get_firestore_client()
     doc_ref = db.collection("users").document(user["uid"])
-    if not doc_ref.get().exists:
+    snap = doc_ref.get()
+    if not snap.exists:
         raise AppError(code="not_found", message="User not found", status_code=404)
-    doc_ref.update(
-        {
-            "displayName": display_name,
-            "updatedAt": firestore.SERVER_TIMESTAMP,
-        }
-    )
+    current = snap.to_dict() or {}
+
+    if "profileForm" in payload_data:
+        updates["profileForm"] = _sanitize_profile_form(
+            current.get("profileForm")
+            if isinstance(current.get("profileForm"), dict)
+            else None,
+            payload.profileForm or ProfileFormModel(),
+        )
+
+    updates["updatedAt"] = firestore.SERVER_TIMESTAMP
+    doc_ref.update(updates)
+
+    response_data = {**current, **updates}
+    role_raw = current.get("role") or user.get("roleRaw") or "student"
+    role = "staff" if role_raw in {"admin", "expert"} else "student"
     return {
         "uid": user["uid"],
-        "email": user.get("email"),
-        "displayName": display_name,
-        "role": user.get("roleRaw"),
-        "status": user.get("status"),
+        "email": user.get("email") or current.get("email") or "",
+        "displayName": response_data.get("displayName") or user.get("displayName") or "",
+        "role": role,
+        "status": current.get("status") or user.get("status") or "active",
+        "roleRaw": role_raw,
+        "selectedGoalId": _sanitize_optional_text(response_data.get("selectedGoalId")),
+        "profileForm": _sanitize_profile_form(
+            response_data.get("profileForm")
+            if isinstance(response_data.get("profileForm"), dict)
+            else None,
+            ProfileFormModel(),
+        ),
+        "selectedCourses": _sanitize_selected_courses(
+            response_data.get("selectedCourses")
+            if isinstance(response_data.get("selectedCourses"), list)
+            else []
+        ),
+        "subscriptionSelected": (
+            response_data.get("subscriptionSelected")
+            if isinstance(response_data.get("subscriptionSelected"), bool)
+            else None
+        ),
     }
 
 
@@ -143,13 +257,6 @@ class CompleteStepRequest(BaseModel):
     link: str | None = None
 
     model_config = {"extra": "forbid"}
-
-
-def _sanitize_optional_text(value: str | None) -> str | None:
-    if value is None:
-        return None
-    trimmed = value.strip()
-    return trimmed or None
 
 
 def _sanitize_link(value: str | None) -> str | None:
