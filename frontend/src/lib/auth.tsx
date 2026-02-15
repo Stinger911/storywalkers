@@ -34,6 +34,19 @@ export type MeProfile = {
   subscriptionSelected?: boolean | null
 }
 
+export type PatchMePayload = {
+  displayName?: string
+  selectedGoalId?: string | null
+  profileForm?: {
+    telegram?: string | null
+    socialUrl?: string | null
+    experienceLevel?: 'beginner' | 'intermediate' | 'advanced' | null
+    notes?: string | null
+  }
+  selectedCourses?: string[]
+  subscriptionSelected?: boolean | null
+}
+
 type AuthContextValue = {
   firebaseUser: () => User | null
   me: () => MeProfile | null
@@ -41,6 +54,7 @@ type AuthContextValue = {
   loginWithGoogle: () => Promise<void>
   logout: () => Promise<void>
   refreshMe: () => Promise<void>
+  patchMe: (payload: PatchMePayload) => Promise<MeProfile>
   updateDisplayName: (displayName: string) => Promise<void>
 }
 
@@ -77,10 +91,10 @@ export function AuthProvider(props: { children: JSX.Element }) {
     }
   }
 
-  const updateDisplayName = async (displayName: string) => {
+  const patchMe = async (payload: PatchMePayload) => {
     const response = await apiFetch('/api/me', {
       method: 'PATCH',
-      body: JSON.stringify({ displayName }),
+      body: JSON.stringify(payload),
     })
     if (!response.ok) {
       const payload = await response.json().catch(() => ({}))
@@ -88,6 +102,11 @@ export function AuthProvider(props: { children: JSX.Element }) {
     }
     const data = (await response.json()) as MeProfile
     setMe(data)
+    return data
+  }
+
+  const updateDisplayName = async (displayName: string) => {
+    await patchMe({ displayName })
   }
 
   const loginWithGoogle = async () => {
@@ -137,6 +156,7 @@ export function AuthProvider(props: { children: JSX.Element }) {
     loginWithGoogle,
     logout,
     refreshMe,
+    patchMe,
     updateDisplayName,
   }
 

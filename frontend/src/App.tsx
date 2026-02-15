@@ -15,6 +15,7 @@ import { Login } from "./routes/Login.tsx";
 import { NotFound } from "./routes/NotFound.tsx";
 import { StudentLayout } from "./routes/student/StudentLayout.tsx";
 import { StudentProfile, StudentProfileRail } from "./routes/student/StudentProfile.tsx";
+import { StudentHomeRoute } from "./routes/student/StudentHomeRoute.tsx";
 import { StudentQuestionDetail } from "./routes/student/StudentQuestionDetail.tsx";
 import { StudentQuestionNew } from "./routes/student/StudentQuestionNew.tsx";
 import { StudentQuestions } from "./routes/student/StudentQuestions.tsx";
@@ -27,6 +28,10 @@ import { StudentLibrary } from "./routes/student/StudentLibrary.tsx";
 import { StudentLibraryDetail } from "./routes/student/StudentLibraryDetail.tsx";
 import { AdminLibrary } from "./routes/admin/AdminLibrary.tsx";
 import { AdminLibraryDetail } from "./routes/admin/AdminLibraryDetail.tsx";
+import { OnboardingGoal } from "./routes/onboarding/OnboardingGoal.tsx";
+import { OnboardingProfile } from "./routes/onboarding/OnboardingProfile.tsx";
+import { OnboardingCourses } from "./routes/onboarding/OnboardingCourses.tsx";
+import { OnboardingCheckout } from "./routes/onboarding/OnboardingCheckout.tsx";
 
 const AdminHomeRoute = () => (
   <AdminLayout>
@@ -237,6 +242,11 @@ const AdminLibraryDetailRoute = () => (
   </AdminLayout>
 );
 
+const OnboardingGoalRoute = () => <OnboardingGoal />;
+const OnboardingProfileRoute = () => <OnboardingProfile />;
+const OnboardingCoursesRoute = () => <OnboardingCourses />;
+const OnboardingCheckoutRoute = () => <OnboardingCheckout />;
+
 export default function App() {
   return (
     <>
@@ -244,13 +254,17 @@ export default function App() {
         <Route path="/" component={Landing} />
         <Route path="/login" component={Login} />
         <Route path="/student" component={StudentProfileRoute} />
-        <Route path="/student/home" component={StudentProfileRoute} />
+        <Route path="/student/home" component={StudentHomeRoute} />
         <Route path="/student/profile" component={StudentProfileRoute} />
         <Route path="/student/questions" component={StudentQuestionsRoute} />
         <Route path="/student/questions/new" component={StudentQuestionNewRoute} />
         <Route path="/student/questions/:id" component={StudentQuestionDetailRoute} />
         <Route path="/student/library" component={StudentLibraryRoute} />
         <Route path="/student/library/:id" component={StudentLibraryDetailRoute} />
+        <Route path="/onboarding/goal" component={OnboardingGoalRoute} />
+        <Route path="/onboarding/profile" component={OnboardingProfileRoute} />
+        <Route path="/onboarding/courses" component={OnboardingCoursesRoute} />
+        <Route path="/onboarding/checkout" component={OnboardingCheckoutRoute} />
         <Route path="/admin" component={AdminHomeRoute} />
         <Route path="/admin/home" component={AdminHomeRoute} />
         <Route path="/admin/students" component={AdminStudentsRoute} />
