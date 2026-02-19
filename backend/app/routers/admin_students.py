@@ -5,9 +5,15 @@ from fastapi import APIRouter, Depends, Query, status
 from google.cloud import firestore
 from pydantic import BaseModel
 
-from app.auth.deps import require_staff
+from app.auth.user_status import (
+    DEFAULT_NEW_USER_STATUS,
+    UserStatus,
+    ensure_user_status_with_migration,
+    validate_user_status_or_400,
+)
+from app.auth.deps import get_current_user, require_staff
 from app.auth.firebase import get_or_create_user
-from app.core.errors import AppError
+from app.core.errors import AppError, forbidden_error
 from app.core.logging import get_logger
 from app.db.firestore import get_firestore_client
 from app.services.goal_template_steps import list_steps
@@ -24,8 +30,9 @@ class CreateStudentRequest(BaseModel):
 
 class PatchStudentRequest(BaseModel):
     displayName: str | None = None
-    status: str | None = None
-    role: str | None = None
+    status: UserStatus | None = None
+
+    model_config = {"extra": "forbid"}
 
 
 class AssignPlanRequest(BaseModel):
@@ -70,7 +77,8 @@ def _doc_or_404(doc_ref: firestore.DocumentReference) -> dict[str, Any]:
 
 def _ensure_user_exists(db: firestore.Client, uid: str) -> None:
     doc_ref = db.collection("users").document(uid)
-    _doc_or_404(doc_ref)
+    data = _doc_or_404(doc_ref)
+    ensure_user_status_with_migration(doc_ref, data)
 
 
 def _progress_percent(done: int, total: int) -> int:
@@ -144,6 +152,26 @@ def _commit_deletes_in_batches(
         batch.commit()
 
 
+def _emit_status_changed_event(
+    *,
+    actor_uid: str,
+    target_uid: str,
+    old_status: UserStatus,
+    new_status: UserStatus,
+) -> None:
+    # Placeholder hook for future Telegram integration.
+    logger.info(
+        "status_changed_hook",
+        extra={
+            "event": "status_changed",
+            "actorUid": actor_uid,
+            "targetUid": target_uid,
+            "oldStatus": old_status,
+            "newStatus": new_status,
+        },
+    )
+
+
 @router.get("/students")
 async def list_students(
     user: dict = Depends(require_staff),
@@ -154,6 +182,8 @@ async def list_students(
     cursor: str | None = Query(None),
 ):
     started = time.perf_counter()
+    if status_filter:
+        validate_user_status_or_400(status_filter)
     db = get_firestore_client()
     query = db.collection("users")
     if role:
@@ -168,6 +198,7 @@ async def list_students(
     items = []
     for snap in query.stream():
         data = snap.to_dict() or {}
+        ensure_user_status_with_migration(snap.reference, data)
         data["uid"] = snap.id
         items.append(data)
 
@@ -245,7 +276,7 @@ async def create_student(
         "email": payload.email,
         "displayName": payload.displayName,
         "role": role,
-        "status": "active",
+        "status": DEFAULT_NEW_USER_STATUS,
         "stepsDone": 0,
         "stepsTotal": 0,
         "progressPercent": 0,
@@ -262,19 +293,26 @@ async def create_student(
 async def update_student(
     uid: str,
     payload: PatchStudentRequest,
-    user: dict = Depends(require_staff),
+    user: dict = Depends(get_current_user),
 ):
+    if user.get("role") != "staff":
+        if user.get("role") == "student" and user.get("uid") == uid:
+            raise forbidden_error()
+        raise forbidden_error()
+
     db = get_firestore_client()
     doc_ref = db.collection("users").document(uid)
-    _doc_or_404(doc_ref)
+    current = _doc_or_404(doc_ref)
+    current_status = ensure_user_status_with_migration(doc_ref, current)
     updates = payload.model_dump(exclude_unset=True)
-    role = updates.get("role")
-    if role and role not in {"student", "admin", "expert"}:
+
+    if not updates:
         raise AppError(
             code="validation_error",
-            message="Invalid role",
+            message="At least one field is required",
             status_code=400,
         )
+
     if "displayName" in updates:
         display_name = (updates.get("displayName") or "").strip()
         if not display_name:
@@ -291,15 +329,32 @@ async def update_student(
             )
         updates["displayName"] = display_name
     status = updates.get("status")
-    if status and status not in {"active", "disabled"}:
-        raise AppError(
-            code="validation_error",
-            message="Invalid status",
-            status_code=400,
-        )
+    if status is not None:
+        updates["status"] = validate_user_status_or_400(status)
     updates["updatedAt"] = firestore.SERVER_TIMESTAMP
     doc_ref.update(updates)
     data = _doc_or_404(doc_ref)
+    ensure_user_status_with_migration(doc_ref, data)
+
+    new_status = updates.get("status")
+    if new_status is not None and new_status != current_status:
+        logger.info(
+            "status_changed",
+            extra={
+                "event": "status_changed",
+                "actorUid": user.get("uid"),
+                "targetUid": uid,
+                "oldStatus": current_status,
+                "newStatus": new_status,
+            },
+        )
+        _emit_status_changed_event(
+            actor_uid=user.get("uid") or "",
+            target_uid=uid,
+            old_status=current_status,
+            new_status=new_status,
+        )
+
     data["uid"] = uid
     return data
 
@@ -312,6 +367,7 @@ async def delete_student(
     db = get_firestore_client()
     user_ref = db.collection("users").document(uid)
     user_data = _doc_or_404(user_ref)
+    ensure_user_status_with_migration(user_ref, user_data)
 
     if user_data.get("role") != "student":
         raise AppError(
@@ -504,6 +560,7 @@ async def get_student(
     db = get_firestore_client()
     doc_ref = db.collection("users").document(uid)
     data = _doc_or_404(doc_ref)
+    ensure_user_status_with_migration(doc_ref, data)
     data["uid"] = uid
     return data
 

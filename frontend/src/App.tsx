@@ -32,6 +32,7 @@ import { OnboardingGoal } from "./routes/onboarding/OnboardingGoal.tsx";
 import { OnboardingProfile } from "./routes/onboarding/OnboardingProfile.tsx";
 import { OnboardingCourses } from "./routes/onboarding/OnboardingCourses.tsx";
 import { OnboardingCheckout } from "./routes/onboarding/OnboardingCheckout.tsx";
+import { Blocked } from "./routes/Blocked.tsx";
 
 const AdminHomeRoute = () => (
   <AdminLayout>
@@ -253,6 +254,7 @@ export default function App() {
       <Router>
         <Route path="/" component={Landing} />
         <Route path="/login" component={Login} />
+        <Route path="/blocked" component={Blocked} />
         <Route path="/student" component={StudentHomeRoute} />
         <Route path="/student/home" component={StudentHomeRoute} />
         <Route path="/student/profile" component={StudentProfileRoute} />

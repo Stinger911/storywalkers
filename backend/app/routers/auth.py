@@ -7,7 +7,12 @@ from google.cloud import firestore
 from pydantic import BaseModel, Field, field_validator
 from pydantic_core import PydanticCustomError
 
-from app.auth.deps import get_current_user
+from app.auth.deps import (
+    ensure_active_student_status,
+    get_current_user,
+    require_active_student,
+)
+from app.auth.user_status import UserStatus, ensure_user_status_with_migration
 from app.core.errors import AppError
 from app.db.firestore import get_firestore_client
 
@@ -107,7 +112,7 @@ class MeResponse(BaseModel):
     email: str
     displayName: str
     role: str
-    status: str
+    status: UserStatus
     roleRaw: str | None = None
     selectedGoalId: str | None = None
     profileForm: ProfileFormModel = Field(default_factory=ProfileFormModel)
@@ -291,6 +296,7 @@ async def patch_me(
     if not snap.exists:
         raise AppError(code="not_found", message="User not found", status_code=404)
     current = snap.to_dict() or {}
+    current_status = ensure_user_status_with_migration(doc_ref, current)
 
     if "profileForm" in payload_data:
         updates["profileForm"] = _sanitize_profile_form(
@@ -299,6 +305,9 @@ async def patch_me(
             else None,
             payload.profileForm or ProfileFormModel(),
         )
+
+    if "subscriptionSelected" in payload_data and user.get("role") == "student":
+        ensure_active_student_status({**user, "status": current_status})
 
     updates["updatedAt"] = firestore.SERVER_TIMESTAMP
     doc_ref.update(updates)
@@ -311,7 +320,7 @@ async def patch_me(
         "email": user.get("email") or current.get("email") or "",
         "displayName": response_data.get("displayName") or user.get("displayName") or "",
         "role": role,
-        "status": current.get("status") or user.get("status") or "active",
+        "status": current_status,
         "roleRaw": role_raw,
         "selectedGoalId": _sanitize_optional_text(response_data.get("selectedGoalId")),
         "profileForm": _sanitize_profile_form(
@@ -379,7 +388,7 @@ def _sync_user_progress(
 
 
 @router.get("/me/plan")
-async def get_my_plan(user: dict = Depends(get_current_user)):
+async def get_my_plan(user: dict = Depends(require_active_student)):
     db = get_firestore_client()
     plan_ref = db.collection("student_plans").document(user["uid"])
     plan = _doc_or_404(plan_ref, "not_found", "Plan not found")
@@ -393,7 +402,7 @@ async def get_my_plan(user: dict = Depends(get_current_user)):
 
 
 @router.get("/me/plan/steps")
-async def get_my_plan_steps(user: dict = Depends(get_current_user)):
+async def get_my_plan_steps(user: dict = Depends(require_active_student)):
     db = get_firestore_client()
     plan_ref = db.collection("student_plans").document(user["uid"])
     _doc_or_404(plan_ref, "not_found", "Plan not found")
@@ -436,7 +445,7 @@ def _sanitize_link(value: str | None) -> str | None:
 async def update_my_step_progress(
     step_id: str,
     payload: UpdateStepProgressRequest,
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_active_student),
 ):
     db = get_firestore_client()
     plan_ref = db.collection("student_plans").document(user["uid"])
@@ -466,7 +475,7 @@ async def update_my_step_progress(
 async def complete_my_step(
     step_id: str,
     payload: CompleteStepRequest | None = None,
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_active_student),
 ):
     db = get_firestore_client()
     plan_ref = db.collection("student_plans").document(user["uid"])

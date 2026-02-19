@@ -1,8 +1,8 @@
-import { Navigate } from "@solidjs/router";
+import { Navigate, useLocation } from "@solidjs/router";
 import { Show } from "solid-js";
-
 import { Loading } from "../../components/Loading";
 import { useAuth } from "../../lib/auth";
+import { resolveGuardRedirect } from "../../lib/routeAccess";
 import { StudentLayout } from "./StudentLayout";
 import { StudentProfile, StudentProfileRail } from "./StudentProfile";
 import {
@@ -13,15 +13,22 @@ import {
 
 export function StudentHomeRoute() {
   const auth = useAuth();
+  const location = useLocation();
+  const me = () => auth.me();
+
+  const redirect = () =>
+    resolveGuardRedirect({
+      me: me(),
+      requiredRole: "student",
+      pathname: location.pathname,
+    });
 
   return (
     <Show when={!auth.loading()} fallback={<div class="page"><Loading /></div>}>
       {(() => {
-        const me = auth.me();
-        if (!me) return <Navigate href="/login" />;
-        if (me.role !== "student") return <Navigate href="/admin/home" />;
-        if (isOnboardingIncomplete(me)) {
-          return <Navigate href={onboardingPath(getNextOnboardingStep(me))} />;
+        if (redirect()) return <Navigate href={redirect()!} />;
+        if (me() && me()!.status === "active" && isOnboardingIncomplete(me()!)) {
+          return <Navigate href={onboardingPath(getNextOnboardingStep(me()!))} />;
         }
         return (
           <StudentLayout rightRail={<StudentProfileRail />}>

@@ -72,8 +72,8 @@ export function OnboardingLayout(props: OnboardingLayoutProps) {
     if (auth.loading()) return;
     const me = auth.me();
     if (!me) return;
-    if (me.status !== "active" && me.status !== "disabled") {
-      void navigate("/student/home", { replace: true });
+    if (me.status !== "active") {
+      setResumeChecked(true);
       return;
     }
     const target = onboardingPath(getNextOnboardingStep(me));

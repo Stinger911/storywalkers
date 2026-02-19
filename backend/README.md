@@ -31,3 +31,9 @@ curl -H "Authorization: Bearer <FIREBASE_ID_TOKEN>" \
 cd backend
 pytest
 ```
+
+## Migration note (user status)
+
+- User status enum is now: `disabled | active | community_only | expired`.
+- New user profiles default to `disabled`.
+- Lazy migration is enabled: when reading `users/{uid}`, if `status` is missing it is auto-set to `active` with `updatedAt=SERVER_TIMESTAMP`.

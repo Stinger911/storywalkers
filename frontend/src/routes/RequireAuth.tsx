@@ -1,8 +1,9 @@
 import { Show } from 'solid-js'
 import type { JSX } from 'solid-js'
-import { Navigate } from '@solidjs/router'
+import { Navigate, useLocation } from '@solidjs/router'
 import { Loading } from '../components/Loading'
 import { useAuth } from '../lib/auth'
+import { resolveGuardRedirect } from '../lib/routeAccess'
 
 type RequireAuthProps = {
   role?: 'student' | 'staff'
@@ -11,15 +12,17 @@ type RequireAuthProps = {
 
 export function RequireAuth(props: RequireAuthProps) {
   const auth = useAuth()
+  const location = useLocation()
   return (
     <Show when={!auth.loading()} fallback={<div class="page"><Loading /></div>}>
       {(() => {
-        const me = auth.me()
-        if (!me) {
-          return <Navigate href="/login" />
-        }
-        if (props.role && me.role !== props.role) {
-          return <Navigate href={me.role === 'staff' ? '/admin' : '/student'} />
+        const redirect = resolveGuardRedirect({
+          me: auth.me(),
+          requiredRole: props.role,
+          pathname: location.pathname,
+        })
+        if (redirect) {
+          return <Navigate href={redirect} />
         }
         return props.children
       })()}

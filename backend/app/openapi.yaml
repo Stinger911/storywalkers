@@ -64,7 +64,7 @@ components:
           example: student
         status:
           type: string
-          enum: [active, disabled]
+          enum: [disabled, active, community_only, expired]
           example: active
         roleRaw:
           type: string
@@ -172,7 +172,7 @@ components:
           example: student
         status:
           type: string
-          enum: [active, disabled]
+          enum: [disabled, active, community_only, expired]
           example: active
         createdAt:
           type: string
@@ -234,10 +234,7 @@ components:
           type: string
         status:
           type: string
-          enum: [active, disabled]
-        role:
-          type: string
-          enum: [student, admin, expert]
+          enum: [disabled, active, community_only, expired]
       example:
         displayName: Alex Doe
         status: disabled
@@ -1046,7 +1043,7 @@ paths:
           name: status
           schema:
             type: string
-            enum: [active, disabled]
+            enum: [disabled, active, community_only, expired]
         - in: query
           name: role
           schema:

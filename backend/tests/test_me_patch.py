@@ -74,6 +74,17 @@ def _override_user():
     }
 
 
+def _override_user_disabled():
+    return {
+        "uid": "u1",
+        "email": "u1@example.com",
+        "displayName": "User One",
+        "role": "student",
+        "status": "disabled",
+        "roleRaw": "student",
+    }
+
+
 def test_patch_me_requires_auth():
     client = TestClient(app)
     response = client.patch("/api/me", json={"displayName": "New"})
@@ -190,6 +201,68 @@ def test_patch_me_updates_onboarding_fields(monkeypatch):
     assert users["u1"]["profileForm"]["telegram"] == "@new"
     assert users["u1"]["profileForm"]["experienceLevel"] == "advanced"
     assert users["u1"]["updatedAt"] == "SERVER_TIMESTAMP"
+
+    app.dependency_overrides.clear()
+
+
+def test_patch_me_migrates_missing_status(monkeypatch):
+    users = {
+        "u1": {
+            "displayName": "User One",
+            "email": "u1@example.com",
+        }
+    }
+    fake_db = FakeFirestore(users)
+    monkeypatch.setattr(auth, "get_firestore_client", lambda: fake_db)
+    app.dependency_overrides[auth_deps.get_current_user] = _override_user
+    client = TestClient(app)
+
+    response = client.patch("/api/me", json={"displayName": "New Name"})
+    assert response.status_code == 200
+    assert response.json()["status"] == "active"
+    assert users["u1"]["status"] == "active"
+    assert users["u1"]["updatedAt"] == "SERVER_TIMESTAMP"
+
+    app.dependency_overrides.clear()
+
+
+def test_patch_me_rejects_invalid_stored_status(monkeypatch):
+    users = {
+        "u1": {
+            "displayName": "User One",
+            "email": "u1@example.com",
+            "status": "paused",
+        }
+    }
+    fake_db = FakeFirestore(users)
+    monkeypatch.setattr(auth, "get_firestore_client", lambda: fake_db)
+    app.dependency_overrides[auth_deps.get_current_user] = _override_user
+    client = TestClient(app)
+
+    response = client.patch("/api/me", json={"displayName": "New Name"})
+    assert response.status_code == 400
+
+    app.dependency_overrides.clear()
+
+
+def test_patch_me_blocks_onboarding_finalize_for_non_active(monkeypatch):
+    users = {
+        "u1": {
+            "displayName": "User One",
+            "email": "u1@example.com",
+            "status": "disabled",
+        }
+    }
+    fake_db = FakeFirestore(users)
+    monkeypatch.setattr(auth, "get_firestore_client", lambda: fake_db)
+    app.dependency_overrides[auth_deps.get_current_user] = _override_user_disabled
+    client = TestClient(app)
+
+    response = client.patch("/api/me", json={"subscriptionSelected": True})
+    assert response.status_code == 403
+    payload = response.json()["error"]
+    assert payload["code"] == "status_blocked"
+    assert payload["message"] == "Account disabled"
 
     app.dependency_overrides.clear()
 

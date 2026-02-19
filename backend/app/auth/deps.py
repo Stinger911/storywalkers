@@ -5,6 +5,10 @@ from fastapi import Depends, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from app.auth.firebase import verify_id_token
+from app.auth.user_status import (
+    DEFAULT_NEW_USER_STATUS,
+    ensure_user_status_with_migration,
+)
 from app.core.config import get_settings
 from app.core.errors import AppError, forbidden_error, unauthorized_error
 from app.core.logging import get_logger
@@ -119,29 +123,45 @@ async def get_current_user(
 
     firestore = get_firestore_client()
     logger.warning(f"Fetching user profile for uid {uid} from Firestore {decoded}")
-    doc = firestore.collection("users").document(uid).get()
+    user_ref = firestore.collection("users").document(uid)
+    doc = user_ref.get()
     if not doc.exists:
         logger.warning(
             f"User profile not found for uid {uid} create new student profile"
         )
-        firestore.collection("users").document(uid).set(
+        user_ref.set(
             {
                 "role": "student",
-                "status": "active",
+                "status": DEFAULT_NEW_USER_STATUS,
                 "email": decoded.get("email", ""),
                 "displayName": decoded.get("name", decoded.get("email", "")),
                 "createdAt": datetime.now(timezone.utc),
                 "updatedAt": datetime.now(timezone.utc),
             }
         )
-        doc = firestore.collection("users").document(uid).get()
+        doc = user_ref.get()
 
     profile = doc.to_dict() or {}
-    if profile.get("status") and profile.get("status") != "active":
-        raise forbidden_error("User is disabled")
+    ensure_user_status_with_migration(user_ref, profile)
 
     request.state.uid = uid
     return _build_user_payload(uid, decoded, profile)
+
+
+def require_active_student(user: dict = Depends(get_current_user)) -> dict:
+    ensure_active_student_status(user)
+    return user
+
+
+def ensure_active_student_status(user: dict) -> None:
+    if user.get("role") != "student":
+        return
+    if user.get("status") != "active":
+        raise AppError(
+            code="status_blocked",
+            message="Account disabled",
+            status_code=403,
+        )
 
 
 def require_staff(user: dict = Depends(get_current_user)) -> dict:

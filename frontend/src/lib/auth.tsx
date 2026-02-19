@@ -21,7 +21,7 @@ export type MeProfile = {
   email: string
   displayName: string
   role: 'student' | 'staff'
-  status: 'active' | 'disabled'
+  status: 'active' | 'disabled' | 'community_only' | 'expired'
   roleRaw?: 'student' | 'admin' | 'expert'
   selectedGoalId?: string | null
   profileForm?: {
