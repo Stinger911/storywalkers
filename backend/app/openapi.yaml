@@ -66,15 +66,83 @@ components:
           type: string
           enum: [active, disabled]
           example: active
+        roleRaw:
+          type: string
+          nullable: true
+          enum: [student, admin, expert]
+          example: student
+        selectedGoalId:
+          type: string
+          nullable: true
+          maxLength: 64
+          example: goal_video_editor
+        profileForm:
+          $ref: "#/components/schemas/ProfileForm"
+        selectedCourses:
+          type: array
+          maxItems: 20
+          uniqueItems: true
+          items:
+            type: string
+          example: [course_1, course_2]
+        subscriptionSelected:
+          type: boolean
+          nullable: true
+          example: true
+
+    ProfileForm:
+      type: object
+      additionalProperties: false
+      properties:
+        telegram:
+          type: string
+          nullable: true
+          maxLength: 64
+          description: "Telegram handle (@username) or t.me link."
+          example: "@alex"
+        socialUrl:
+          type: string
+          nullable: true
+          maxLength: 200
+          format: uri
+          example: "https://t.me/alex"
+        experienceLevel:
+          type: string
+          nullable: true
+          enum: [beginner, intermediate, advanced]
+          example: intermediate
+        notes:
+          type: string
+          nullable: true
+          maxLength: 1000
+          example: "Prefers short assignments."
 
     PatchMeRequest:
       type: object
       additionalProperties: false
-      required: [displayName]
       properties:
         displayName:
           type: string
+          nullable: true
           example: Alex Doe
+        selectedGoalId:
+          type: string
+          nullable: true
+          maxLength: 64
+          example: goal_video_editor
+        profileForm:
+          $ref: "#/components/schemas/ProfileForm"
+        selectedCourses:
+          type: array
+          maxItems: 20
+          uniqueItems: true
+          items:
+            type: string
+          example: [course_1, course_2]
+        subscriptionSelected:
+          type: boolean
+          nullable: true
+          example: false
 
     Paginated:
       type: object

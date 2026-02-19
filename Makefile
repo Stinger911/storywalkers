@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help env install cc format isort fix-unused-imports check-unused-imports check tests build-frontend build-backend deploy-frontend deploy-backend
+.PHONY: help env install cc format isort fix-unused-imports check-unused-imports check tests build-frontend build-backend deploy-frontend deploy-backend deploy-frontend-dev deploy-backend-dev deploy-dev
 
 help: ## this help.
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "\033[36m%-30s\033[0m%s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -84,3 +84,13 @@ deploy-frontend: ## deploy frontend hosting + firestore rules
 
 deploy-backend: ## deploy backend to Cloud Run
 	@./scripts/ci/deploy-backend.sh
+
+deploy-frontend-dev: ## deploy frontend to Firebase Hosting dev channel
+	@./scripts/ci/deploy-frontend-dev.sh
+
+deploy-backend-dev: ## deploy backend to Cloud Run dev service
+	@./scripts/ci/deploy-backend-dev.sh
+
+deploy-dev: ## one-step dev deployment (backend + frontend)
+	@make deploy-backend-dev
+	@make deploy-frontend-dev

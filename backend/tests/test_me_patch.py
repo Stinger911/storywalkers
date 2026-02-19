@@ -93,6 +93,20 @@ def test_patch_me_rejects_extra_fields(monkeypatch):
     app.dependency_overrides.clear()
 
 
+def test_patch_me_rejects_forbidden_fields(monkeypatch):
+    users = {"u1": {"displayName": "User One", "email": "u1@example.com"}}
+    fake_db = FakeFirestore(users)
+    monkeypatch.setattr(auth, "get_firestore_client", lambda: fake_db)
+    app.dependency_overrides[auth_deps.get_current_user] = _override_user
+    client = TestClient(app)
+
+    for field, value in [("role", "admin"), ("status", "disabled"), ("email", "x@y.z")]:
+        response = client.patch("/api/me", json={field: value})
+        assert response.status_code == 400
+
+    app.dependency_overrides.clear()
+
+
 def test_patch_me_validates_display_name(monkeypatch):
     users = {"u1": {"displayName": "User One", "email": "u1@example.com"}}
     fake_db = FakeFirestore(users)
@@ -104,6 +118,8 @@ def test_patch_me_validates_display_name(monkeypatch):
     assert response.status_code == 400
 
     response = client.patch("/api/me", json={"displayName": "x" * 61})
+    assert response.status_code == 400
+    response = client.patch("/api/me", json={})
     assert response.status_code == 400
 
     app.dependency_overrides.clear()
@@ -126,5 +142,79 @@ def test_patch_me_trims_and_updates_self(monkeypatch):
     assert users["u1"]["displayName"] == "New Name"
     assert users["u1"]["updatedAt"] == "SERVER_TIMESTAMP"
     assert users["u2"]["displayName"] == "User Two"
+
+    app.dependency_overrides.clear()
+
+
+def test_patch_me_updates_onboarding_fields(monkeypatch):
+    users = {
+        "u1": {
+            "displayName": "User One",
+            "email": "u1@example.com",
+            "profileForm": {
+                "telegram": "@old",
+                "socialUrl": None,
+                "experienceLevel": "beginner",
+                "notes": None,
+            },
+        }
+    }
+    fake_db = FakeFirestore(users)
+    monkeypatch.setattr(auth, "get_firestore_client", lambda: fake_db)
+    app.dependency_overrides[auth_deps.get_current_user] = _override_user
+    client = TestClient(app)
+
+    response = client.patch(
+        "/api/me",
+        json={
+            "selectedGoalId": "  goal-1  ",
+            "selectedCourses": [" course-a ", "", "course-b"],
+            "subscriptionSelected": True,
+            "profileForm": {
+                "telegram": "  @new  ",
+                "experienceLevel": "advanced",
+            },
+        },
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["selectedGoalId"] == "goal-1"
+    assert payload["selectedCourses"] == ["course-a", "course-b"]
+    assert payload["subscriptionSelected"] is True
+    assert payload["profileForm"]["telegram"] == "@new"
+    assert payload["profileForm"]["experienceLevel"] == "advanced"
+    assert payload["profileForm"]["socialUrl"] is None
+    assert users["u1"]["selectedGoalId"] == "goal-1"
+    assert users["u1"]["selectedCourses"] == ["course-a", "course-b"]
+    assert users["u1"]["subscriptionSelected"] is True
+    assert users["u1"]["profileForm"]["telegram"] == "@new"
+    assert users["u1"]["profileForm"]["experienceLevel"] == "advanced"
+    assert users["u1"]["updatedAt"] == "SERVER_TIMESTAMP"
+
+    app.dependency_overrides.clear()
+
+
+def test_patch_me_validates_onboarding_fields(monkeypatch):
+    users = {"u1": {"displayName": "User One", "email": "u1@example.com"}}
+    fake_db = FakeFirestore(users)
+    monkeypatch.setattr(auth, "get_firestore_client", lambda: fake_db)
+    app.dependency_overrides[auth_deps.get_current_user] = _override_user
+    client = TestClient(app)
+
+    long_notes = "x" * 1001
+    too_many_courses = [f"c{i}" for i in range(21)]
+    cases = [
+        {"profileForm": {"telegram": "bad-telegram"}},
+        {"profileForm": {"telegram": "@" + ("a" * 65)}},
+        {"profileForm": {"socialUrl": "notaurl"}},
+        {"profileForm": {"socialUrl": "https://example.com/" + ("x" * 190)}},
+        {"profileForm": {"notes": long_notes}},
+        {"selectedGoalId": "x" * 65},
+        {"selectedCourses": ["c1", "c1"]},
+        {"selectedCourses": too_many_courses},
+    ]
+    for payload in cases:
+        response = client.patch("/api/me", json=payload)
+        assert response.status_code == 400
 
     app.dependency_overrides.clear()

@@ -1,9 +1,11 @@
-from typing import Any
+import re
+from typing import Any, Literal
 from urllib.parse import urlparse
 
 from fastapi import APIRouter, Depends, status
 from google.cloud import firestore
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator
+from pydantic_core import PydanticCustomError
 
 from app.auth.deps import get_current_user
 from app.core.errors import AppError
@@ -12,51 +14,322 @@ from app.db.firestore import get_firestore_client
 router = APIRouter(prefix="/api", tags=["Auth"])
 
 
-@router.get("/me")
-async def get_me(user: dict = Depends(get_current_user)) -> dict:
+ExperienceLevel = Literal["beginner", "intermediate", "advanced"]
+TELEGRAM_HANDLE_RE = re.compile(r"^@[A-Za-z0-9_]{1,32}$")
+
+
+class ProfileFormModel(BaseModel):
+    telegram: str | None = None
+    socialUrl: str | None = None
+    experienceLevel: ExperienceLevel | None = None
+    notes: str | None = None
+
+    model_config = {"extra": "forbid"}
+
+    @field_validator("telegram", mode="before")
+    @classmethod
+    def _trim_telegram(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        trimmed = value.strip()
+        return trimmed or None
+
+    @field_validator("telegram")
+    @classmethod
+    def _validate_telegram(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        if len(value) > 64:
+            raise PydanticCustomError(
+                "telegram_max_length", "telegram must be 64 characters or fewer"
+            )
+        if TELEGRAM_HANDLE_RE.match(value):
+            return value
+        parsed = urlparse(value)
+        host = (parsed.netloc or "").lower()
+        path = (parsed.path or "").strip("/")
+        if (
+            parsed.scheme in {"http", "https"}
+            and host in {"t.me", "www.t.me", "telegram.me", "www.telegram.me"}
+            and path
+        ):
+            return value
+        raise PydanticCustomError(
+            "telegram_invalid", "telegram must be @handle or t.me link"
+        )
+
+    @field_validator("socialUrl", mode="before")
+    @classmethod
+    def _trim_social_url(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        trimmed = value.strip()
+        return trimmed or None
+
+    @field_validator("socialUrl")
+    @classmethod
+    def _validate_social_url(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        if len(value) > 200:
+            raise PydanticCustomError(
+                "social_url_max_length", "socialUrl must be 200 characters or fewer"
+            )
+        parsed = urlparse(value)
+        if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+            raise PydanticCustomError(
+                "social_url_invalid", "socialUrl must be a valid URL"
+            )
+        return value
+
+    @field_validator("notes", mode="before")
+    @classmethod
+    def _trim_notes(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        trimmed = value.strip()
+        return trimmed or None
+
+    @field_validator("notes")
+    @classmethod
+    def _validate_notes(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        if len(value) > 1000:
+            raise PydanticCustomError(
+                "notes_max_length", "notes must be 1000 characters or fewer"
+            )
+        return value
+
+
+class MeResponse(BaseModel):
+    uid: str
+    email: str
+    displayName: str
+    role: str
+    status: str
+    roleRaw: str | None = None
+    selectedGoalId: str | None = None
+    profileForm: ProfileFormModel = Field(default_factory=ProfileFormModel)
+    selectedCourses: list[str] = Field(default_factory=list)
+    subscriptionSelected: bool | None = None
+
+
+@router.get("/me", response_model=MeResponse)
+async def get_me(user: dict = Depends(get_current_user)) -> MeResponse:
     return user
 
 
 class PatchMeRequest(BaseModel):
-    displayName: str
+    displayName: str | None = None
+    selectedGoalId: str | None = None
+    profileForm: ProfileFormModel | None = None
+    selectedCourses: list[str] | None = None
+    subscriptionSelected: bool | None = None
 
     model_config = {"extra": "forbid"}
 
+    @field_validator("displayName", mode="before")
+    @classmethod
+    def _trim_display_name(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        trimmed = value.strip()
+        return trimmed or None
 
-@router.patch("/me")
+    @field_validator("displayName")
+    @classmethod
+    def _validate_display_name(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        if len(value) > 60:
+            raise PydanticCustomError(
+                "display_name_max_length",
+                "displayName must be 60 characters or fewer",
+            )
+        return value
+
+    @field_validator("selectedGoalId", mode="before")
+    @classmethod
+    def _trim_selected_goal_id(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        trimmed = value.strip()
+        return trimmed or None
+
+    @field_validator("selectedGoalId")
+    @classmethod
+    def _validate_selected_goal_id(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        if len(value) > 64:
+            raise PydanticCustomError(
+                "selected_goal_id_max_length",
+                "selectedGoalId must be 64 characters or fewer",
+            )
+        return value
+
+    @field_validator("selectedCourses", mode="before")
+    @classmethod
+    def _normalize_selected_courses(cls, value: list[str] | None) -> list[str] | None:
+        if value is None:
+            return None
+        normalized: list[str] = []
+        for item in value:
+            if not isinstance(item, str):
+                continue
+            trimmed = item.strip()
+            if trimmed:
+                normalized.append(trimmed)
+        return normalized
+
+    @field_validator("selectedCourses")
+    @classmethod
+    def _validate_selected_courses(cls, value: list[str] | None) -> list[str] | None:
+        if value is None:
+            return None
+        if len(value) > 20:
+            raise PydanticCustomError(
+                "selected_courses_max_items",
+                "selectedCourses must contain at most 20 items",
+            )
+        if len(set(value)) != len(value):
+            raise PydanticCustomError(
+                "selected_courses_unique", "selectedCourses must be unique"
+            )
+        return value
+
+
+def _sanitize_optional_text(value: object) -> str | None:
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        return None
+    trimmed = value.strip()
+    return trimmed or None
+
+
+def _sanitize_profile_form(
+    existing: dict[str, Any] | None,
+    incoming: ProfileFormModel,
+) -> dict[str, Any]:
+    merged = dict(existing or {})
+    payload = incoming.model_dump(exclude_unset=True)
+    for key, value in payload.items():
+        if key in {"telegram", "socialUrl", "notes"}:
+            merged[key] = _sanitize_optional_text(value)
+        else:
+            merged[key] = value
+    normalized = {
+        "telegram": _sanitize_optional_text(merged.get("telegram")),
+        "socialUrl": _sanitize_optional_text(merged.get("socialUrl")),
+        "experienceLevel": merged.get("experienceLevel"),
+        "notes": _sanitize_optional_text(merged.get("notes")),
+    }
+    # Keep read path backward-compatible with legacy/invalid stored values.
+    try:
+        return ProfileFormModel.model_validate(normalized).model_dump()
+    except Exception:
+        return {
+            "telegram": None,
+            "socialUrl": None,
+            "experienceLevel": None,
+            "notes": None,
+        }
+
+
+def _sanitize_selected_courses(value: list[str]) -> list[str]:
+    normalized = [item.strip() for item in value if item.strip()]
+    unique: list[str] = []
+    seen: set[str] = set()
+    for item in normalized:
+        if item not in seen:
+            seen.add(item)
+            unique.append(item)
+    return unique
+
+
+@router.patch("/me", response_model=MeResponse)
 async def patch_me(
     payload: PatchMeRequest,
     user: dict = Depends(get_current_user),
-) -> dict:
-    display_name = payload.displayName.strip()
-    if not display_name:
+) -> MeResponse:
+    updates: dict[str, Any] = {}
+    payload_data = payload.model_dump(exclude_unset=True)
+
+    if not payload_data:
         raise AppError(
             code="validation_error",
-            message="displayName is required",
+            message="At least one allowed field is required",
             status_code=400,
         )
-    if len(display_name) > 60:
-        raise AppError(
-            code="validation_error",
-            message="displayName must be 60 characters or fewer",
-            status_code=400,
+
+    if "displayName" in payload_data:
+        display_name = payload.displayName
+        if not display_name:
+            raise AppError(
+                code="validation_error",
+                message="displayName is required",
+                status_code=400,
+            )
+        updates["displayName"] = display_name
+
+    if "selectedGoalId" in payload_data:
+        updates["selectedGoalId"] = _sanitize_optional_text(payload.selectedGoalId)
+
+    if "selectedCourses" in payload_data:
+        updates["selectedCourses"] = _sanitize_selected_courses(
+            payload.selectedCourses or []
         )
+
+    if "subscriptionSelected" in payload_data:
+        updates["subscriptionSelected"] = payload.subscriptionSelected
+
     db = get_firestore_client()
     doc_ref = db.collection("users").document(user["uid"])
-    if not doc_ref.get().exists:
+    snap = doc_ref.get()
+    if not snap.exists:
         raise AppError(code="not_found", message="User not found", status_code=404)
-    doc_ref.update(
-        {
-            "displayName": display_name,
-            "updatedAt": firestore.SERVER_TIMESTAMP,
-        }
-    )
+    current = snap.to_dict() or {}
+
+    if "profileForm" in payload_data:
+        updates["profileForm"] = _sanitize_profile_form(
+            current.get("profileForm")
+            if isinstance(current.get("profileForm"), dict)
+            else None,
+            payload.profileForm or ProfileFormModel(),
+        )
+
+    updates["updatedAt"] = firestore.SERVER_TIMESTAMP
+    doc_ref.update(updates)
+
+    response_data = {**current, **updates}
+    role_raw = current.get("role") or user.get("roleRaw") or "student"
+    role = "staff" if role_raw in {"admin", "expert"} else "student"
     return {
         "uid": user["uid"],
-        "email": user.get("email"),
-        "displayName": display_name,
-        "role": user.get("roleRaw"),
-        "status": user.get("status"),
+        "email": user.get("email") or current.get("email") or "",
+        "displayName": response_data.get("displayName") or user.get("displayName") or "",
+        "role": role,
+        "status": current.get("status") or user.get("status") or "active",
+        "roleRaw": role_raw,
+        "selectedGoalId": _sanitize_optional_text(response_data.get("selectedGoalId")),
+        "profileForm": _sanitize_profile_form(
+            response_data.get("profileForm")
+            if isinstance(response_data.get("profileForm"), dict)
+            else None,
+            ProfileFormModel(),
+        ),
+        "selectedCourses": _sanitize_selected_courses(
+            response_data.get("selectedCourses")
+            if isinstance(response_data.get("selectedCourses"), list)
+            else []
+        ),
+        "subscriptionSelected": (
+            response_data.get("subscriptionSelected")
+            if isinstance(response_data.get("subscriptionSelected"), bool)
+            else None
+        ),
     }
 
 
@@ -143,13 +416,6 @@ class CompleteStepRequest(BaseModel):
     link: str | None = None
 
     model_config = {"extra": "forbid"}
-
-
-def _sanitize_optional_text(value: str | None) -> str | None:
-    if value is None:
-        return None
-    trimmed = value.strip()
-    return trimmed or None
 
 
 def _sanitize_link(value: str | None) -> str | None:

@@ -214,6 +214,72 @@ type RawDictionary = {
       questionsAlt: string;
       libraryAlt: string;
     };
+    onboarding: {
+      stepperTitle: string;
+      steps: {
+        goal: string;
+        profile: string;
+        courses: string;
+        checkout: string;
+      };
+      common: {
+        saving: string;
+        saveAndContinue: string;
+      };
+      goal: {
+        title: string;
+        subtitle: string;
+        cardTitle: string;
+        cardDescription: string;
+        noDescription: string;
+        selectedBadge: string;
+        next: string;
+        retry: string;
+        empty: string;
+        loadError: string;
+        saveError: string;
+      };
+      profile: {
+        title: string;
+        subtitle: string;
+        cardTitle: string;
+        telegramLabel: string;
+        telegramPlaceholder: string;
+        socialUrlLabel: string;
+        socialUrlPlaceholder: string;
+        experienceLevelLabel: string;
+        experienceLevelPlaceholder: string;
+        experienceBeginner: string;
+        experienceIntermediate: string;
+        experienceAdvanced: string;
+        notesLabel: string;
+        notesPlaceholder: string;
+        disclaimer: string;
+        back: string;
+        submit: string;
+        next: string;
+      };
+      courses: {
+        title: string;
+        subtitle: string;
+        cardTitle: string;
+        courseIdLabel: string;
+        courseIdPlaceholder: string;
+        addButton: string;
+        empty: string;
+        removeTitle: string;
+      };
+      checkout: {
+        title: string;
+        subtitle: string;
+        cardTitle: string;
+        goalLabel: string;
+        experienceLabel: string;
+        coursesLabel: string;
+        coursesEmpty: string;
+        completeButton: string;
+      };
+    };
   };
 };
 
@@ -434,6 +500,73 @@ const dictionaries: Record<Locale, RawDictionary> = {
         questionsAlt: "Questions",
         libraryAlt: "Library",
       },
+      onboarding: {
+        stepperTitle: "Onboarding progress",
+        steps: {
+          goal: "Goal",
+          profile: "Profile",
+          courses: "Courses",
+          checkout: "Checkout",
+        },
+        common: {
+          saving: "Saving...",
+          saveAndContinue: "Save and continue",
+        },
+        goal: {
+          title: "Choose your goal",
+          subtitle: "Pick your learning track to personalize onboarding.",
+          cardTitle: "Goal selection",
+          cardDescription: "You can change this later.",
+          noDescription: "No description",
+          selectedBadge: "Selected",
+          next: "Next",
+          retry: "Retry",
+          empty: "No goals available yet.",
+          loadError: "Could not load goals.",
+          saveError: "Could not save selected goal.",
+        },
+        profile: {
+          title: "Tell us about yourself",
+          subtitle: "This helps us tailor your learning path.",
+          cardTitle: "Profile form",
+          telegramLabel: "Telegram",
+          telegramPlaceholder: "@username or https://t.me/username",
+          socialUrlLabel: "Social URL",
+          socialUrlPlaceholder: "https://...",
+          experienceLevelLabel: "Experience level",
+          experienceLevelPlaceholder: "Select level",
+          experienceBeginner: "Beginner",
+          experienceIntermediate: "Intermediate",
+          experienceAdvanced: "Advanced",
+          notesLabel: "Notes",
+          notesPlaceholder: "Anything you want us to know...",
+          disclaimer:
+            "Your profile will be reviewed by a human. Activation is manual after review.",
+          back: "Back",
+          submit: "Save profile",
+          next: "Next",
+        },
+        courses: {
+          title: "Choose courses",
+          subtitle: "Select one or more courses to continue.",
+          cardTitle: "Course selection",
+          courseIdLabel: "Course ID",
+          courseIdPlaceholder: "e.g. course_video_basics",
+          addButton: "Add",
+          empty: "No courses selected yet.",
+          removeTitle: "Remove",
+        },
+        checkout: {
+          title: "Checkout",
+          subtitle: "Review your onboarding selections.",
+          cardTitle: "Summary",
+          goalLabel: "Goal:",
+          experienceLabel: "Experience:",
+          coursesLabel: "Selected courses:",
+          coursesEmpty: "No courses selected",
+          completeButton: "Complete onboarding",
+        },
+      },
     },
   },
   ru: {
@@ -651,6 +784,73 @@ const dictionaries: Record<Locale, RawDictionary> = {
         learningIllustrationAlt: "Иллюстрация обучения",
         questionsAlt: "Вопросы",
         libraryAlt: "Библиотека",
+      },
+      onboarding: {
+        stepperTitle: "Прогресс онбординга",
+        steps: {
+          goal: "Цель",
+          profile: "Профиль",
+          courses: "Курсы",
+          checkout: "Оплата",
+        },
+        common: {
+          saving: "Сохранение...",
+          saveAndContinue: "Сохранить и продолжить",
+        },
+        goal: {
+          title: "Выберите цель",
+          subtitle: "Это поможет персонализировать путь обучения.",
+          cardTitle: "Выбор цели",
+          cardDescription: "Позже это можно изменить.",
+          noDescription: "Описание отсутствует",
+          selectedBadge: "Выбрано",
+          next: "Далее",
+          retry: "Повторить",
+          empty: "Пока нет доступных целей.",
+          loadError: "Не удалось загрузить цели.",
+          saveError: "Не удалось сохранить выбранную цель.",
+        },
+        profile: {
+          title: "Расскажите о себе",
+          subtitle: "Это поможет нам точнее подобрать программу.",
+          cardTitle: "Анкета",
+          telegramLabel: "Telegram",
+          telegramPlaceholder: "@username или https://t.me/username",
+          socialUrlLabel: "Ссылка на соцсеть",
+          socialUrlPlaceholder: "https://...",
+          experienceLevelLabel: "Уровень подготовки",
+          experienceLevelPlaceholder: "Выберите уровень",
+          experienceBeginner: "Начинающий",
+          experienceIntermediate: "Средний",
+          experienceAdvanced: "Продвинутый",
+          notesLabel: "Комментарий",
+          notesPlaceholder: "Что нам важно знать о вас...",
+          disclaimer:
+            "Профиль проверяет человек. Активация выполняется вручную после проверки.",
+          back: "Назад",
+          submit: "Сохранить профиль",
+          next: "Далее",
+        },
+        courses: {
+          title: "Выберите курсы",
+          subtitle: "Добавьте один или несколько курсов для продолжения.",
+          cardTitle: "Выбор курсов",
+          courseIdLabel: "ID курса",
+          courseIdPlaceholder: "например, course_video_basics",
+          addButton: "Добавить",
+          empty: "Курсы пока не выбраны.",
+          removeTitle: "Удалить",
+        },
+        checkout: {
+          title: "Оплата",
+          subtitle: "Проверьте выбранные данные перед завершением.",
+          cardTitle: "Сводка",
+          goalLabel: "Цель:",
+          experienceLabel: "Уровень:",
+          coursesLabel: "Выбранные курсы:",
+          coursesEmpty: "Курсы не выбраны",
+          completeButton: "Завершить онбординг",
+        },
       },
     },
   },
