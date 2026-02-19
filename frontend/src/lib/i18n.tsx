@@ -263,21 +263,33 @@ type RawDictionary = {
         title: string;
         subtitle: string;
         cardTitle: string;
-        courseIdLabel: string;
-        courseIdPlaceholder: string;
-        addButton: string;
+        cardDescription: string;
+        selected: string;
+        clickToSelect: string;
+        totalLabel: string;
+        communityTitle: string;
+        communityDescription: string;
+        inactiveSectionTitle: string;
+        inactiveBadge: string;
+        retry: string;
+        loadError: string;
+        saveError: string;
         empty: string;
-        removeTitle: string;
       };
       checkout: {
         title: string;
         subtitle: string;
         cardTitle: string;
         goalLabel: string;
-        experienceLabel: string;
+        goalEmpty: string;
         coursesLabel: string;
         coursesEmpty: string;
-        completeButton: string;
+        communityLabel: string;
+        totalLabel: string;
+        boostyCta: string;
+        afterPaymentTitle: string;
+        afterPaymentManual: string;
+        afterPaymentContactLabel: string;
       };
     };
   };
@@ -550,21 +562,36 @@ const dictionaries: Record<Locale, RawDictionary> = {
           title: "Choose courses",
           subtitle: "Select one or more courses to continue.",
           cardTitle: "Course selection",
-          courseIdLabel: "Course ID",
-          courseIdPlaceholder: "e.g. course_video_basics",
-          addButton: "Add",
+          cardDescription:
+            "Choose your paid courses and optionally add community access.",
+          selected: "Selected",
+          clickToSelect: "Click to select",
+          totalLabel: "Total price",
+          communityTitle: "Community",
+          communityDescription:
+            "Community access with group feedback and discussion channels.",
+          inactiveSectionTitle: "Unavailable courses",
+          inactiveBadge: "Inactive",
+          retry: "Retry",
+          loadError: "Could not load courses.",
+          saveError: "Could not save selected courses.",
           empty: "No courses selected yet.",
-          removeTitle: "Remove",
         },
         checkout: {
           title: "Checkout",
-          subtitle: "Review your onboarding selections.",
+          subtitle: "Review your selections before payment.",
           cardTitle: "Summary",
           goalLabel: "Goal:",
-          experienceLabel: "Experience:",
+          goalEmpty: "No goal selected",
           coursesLabel: "Selected courses:",
           coursesEmpty: "No courses selected",
-          completeButton: "Complete onboarding",
+          communityLabel: "Community",
+          totalLabel: "Total price:",
+          boostyCta: "Go to Boosty",
+          afterPaymentTitle: "After payment",
+          afterPaymentManual:
+            "Activation is manual after human review. Please wait for confirmation from the team.",
+          afterPaymentContactLabel: "If you have paid, message support:",
         },
       },
     },
@@ -835,21 +862,36 @@ const dictionaries: Record<Locale, RawDictionary> = {
           title: "Выберите курсы",
           subtitle: "Добавьте один или несколько курсов для продолжения.",
           cardTitle: "Выбор курсов",
-          courseIdLabel: "ID курса",
-          courseIdPlaceholder: "например, course_video_basics",
-          addButton: "Добавить",
+          cardDescription:
+            "Выберите платные курсы и при желании добавьте доступ в сообщество.",
+          selected: "Выбрано",
+          clickToSelect: "Нажмите, чтобы выбрать",
+          totalLabel: "Итоговая стоимость",
+          communityTitle: "Сообщество",
+          communityDescription:
+            "Доступ в комьюнити с групповым фидбеком и каналами обсуждения.",
+          inactiveSectionTitle: "Недоступные курсы",
+          inactiveBadge: "Неактивен",
+          retry: "Повторить",
+          loadError: "Не удалось загрузить курсы.",
+          saveError: "Не удалось сохранить выбранные курсы.",
           empty: "Курсы пока не выбраны.",
-          removeTitle: "Удалить",
         },
         checkout: {
           title: "Оплата",
-          subtitle: "Проверьте выбранные данные перед завершением.",
+          subtitle: "Проверьте выбранное перед оплатой.",
           cardTitle: "Сводка",
           goalLabel: "Цель:",
-          experienceLabel: "Уровень:",
+          goalEmpty: "Цель не выбрана",
           coursesLabel: "Выбранные курсы:",
           coursesEmpty: "Курсы не выбраны",
-          completeButton: "Завершить онбординг",
+          communityLabel: "Комьюнити",
+          totalLabel: "Итого:",
+          boostyCta: "Перейти в Boosty",
+          afterPaymentTitle: "После оплаты",
+          afterPaymentManual:
+            "Активация выполняется вручную после проверки человеком. Пожалуйста, дождитесь подтверждения от команды.",
+          afterPaymentContactLabel: "Если вы оплатили, напишите в поддержку:",
         },
       },
     },
