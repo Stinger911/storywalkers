@@ -1,5 +1,5 @@
 import { Navigate, useLocation, useNavigate } from "@solidjs/router";
-import { createEffect, Show, type JSX } from "solid-js";
+import { createEffect, createSignal, Show, type JSX } from "solid-js";
 
 import { Loading } from "../../components/Loading";
 import { StudentLayout } from "../student/StudentLayout";
@@ -65,8 +65,10 @@ export function OnboardingLayout(props: OnboardingLayoutProps) {
   const auth = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const [resumeChecked, setResumeChecked] = createSignal(false);
 
   createEffect(() => {
+    if (resumeChecked()) return;
     if (auth.loading()) return;
     const me = auth.me();
     if (!me) return;
@@ -75,6 +77,7 @@ export function OnboardingLayout(props: OnboardingLayoutProps) {
       return;
     }
     const target = onboardingPath(getNextOnboardingStep(me));
+    setResumeChecked(true);
     if (location.pathname !== target) {
       void navigate(target, { replace: true });
     }

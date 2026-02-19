@@ -1,3 +1,4 @@
+import { A, useNavigate } from "@solidjs/router";
 import { createSignal } from "solid-js";
 
 import { Button } from "../../components/ui/button";
@@ -14,6 +15,7 @@ import { OnboardingLayout } from "./OnboardingLayout";
 export function OnboardingProfile() {
   const auth = useAuth();
   const { t } = useI18n();
+  const navigate = useNavigate();
   const [saving, setSaving] = createSignal(false);
   const [error, setError] = createSignal<string | null>(null);
 
@@ -26,7 +28,7 @@ export function OnboardingProfile() {
   );
   const [notes, setNotes] = createSignal(auth.me()?.profileForm?.notes || "");
 
-  const save = async () => {
+  const save = async (): Promise<boolean> => {
     setSaving(true);
     setError(null);
     try {
@@ -39,10 +41,19 @@ export function OnboardingProfile() {
           notes: notes().trim() || null,
         },
       });
+      return true;
     } catch (err) {
       setError((err as Error).message);
+      return false;
     } finally {
       setSaving(false);
+    }
+  };
+
+  const next = async () => {
+    const ok = await save();
+    if (ok) {
+      void navigate("/onboarding/courses");
     }
   };
 
@@ -112,11 +123,27 @@ export function OnboardingProfile() {
               placeholder={t("student.onboarding.profile.notesPlaceholder")}
             />
           </TextField>
-          <div class="flex gap-2">
-            <Button onClick={() => void save()} disabled={saving()}>
+          <div class="rounded-md border border-border/70 bg-muted/30 p-3 text-sm text-muted-foreground">
+            {t("student.onboarding.profile.disclaimer")}
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <Button
+              as={A}
+              href="/onboarding/goal"
+              variant="outline"
+              disabled={saving()}
+            >
+              {t("student.onboarding.profile.back")}
+            </Button>
+            <Button variant="outline" onClick={() => void save()} disabled={saving()}>
               {saving()
                 ? t("student.onboarding.common.saving")
-                : t("student.onboarding.common.saveAndContinue")}
+                : t("student.onboarding.profile.submit")}
+            </Button>
+            <Button onClick={() => void next()} disabled={saving()}>
+              {saving()
+                ? t("student.onboarding.common.saving")
+                : t("student.onboarding.profile.next")}
             </Button>
           </div>
           {error() ? (

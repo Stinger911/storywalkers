@@ -62,6 +62,17 @@ These scripts are safe to call from CI and expect environment variables:
 - `scripts/ci/build-backend.sh` (`IMAGE_TAG` optional)
 - `scripts/ci/deploy-frontend.sh` (`FIREBASE_PROJECT_ID` required)
 - `scripts/ci/deploy-backend.sh` (`PROJECT_ID`, `CLOUD_RUN_SERVICE`, `CLOUD_RUN_REGION` required)
+- `scripts/ci/deploy-frontend-dev.sh` (`FIREBASE_PROJECT_ID` required, `FIREBASE_HOSTING_CHANNEL` optional; defaults to `dev`, `FIREBASE_HOSTING_TARGET` optional for multi-site)
+- `scripts/ci/deploy-backend-dev.sh` (`PROJECT_ID` required; defaults: `CLOUD_RUN_SERVICE=storywalkers-api-dev`, `CLOUD_RUN_REGION=europe-west1`)
+
+## Dev Environment Deploy
+
+Cloud Run service:
+- `storywalkers-api-dev`
+
+Firebase Hosting:
+- Preview channel `dev` (via `firebase hosting:channel:deploy`)
+- Config: `firebase/firebase.dev.json` (rewrites `/api/**` to `storywalkers-api-dev`)
 
 ## GitHub Actions (Workload Identity Federation)
 

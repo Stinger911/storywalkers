@@ -16,6 +16,7 @@ export default ({ mode }: { mode: string }) => {
       include: ["tests/**/*.test.ts", "tests/**/*.test.tsx"],
     },
     server: {
+      allowedHosts: ["683f-88-156-132-232.ngrok-free.app", "localhost"],
       proxy: {
         '/api': {
           target: PROXY_TARGET,

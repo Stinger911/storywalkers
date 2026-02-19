@@ -231,8 +231,13 @@ type RawDictionary = {
         subtitle: string;
         cardTitle: string;
         cardDescription: string;
-        goalIdLabel: string;
-        goalIdPlaceholder: string;
+        noDescription: string;
+        selectedBadge: string;
+        next: string;
+        retry: string;
+        empty: string;
+        loadError: string;
+        saveError: string;
       };
       profile: {
         title: string;
@@ -249,6 +254,10 @@ type RawDictionary = {
         experienceAdvanced: string;
         notesLabel: string;
         notesPlaceholder: string;
+        disclaimer: string;
+        back: string;
+        submit: string;
+        next: string;
       };
       courses: {
         title: string;
@@ -508,8 +517,13 @@ const dictionaries: Record<Locale, RawDictionary> = {
           subtitle: "Pick your learning track to personalize onboarding.",
           cardTitle: "Goal selection",
           cardDescription: "You can change this later.",
-          goalIdLabel: "Goal ID",
-          goalIdPlaceholder: "e.g. goal_video_editor",
+          noDescription: "No description",
+          selectedBadge: "Selected",
+          next: "Next",
+          retry: "Retry",
+          empty: "No goals available yet.",
+          loadError: "Could not load goals.",
+          saveError: "Could not save selected goal.",
         },
         profile: {
           title: "Tell us about yourself",
@@ -526,6 +540,11 @@ const dictionaries: Record<Locale, RawDictionary> = {
           experienceAdvanced: "Advanced",
           notesLabel: "Notes",
           notesPlaceholder: "Anything you want us to know...",
+          disclaimer:
+            "Your profile will be reviewed by a human. Activation is manual after review.",
+          back: "Back",
+          submit: "Save profile",
+          next: "Next",
         },
         courses: {
           title: "Choose courses",
@@ -783,8 +802,13 @@ const dictionaries: Record<Locale, RawDictionary> = {
           subtitle: "Это поможет персонализировать путь обучения.",
           cardTitle: "Выбор цели",
           cardDescription: "Позже это можно изменить.",
-          goalIdLabel: "ID цели",
-          goalIdPlaceholder: "например, goal_video_editor",
+          noDescription: "Описание отсутствует",
+          selectedBadge: "Выбрано",
+          next: "Далее",
+          retry: "Повторить",
+          empty: "Пока нет доступных целей.",
+          loadError: "Не удалось загрузить цели.",
+          saveError: "Не удалось сохранить выбранную цель.",
         },
         profile: {
           title: "Расскажите о себе",
@@ -801,6 +825,11 @@ const dictionaries: Record<Locale, RawDictionary> = {
           experienceAdvanced: "Продвинутый",
           notesLabel: "Комментарий",
           notesPlaceholder: "Что нам важно знать о вас...",
+          disclaimer:
+            "Профиль проверяет человек. Активация выполняется вручную после проверки.",
+          back: "Назад",
+          submit: "Сохранить профиль",
+          next: "Далее",
         },
         courses: {
           title: "Выберите курсы",

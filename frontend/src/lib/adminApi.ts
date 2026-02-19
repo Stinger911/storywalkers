@@ -9,7 +9,7 @@ type Category = {
   type: string
 }
 
-type Goal = {
+export type Goal = {
   id: string
   title: string
   description?: string | null
@@ -342,7 +342,6 @@ export async function revokeStepCompletion(id: string) {
 
 export type {
   Category,
-  Goal,
   StepTemplate,
   Student,
   PlanResponse,

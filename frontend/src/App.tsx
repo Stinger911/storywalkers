@@ -253,7 +253,7 @@ export default function App() {
       <Router>
         <Route path="/" component={Landing} />
         <Route path="/login" component={Login} />
-        <Route path="/student" component={StudentProfileRoute} />
+        <Route path="/student" component={StudentHomeRoute} />
         <Route path="/student/home" component={StudentHomeRoute} />
         <Route path="/student/profile" component={StudentProfileRoute} />
         <Route path="/student/questions" component={StudentQuestionsRoute} />
