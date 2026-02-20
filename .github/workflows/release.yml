@@ -57,6 +57,8 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - name: Build frontend
         run: make build-frontend
+      - name: Use prod Firebase config
+        run: cp firebase/firebase.prod.json firebase/firebase.json
       - name: Deploy frontend
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
