@@ -42,6 +42,7 @@ def _lesson_payload(lesson) -> dict:
         "title": lesson.title,
         "type": lesson.type.value if hasattr(lesson.type, "value") else lesson.type,
         "content": lesson.content,
+        "materialUrl": lesson.materialUrl,
         "order": lesson.order,
         "isActive": lesson.isActive,
         "createdAt": lesson.createdAt,

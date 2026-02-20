@@ -78,3 +78,13 @@ def test_lesson_model_rejects_negative_order():
             content="Task content",
             order=-1,
         )
+
+
+def test_lesson_model_normalizes_material_url_without_scheme():
+    payload = LessonCreate(
+        title="Lesson A",
+        type=LessonType.text,
+        content="Content",
+        materialUrl="drive.google.com/file/d/123",
+    )
+    assert payload.materialUrl == "https://drive.google.com/file/d/123"
