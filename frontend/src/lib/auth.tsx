@@ -31,6 +31,7 @@ export type MeProfile = {
     notes?: string | null
   }
   selectedCourses?: string[]
+  preferredCurrency?: "USD" | "EUR" | "PLN" | "RUB"
   subscriptionSelected?: boolean | null
 }
 
@@ -44,6 +45,7 @@ export type PatchMePayload = {
     notes?: string | null
   }
   selectedCourses?: string[]
+  preferredCurrency?: "USD" | "EUR" | "PLN" | "RUB"
   subscriptionSelected?: boolean | null
 }
 

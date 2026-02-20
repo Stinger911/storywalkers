@@ -15,6 +15,28 @@ export type Goal = {
   description?: string | null
 }
 
+export type AdminCourse = {
+  id: string
+  title: string
+  description?: string | null
+  goalIds: string[]
+  priceUsdCents: number
+  isActive: boolean
+  createdAt?: unknown
+  updatedAt?: unknown
+}
+
+export type AdminLesson = {
+  id: string
+  title: string
+  type: "video" | "text" | "task"
+  content: string
+  order: number
+  isActive: boolean
+  createdAt?: unknown
+  updatedAt?: unknown
+}
+
 type StepTemplate = {
   id: string
   title: string
@@ -145,6 +167,128 @@ export async function deleteGoal(id: string) {
     const payload = await response.json().catch(() => ({}))
     throw new Error(payload?.error?.message ?? 'Delete failed')
   }
+}
+
+export async function listAdminCourses(params?: {
+  isActive?: boolean
+  goalId?: string
+  q?: string
+  limit?: number
+  cursor?: string
+}) {
+  const query = new URLSearchParams()
+  if (typeof params?.isActive === 'boolean') {
+    query.set('isActive', String(params.isActive))
+  }
+  if (params?.goalId) query.set('goalId', params.goalId)
+  if (params?.q) query.set('q', params.q)
+  if (params?.limit) query.set('limit', String(params.limit))
+  if (params?.cursor) query.set('cursor', params.cursor)
+  const suffix = query.toString()
+  const response = await apiFetch(`/api/admin/courses${suffix ? `?${suffix}` : ''}`)
+  return handleJson<ApiList<AdminCourse>>(response)
+}
+
+export async function createAdminCourse(payload: {
+  title: string
+  description?: string | null
+  goalIds: string[]
+  priceUsdCents: number
+  isActive?: boolean
+}) {
+  const response = await apiFetch('/api/admin/courses', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+  return handleJson<AdminCourse>(response)
+}
+
+export async function patchAdminCourse(
+  id: string,
+  payload: {
+    title?: string
+    description?: string | null
+    goalIds?: string[]
+    priceUsdCents?: number
+    isActive?: boolean
+  },
+) {
+  const response = await apiFetch(`/api/admin/courses/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  })
+  return handleJson<AdminCourse>(response)
+}
+
+export async function deleteAdminCourse(id: string) {
+  const response = await apiFetch(`/api/admin/courses/${id}`, {
+    method: 'DELETE',
+  })
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}))
+    throw new Error(payload?.error?.message ?? 'Delete failed')
+  }
+}
+
+export async function listAdminCourseLessons(courseId: string) {
+  const response = await apiFetch(`/api/admin/courses/${courseId}/lessons`)
+  return handleJson<ApiList<AdminLesson>>(response)
+}
+
+export async function createAdminCourseLesson(
+  courseId: string,
+  payload: {
+    title: string
+    type: "video" | "text" | "task"
+    content: string
+    order?: number
+    isActive?: boolean
+  },
+) {
+  const response = await apiFetch(`/api/admin/courses/${courseId}/lessons`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+  return handleJson<AdminLesson>(response)
+}
+
+export async function patchAdminCourseLesson(
+  courseId: string,
+  lessonId: string,
+  payload: {
+    title?: string
+    type?: "video" | "text" | "task"
+    content?: string
+    order?: number
+    isActive?: boolean
+  },
+) {
+  const response = await apiFetch(`/api/admin/courses/${courseId}/lessons/${lessonId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  })
+  return handleJson<AdminLesson>(response)
+}
+
+export async function deleteAdminCourseLesson(courseId: string, lessonId: string) {
+  const response = await apiFetch(`/api/admin/courses/${courseId}/lessons/${lessonId}`, {
+    method: 'DELETE',
+  })
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}))
+    throw new Error(payload?.error?.message ?? 'Delete failed')
+  }
+}
+
+export async function reorderAdminCourseLessons(
+  courseId: string,
+  payload: { items: { lessonId: string; order: number }[] },
+) {
+  const response = await apiFetch(`/api/admin/courses/${courseId}/lessons/reorder`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  })
+  return handleJson<{ updated: number }>(response)
 }
 
 export async function listStepTemplates() {

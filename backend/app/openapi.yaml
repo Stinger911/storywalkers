@@ -14,9 +14,11 @@ security:
 tags:
   - name: Auth
   - name: Admin - Students
+  - name: Admin - Courses
   - name: Admin - Settings
   - name: Questions
   - name: Library
+  - name: Courses
 
 components:
   securitySchemes:
@@ -85,6 +87,10 @@ components:
           items:
             type: string
           example: [course_1, course_2]
+        preferredCurrency:
+          type: string
+          enum: [USD, EUR, PLN, RUB]
+          example: USD
         subscriptionSelected:
           type: boolean
           nullable: true
@@ -139,10 +145,165 @@ components:
           items:
             type: string
           example: [course_1, course_2]
+        preferredCurrency:
+          type: string
+          nullable: true
+          enum: [USD, EUR, PLN, RUB]
+          example: EUR
         subscriptionSelected:
           type: boolean
           nullable: true
           example: false
+
+    CourseSummary:
+      type: object
+      required: [id, title, goalIds, priceUsdCents, currencyBase]
+      properties:
+        id:
+          type: string
+          example: course_video_basics
+        title:
+          type: string
+          example: Video Basics
+        description:
+          type: string
+          nullable: true
+          example: Full course description
+        priceUsdCents:
+          type: integer
+          minimum: 0
+          example: 12900
+        goalIds:
+          type: array
+          items:
+            type: string
+          example: [goal_video_editor, goal_youtube]
+        currencyBase:
+          type: string
+          enum: [USD]
+          example: USD
+
+    CourseAdmin:
+      type: object
+      required: [id, title, goalIds, priceUsdCents, isActive]
+      properties:
+        id:
+          type: string
+          example: course_video_basics
+        title:
+          type: string
+          example: Video Basics
+        description:
+          type: string
+          nullable: true
+          example: Full course description
+        goalIds:
+          type: array
+          items:
+            type: string
+          example: [goal_video_editor, goal_youtube]
+        priceUsdCents:
+          type: integer
+          minimum: 0
+          example: 12900
+        isActive:
+          type: boolean
+          example: true
+        createdAt:
+          type: string
+          format: date-time
+          nullable: true
+        updatedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    CoursesSummaryResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/CourseSummary"
+
+    FxRatesResponse:
+      type: object
+      required: [base, rates, source]
+      properties:
+        base:
+          type: string
+          enum: [USD]
+          example: USD
+        rates:
+          type: object
+          additionalProperties:
+            type: number
+            format: float
+          example:
+            USD: 1
+            EUR: 0.92
+        asOf:
+          type: string
+          nullable: true
+          example: "2026-02-20T12:00:00Z"
+        source:
+          type: string
+          enum: [firestore]
+          example: firestore
+
+    Lesson:
+      type: object
+      required: [id, title, content, order, isActive]
+      properties:
+        id:
+          type: string
+          example: lesson_1
+        title:
+          type: string
+          example: Basic cuts
+        content:
+          type: string
+          example: Lesson body
+        order:
+          type: integer
+          minimum: 0
+          example: 1
+        isActive:
+          type: boolean
+          example: true
+        updatedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    LessonsResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Lesson"
+
+    ReorderLessonsRequest:
+      type: object
+      required: [items]
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required: [lessonId, order]
+            additionalProperties: false
+            properties:
+              lessonId:
+                type: string
+              order:
+                type: integer
+                minimum: 0
 
     Paginated:
       type: object
@@ -1265,6 +1426,334 @@ paths:
         "400":
           $ref: "#/components/responses/ValidationError"
 
+  /admin/courses:
+    get:
+      tags: [Admin - Courses]
+      summary: List courses (staff)
+      operationId: adminListCourses
+      parameters:
+        - in: query
+          name: isActive
+          required: false
+          schema: { type: boolean }
+        - in: query
+          name: goalId
+          required: false
+          schema: { type: string }
+        - in: query
+          name: q
+          required: false
+          schema: { type: string }
+        - in: query
+          name: limit
+          required: false
+          schema: { type: integer, default: 100, minimum: 1, maximum: 200 }
+        - in: query
+          name: cursor
+          required: false
+          schema: { type: string }
+          description: Optional cursor placeholder (MVP returns `nextCursor: null`).
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Paginated"
+                  - type: object
+                    required: [items]
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/CourseAdmin"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [Admin - Courses]
+      summary: Create course (staff)
+      operationId: adminCreateCourse
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, goalIds, priceUsdCents]
+              additionalProperties: false
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                  nullable: true
+                goalIds:
+                  type: array
+                  items: { type: string }
+                priceUsdCents:
+                  type: integer
+                  minimum: 0
+                isActive:
+                  type: boolean
+                  default: true
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CourseAdmin"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+
+  /admin/courses/{id}:
+    patch:
+      tags: [Admin - Courses]
+      summary: Patch course allowlist fields (staff)
+      operationId: adminPatchCourse
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                  nullable: true
+                goalIds:
+                  type: array
+                  items: { type: string }
+                priceUsdCents:
+                  type: integer
+                  minimum: 0
+                isActive:
+                  type: boolean
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CourseAdmin"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+    delete:
+      tags: [Admin - Courses]
+      summary: Soft-delete course (set isActive=false)
+      operationId: adminDeleteCourse
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "204":
+          description: No Content
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /admin/courses/{id}/lessons:
+    get:
+      tags: [Admin - Courses]
+      summary: List course lessons including inactive (staff)
+      operationId: adminListCourseLessons
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LessonsResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      tags: [Admin - Courses]
+      summary: Create course lesson (staff)
+      operationId: adminCreateCourseLesson
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, type, content]
+              additionalProperties: false
+              properties:
+                title: { type: string }
+                type:
+                  type: string
+                  enum: [video, text, task]
+                content: { type: string }
+                order:
+                  type: integer
+                  minimum: 0
+                  nullable: true
+                isActive:
+                  type: boolean
+                  default: true
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Lesson"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+
+  /admin/courses/{id}/lessons/reorder:
+    patch:
+      tags: [Admin - Courses]
+      summary: Reorder lessons for a course (staff)
+      operationId: adminReorderCourseLessons
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReorderLessonsRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [updated]
+                properties:
+                  updated:
+                    type: integer
+                    example: 3
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+
+  /admin/courses/{id}/lessons/{lessonId}:
+    patch:
+      tags: [Admin - Courses]
+      summary: Patch lesson allowlist fields (staff)
+      operationId: adminPatchCourseLesson
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+        - in: path
+          name: lessonId
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                title: { type: string }
+                type:
+                  type: string
+                  enum: [video, text, task]
+                content: { type: string }
+                order:
+                  type: integer
+                  minimum: 0
+                isActive:
+                  type: boolean
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Lesson"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+    delete:
+      tags: [Admin - Courses]
+      summary: Soft-delete lesson (set isActive=false)
+      operationId: adminDeleteCourseLesson
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+        - in: path
+          name: lessonId
+          required: true
+          schema: { type: string }
+      responses:
+        "204":
+          description: No Content
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /admin/categories:
     get:
       tags: [Admin - Settings]
@@ -1802,6 +2291,111 @@ paths:
           $ref: "#/components/responses/NotFound"
         "400":
           $ref: "#/components/responses/ValidationError"
+
+  /courses:
+    get:
+      tags: [Courses]
+      summary: List active courses for onboarding/catalog (stable title ASC order)
+      operationId: listCourses
+      description: Returns only active courses (`isActive=true`) sorted by `title` ascending.
+      parameters:
+        - in: query
+          name: goalId
+          required: false
+          schema: { type: string }
+          description: Optional filter by goal id (`goalIds` array-contains).
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CoursesSummaryResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /fx/rates:
+    get:
+      tags: [Courses]
+      summary: Get latest FX rates for UI price conversion
+      operationId: getFxRates
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FxRatesResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /fx-rates:
+    get:
+      tags: [Courses]
+      summary: Get FX rates from Firestore config/fx_rates
+      operationId: getFxRatesV2
+      description: If `config/fx_rates` is missing, bootstrap it with `{ base: "USD", rates: { USD: 1 } }`.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FxRatesResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /courses/{id}/lessons:
+    get:
+      tags: [Courses]
+      summary: List lessons for a course (active students or staff)
+      operationId: listCourseLessons
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LessonsResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /courses/{id}/lessons/{lessonId}:
+    get:
+      tags: [Courses]
+      summary: Get lesson content (active students or staff)
+      operationId: getCourseLesson
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+        - in: path
+          name: lessonId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Lesson"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   /healthz:
     get:

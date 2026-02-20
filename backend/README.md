@@ -37,3 +37,12 @@ pytest
 - User status enum is now: `disabled | active | community_only | expired`.
 - New user profiles default to `disabled`.
 - Lazy migration is enabled: when reading `users/{uid}`, if `status` is missing it is auto-set to `active` with `updatedAt=SERVER_TIMESTAMP`.
+
+## FX rates config
+
+- Endpoint: `GET /api/fx-rates` (auth required).
+- Source: Firestore doc `config/fx_rates`.
+- If missing, backend bootstraps it with:
+  - `base: "USD"`
+  - `rates: { "USD": 1 }`
+- Manual update (admin/ops): edit Firestore document `config/fx_rates` fields directly (`base`, `rates`, optional `asOf`).

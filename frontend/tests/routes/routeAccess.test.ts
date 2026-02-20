@@ -64,6 +64,13 @@ describe("resolveGuardRedirect", () => {
         pathname: "/student/questions",
       }),
     ).toBe("/blocked?type=community_only");
+    expect(
+      resolveGuardRedirect({
+        me: student("community_only"),
+        requiredRole: "student",
+        pathname: "/student/courses/course-1/lessons/lesson-1",
+      }),
+    ).toBe("/blocked?type=community_only");
   });
 
   it("does not apply student status restrictions to staff", () => {

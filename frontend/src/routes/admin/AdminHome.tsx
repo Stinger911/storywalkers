@@ -68,6 +68,14 @@ export function AdminHome() {
           </A>
         </Col>
         <Col>
+          <A href="/admin/courses" class="panel panel--center hover:shadow-lg">
+            <h3 class="text-lg font-semibold">Courses</h3>
+            <p class="text-sm text-muted-foreground">
+              Manage catalog pricing and goal mapping.
+            </p>
+          </A>
+        </Col>
+        <Col>
           <A
             href="/admin/step-templates"
             class="panel panel--center hover:shadow-lg"

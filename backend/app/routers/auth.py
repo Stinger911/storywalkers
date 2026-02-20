@@ -20,6 +20,7 @@ router = APIRouter(prefix="/api", tags=["Auth"])
 
 
 ExperienceLevel = Literal["beginner", "intermediate", "advanced"]
+PreferredCurrency = Literal["USD", "EUR", "PLN", "RUB"]
 TELEGRAM_HANDLE_RE = re.compile(r"^@[A-Za-z0-9_]{1,32}$")
 
 
@@ -117,6 +118,7 @@ class MeResponse(BaseModel):
     selectedGoalId: str | None = None
     profileForm: ProfileFormModel = Field(default_factory=ProfileFormModel)
     selectedCourses: list[str] = Field(default_factory=list)
+    preferredCurrency: PreferredCurrency = "USD"
     subscriptionSelected: bool | None = None
 
 
@@ -130,6 +132,7 @@ class PatchMeRequest(BaseModel):
     selectedGoalId: str | None = None
     profileForm: ProfileFormModel | None = None
     selectedCourses: list[str] | None = None
+    preferredCurrency: PreferredCurrency | None = None
     subscriptionSelected: bool | None = None
 
     model_config = {"extra": "forbid"}
@@ -287,6 +290,9 @@ async def patch_me(
             payload.selectedCourses or []
         )
 
+    if "preferredCurrency" in payload_data:
+        updates["preferredCurrency"] = payload.preferredCurrency
+
     if "subscriptionSelected" in payload_data:
         updates["subscriptionSelected"] = payload.subscriptionSelected
 
@@ -334,6 +340,9 @@ async def patch_me(
             if isinstance(response_data.get("selectedCourses"), list)
             else []
         ),
+        "preferredCurrency": response_data.get("preferredCurrency")
+        if response_data.get("preferredCurrency") in {"USD", "EUR", "PLN", "RUB"}
+        else "USD",
         "subscriptionSelected": (
             response_data.get("subscriptionSelected")
             if isinstance(response_data.get("subscriptionSelected"), bool)

@@ -180,6 +180,7 @@ def test_patch_me_updates_onboarding_fields(monkeypatch):
         json={
             "selectedGoalId": "  goal-1  ",
             "selectedCourses": [" course-a ", "", "course-b"],
+            "preferredCurrency": "EUR",
             "subscriptionSelected": True,
             "profileForm": {
                 "telegram": "  @new  ",
@@ -191,16 +192,39 @@ def test_patch_me_updates_onboarding_fields(monkeypatch):
     payload = response.json()
     assert payload["selectedGoalId"] == "goal-1"
     assert payload["selectedCourses"] == ["course-a", "course-b"]
+    assert payload["preferredCurrency"] == "EUR"
     assert payload["subscriptionSelected"] is True
     assert payload["profileForm"]["telegram"] == "@new"
     assert payload["profileForm"]["experienceLevel"] == "advanced"
     assert payload["profileForm"]["socialUrl"] is None
     assert users["u1"]["selectedGoalId"] == "goal-1"
     assert users["u1"]["selectedCourses"] == ["course-a", "course-b"]
+    assert users["u1"]["preferredCurrency"] == "EUR"
     assert users["u1"]["subscriptionSelected"] is True
     assert users["u1"]["profileForm"]["telegram"] == "@new"
     assert users["u1"]["profileForm"]["experienceLevel"] == "advanced"
     assert users["u1"]["updatedAt"] == "SERVER_TIMESTAMP"
+
+    app.dependency_overrides.clear()
+
+
+def test_patch_me_accepts_preferred_currency_pln(monkeypatch):
+    users = {
+        "u1": {
+            "displayName": "User One",
+            "email": "u1@example.com",
+        }
+    }
+    fake_db = FakeFirestore(users)
+    monkeypatch.setattr(auth, "get_firestore_client", lambda: fake_db)
+    app.dependency_overrides[auth_deps.get_current_user] = _override_user
+    client = TestClient(app)
+
+    response = client.patch("/api/me", json={"preferredCurrency": "PLN"})
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["preferredCurrency"] == "PLN"
+    assert users["u1"]["preferredCurrency"] == "PLN"
 
     app.dependency_overrides.clear()
 
@@ -285,6 +309,7 @@ def test_patch_me_validates_onboarding_fields(monkeypatch):
         {"selectedGoalId": "x" * 65},
         {"selectedCourses": ["c1", "c1"]},
         {"selectedCourses": too_many_courses},
+        {"preferredCurrency": "AUD"},
     ]
     for payload in cases:
         response = client.patch("/api/me", json=payload)

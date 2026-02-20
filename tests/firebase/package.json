@@ -4,7 +4,7 @@
   "type": "commonjs",
   "scripts": {
     "test": "jest --runInBand",
-    "test:emu": "firebase emulators:exec --only firestore \"npm test\""
+    "test:emu": "cp -f ../../firebase/firestore.rules ./ && firebase emulators:exec --only firestore \"npm test\""
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "^3.0.1",

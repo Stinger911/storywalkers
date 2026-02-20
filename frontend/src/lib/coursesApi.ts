@@ -4,8 +4,9 @@ export type Course = {
   id: string;
   title: string;
   shortDescription: string;
-  price: number;
+  priceUsdCents: number;
   isActive: boolean;
+  goalIds: string[];
 };
 
 type CoursesResponse = {
@@ -17,8 +18,10 @@ type RawCourse = {
   title?: unknown;
   shortDescription?: unknown;
   description?: unknown;
+  priceUsdCents?: unknown;
   price?: unknown;
   isActive?: unknown;
+  goalIds?: unknown;
 };
 
 async function handleJson<T>(response: Response): Promise<T> {
@@ -29,7 +32,7 @@ async function handleJson<T>(response: Response): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-let cachedCourses: Course[] | null = null;
+const cachedCoursesByGoal = new Map<string, Course[]>();
 
 function normalizeCourse(raw: RawCourse): Course | null {
   if (typeof raw?.id !== "string" || !raw.id.trim()) return null;
@@ -41,18 +44,26 @@ function normalizeCourse(raw: RawCourse): Course | null {
       : typeof raw.description === "string"
         ? raw.description
         : "";
-  const numericPrice =
-    typeof raw.price === "number"
-      ? raw.price
-      : typeof raw.price === "string"
-        ? Number(raw.price)
-        : 0;
+  const cents =
+    typeof raw.priceUsdCents === "number"
+      ? raw.priceUsdCents
+      : typeof raw.priceUsdCents === "string"
+        ? Number(raw.priceUsdCents)
+        : typeof raw.price === "number"
+          ? raw.price * 100
+          : typeof raw.price === "string"
+            ? Number(raw.price) * 100
+            : 0;
+  const goalIds = Array.isArray(raw.goalIds)
+    ? raw.goalIds.filter((id): id is string => typeof id === "string" && id.trim().length > 0)
+    : [];
   return {
     id: raw.id,
     title,
     shortDescription,
-    price: Number.isFinite(numericPrice) ? Math.max(0, numericPrice) : 0,
+    priceUsdCents: Number.isFinite(cents) ? Math.max(0, Math.round(cents)) : 0,
     isActive: raw.isActive !== false,
+    goalIds,
   };
 }
 
@@ -67,17 +78,49 @@ function normalizeResponse(payload: unknown): Course[] {
     .filter((item): item is Course => Boolean(item));
 }
 
-export async function listCourses(options?: { force?: boolean }) {
-  if (!options?.force && cachedCourses) {
-    return { items: cachedCourses };
+type ListCoursesOptions = {
+  force?: boolean;
+  goalId?: string | null;
+};
+
+function normalizeGoalId(goalId: string | null | undefined) {
+  if (typeof goalId !== "string") return "";
+  const trimmed = goalId.trim();
+  return trimmed;
+}
+
+export async function listCourses(options?: ListCoursesOptions) {
+  const goalId = normalizeGoalId(options?.goalId);
+  if (!options?.force && cachedCoursesByGoal.has(goalId)) {
+    return { items: cachedCoursesByGoal.get(goalId) ?? [] };
   }
-  const response = await apiFetch("/api/courses");
+  const query = goalId ? `?goalId=${encodeURIComponent(goalId)}` : "";
+  const response = await apiFetch(`/api/courses${query}`);
   const payload = await handleJson<CoursesResponse | RawCourse[]>(response);
   const items = normalizeResponse(payload);
-  cachedCourses = items;
+  cachedCoursesByGoal.set(goalId, items);
   return { items };
 }
 
 export function resetCoursesCacheForTests() {
-  cachedCourses = null;
+  cachedCoursesByGoal.clear();
+}
+
+export function convertUsdCentsToCurrencyCents(
+  usdCents: number,
+  rate: number | null | undefined,
+) {
+  if (!Number.isFinite(usdCents)) return 0;
+  const safeRate = typeof rate === "number" && rate > 0 ? rate : 1;
+  return Math.max(0, Math.round(usdCents * safeRate));
+}
+
+export function formatCents(cents: number, currency: string) {
+  const safeCents = Number.isFinite(cents) ? Math.max(0, cents) : 0;
+  const safeCurrency = typeof currency === "string" && currency ? currency : "USD";
+  return new Intl.NumberFormat(undefined, {
+    style: "currency",
+    currency: safeCurrency,
+    minimumFractionDigits: 2,
+  }).format(safeCents / 100);
 }
