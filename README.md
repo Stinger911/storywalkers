@@ -107,6 +107,11 @@ Required GitHub secrets:
 - `PROJECT_ID`
 - `CLOUD_RUN_SERVICE`
 - `CLOUD_RUN_REGION`
+- `VITE_FIREBASE_API_KEY`
+- `VITE_FIREBASE_AUTH_DOMAIN`
+- `VITE_FIREBASE_PROJECT_ID`
+- `VITE_FIREBASE_APP_ID`
+- `VITE_FIREBASE_MESSAGING_SENDER_ID`
 
 The backend selects Firestore database by environment:
 

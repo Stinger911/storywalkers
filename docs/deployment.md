@@ -153,3 +153,8 @@ Set the following GitHub Actions secrets:
 - `FIREBASE_PROJECT_ID`: Firebase project id (same as `PROJECT_ID`)
 - `CLOUD_RUN_SERVICE`: Cloud Run service name
 - `CLOUD_RUN_REGION`: Cloud Run region
+- `VITE_FIREBASE_API_KEY`: Firebase Web API key used by frontend build
+- `VITE_FIREBASE_AUTH_DOMAIN`: Firebase Auth domain for frontend build
+- `VITE_FIREBASE_PROJECT_ID`: Firebase project id for frontend build
+- `VITE_FIREBASE_APP_ID`: Firebase app id for frontend build
+- `VITE_FIREBASE_MESSAGING_SENDER_ID`: Firebase sender id for frontend build
