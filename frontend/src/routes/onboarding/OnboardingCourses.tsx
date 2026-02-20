@@ -3,18 +3,44 @@ import { createMemo, createSignal, For, onMount, Show } from "solid-js";
 
 import { Button } from "../../components/ui/button";
 import { SectionCard } from "../../components/ui/section-card";
+import {
+  Select,
+  SelectContent,
+  SelectHiddenSelect,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "../../components/ui/select";
 import { Skeleton } from "../../components/ui/skeleton";
 import { useAuth } from "../../lib/auth";
+import {
+  convertUsdCentsToCurrencyCents,
+  formatCents,
+  listCourses,
+  type Course,
+} from "../../lib/coursesApi";
+import { getFxRates } from "../../lib/fxApi";
 import { useI18n } from "../../lib/i18n";
-import { listCourses, type Course } from "../../lib/coursesApi";
 import { OnboardingLayout } from "./OnboardingLayout";
 
 const COMMUNITY_CARD = {
   id: "community",
   titleKey: "student.onboarding.courses.communityTitle",
   descKey: "student.onboarding.courses.communityDescription",
-  price: 19,
+  priceUsdCents: 1900,
 } as const;
+
+type CurrencyOption = {
+  value: "USD" | "EUR" | "PLN";
+  label: string;
+};
+
+const CURRENCY_OPTIONS: CurrencyOption[] = [
+  { value: "USD", label: "USD" },
+  { value: "EUR", label: "EUR" },
+  { value: "PLN", label: "PLN" },
+];
 
 export function OnboardingCourses() {
   const auth = useAuth();
@@ -24,9 +50,20 @@ export function OnboardingCourses() {
   const [loading, setLoading] = createSignal(true);
   const [loadError, setLoadError] = createSignal<string | null>(null);
   const [courses, setCourses] = createSignal<Course[]>([]);
+  const [fxRates, setFxRates] = createSignal<Record<string, number>>({ USD: 1 });
+  const [preferredCurrency, setPreferredCurrency] = createSignal<"USD" | "EUR" | "PLN">(
+    auth.me()?.preferredCurrency === "EUR"
+      ? "EUR"
+      : auth.me()?.preferredCurrency === "PLN"
+        ? "PLN"
+        : "USD",
+  );
+  const selectedGoalId = createMemo(() => auth.me()?.selectedGoalId || null);
 
   const [saving, setSaving] = createSignal(false);
+  const [currencySaving, setCurrencySaving] = createSignal(false);
   const [saveError, setSaveError] = createSignal<string | null>(null);
+  const [currencyError, setCurrencyError] = createSignal<string | null>(null);
 
   const [selectedCourses, setSelectedCourses] = createSignal<string[]>(
     auth.me()?.selectedCourses || [],
@@ -35,13 +72,34 @@ export function OnboardingCourses() {
     Boolean(auth.me()?.subscriptionSelected),
   );
 
-  const totalPrice = createMemo(() => {
+  const hasPreferredRate = createMemo(() => {
+    const next = fxRates()[preferredCurrency()];
+    return typeof next === "number" && next > 0;
+  });
+  const displayCurrency = createMemo<"USD" | "EUR" | "PLN">(() =>
+    hasPreferredRate() ? preferredCurrency() : "USD",
+  );
+  const currencyRate = createMemo(() =>
+    displayCurrency() === "USD" ? 1 : (fxRates()[displayCurrency()] as number),
+  );
+
+  const formatPrice = (usdCents: number) =>
+    formatCents(
+      convertUsdCentsToCurrencyCents(usdCents, currencyRate()),
+      displayCurrency(),
+    );
+
+  const totalPriceCents = createMemo(() => {
     const selected = new Set(selectedCourses());
-    const coursesTotal = courses()
+    const coursesTotalUsdCents = courses()
       .filter((course) => course.isActive)
       .filter((course) => selected.has(course.id))
-      .reduce((sum, course) => sum + course.price, 0);
-    return coursesTotal + (communitySelected() ? COMMUNITY_CARD.price : 0);
+      .reduce((sum, course) => sum + course.priceUsdCents, 0);
+    const communityUsdCents = communitySelected() ? COMMUNITY_CARD.priceUsdCents : 0;
+    return convertUsdCentsToCurrencyCents(
+      coursesTotalUsdCents + communityUsdCents,
+      currencyRate(),
+    );
   });
 
   const activeCourses = createMemo(() => courses().filter((course) => course.isActive));
@@ -54,7 +112,7 @@ export function OnboardingCourses() {
   });
 
   const toggleCourse = (courseId: string, isActive: boolean) => {
-    if (saving()) return;
+    if (saving() || currencySaving()) return;
     if (!isActive) return;
     setSelectedCourses((prev) =>
       prev.includes(courseId)
@@ -73,8 +131,12 @@ export function OnboardingCourses() {
     setLoading(true);
     setLoadError(null);
     try {
-      const response = await listCourses(options);
-      setCourses(response.items);
+      const [courseResponse, fxResponse] = await Promise.all([
+        listCourses({ ...options, goalId: selectedGoalId() }),
+        getFxRates(options),
+      ]);
+      setCourses(courseResponse.items);
+      setFxRates(fxResponse.rates || { USD: 1 });
     } catch (err) {
       setLoadError(formatError(err, t("student.onboarding.courses.loadError")));
     } finally {
@@ -103,6 +165,24 @@ export function OnboardingCourses() {
     }
   };
 
+  const updatePreferredCurrency = async (nextCurrency: "USD" | "EUR" | "PLN") => {
+    if (nextCurrency === preferredCurrency()) return;
+    const previous = preferredCurrency();
+    setPreferredCurrency(nextCurrency);
+    setCurrencySaving(true);
+    setCurrencyError(null);
+    try {
+      await auth.patchMe({ preferredCurrency: nextCurrency });
+    } catch (err) {
+      setPreferredCurrency(previous);
+      setCurrencyError(
+        formatError(err, t("student.onboarding.courses.currencySaveError")),
+      );
+    } finally {
+      setCurrencySaving(false);
+    }
+  };
+
   const next = async () => {
     const ok = await save();
     if (ok) {
@@ -121,6 +201,40 @@ export function OnboardingCourses() {
         description={t("student.onboarding.courses.cardDescription")}
       >
         <div class="space-y-4">
+          <div class="max-w-[220px]">
+            <Select
+              value={CURRENCY_OPTIONS.find((item) => item.value === preferredCurrency())}
+              onChange={(value) => {
+                const raw = value?.value;
+                if (raw === "USD" || raw === "EUR" || raw === "PLN") {
+                  void updatePreferredCurrency(raw);
+                }
+              }}
+              options={CURRENCY_OPTIONS}
+              optionValue={(option) => (option as CurrencyOption).value}
+              optionTextValue={(option) => (option as CurrencyOption).label}
+              itemComponent={(props) => (
+                <SelectItem item={props.item}>
+                  {(props.item.rawValue as CurrencyOption).label}
+                </SelectItem>
+              )}
+              disabled={currencySaving() || saving()}
+            >
+              <SelectLabel for="onboarding-currency">
+                {t("student.onboarding.courses.currencyLabel")}
+              </SelectLabel>
+              <SelectHiddenSelect id="onboarding-currency" />
+              <SelectTrigger aria-label={t("student.onboarding.courses.currencyLabel")}>
+                <SelectValue<CurrencyOption>>
+                  {(state) =>
+                    (state?.selectedOption() as CurrencyOption | undefined)?.label || "USD"
+                  }
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent />
+            </Select>
+          </div>
+
           <Show
             when={!loading()}
             fallback={
@@ -165,7 +279,7 @@ export function OnboardingCourses() {
                               : "border-border/70 bg-card hover:border-primary/50"
                           }`}
                           onClick={() => toggleCourse(course.id, course.isActive)}
-                          disabled={saving()}
+                          disabled={saving() || currencySaving()}
                         >
                           <div class="flex items-start justify-between gap-3">
                             <div>
@@ -175,7 +289,7 @@ export function OnboardingCourses() {
                               </div>
                             </div>
                             <div class="text-sm font-semibold">
-                              ${course.price}
+                              {formatPrice(course.priceUsdCents)}
                             </div>
                           </div>
                           <div class="mt-3 text-xs text-muted-foreground">
@@ -205,7 +319,9 @@ export function OnboardingCourses() {
                                 {course.shortDescription}
                               </div>
                             </div>
-                            <div class="text-sm font-semibold">${course.price}</div>
+                            <div class="text-sm font-semibold">
+                              {formatPrice(course.priceUsdCents)}
+                            </div>
                           </div>
                           <div class="mt-3 text-xs text-muted-foreground">
                             {t("student.onboarding.courses.inactiveBadge")}
@@ -227,7 +343,7 @@ export function OnboardingCourses() {
                   : "border-border/70 hover:border-primary/50"
               }`}
               onClick={() => setCommunitySelected((prev) => !prev)}
-              disabled={saving()}
+              disabled={saving() || currencySaving()}
             >
               <div class="flex items-start justify-between gap-3">
                 <div>
@@ -236,7 +352,9 @@ export function OnboardingCourses() {
                     {t(COMMUNITY_CARD.descKey)}
                   </div>
                 </div>
-                <div class="text-sm font-semibold">${COMMUNITY_CARD.price}</div>
+                <div class="text-sm font-semibold">
+                  {formatPrice(COMMUNITY_CARD.priceUsdCents)}
+                </div>
               </div>
               <div class="mt-3 text-xs text-muted-foreground">
                 {communitySelected()
@@ -250,19 +368,35 @@ export function OnboardingCourses() {
             <div class="text-sm text-muted-foreground">
               {t("student.onboarding.courses.totalLabel")}
             </div>
-            <div class="mt-1 text-xl font-semibold">${totalPrice()}</div>
+            <div class="mt-1 text-xl font-semibold">
+              {formatCents(totalPriceCents(), displayCurrency())}
+            </div>
           </div>
 
           <div class="flex flex-wrap gap-2">
-            <Button as={A} href="/onboarding/profile" variant="outline" disabled={saving()}>
+            <Button
+              as={A}
+              href="/onboarding/profile"
+              variant="outline"
+              disabled={saving() || currencySaving()}
+            >
               {t("student.onboarding.profile.back")}
             </Button>
-            <Button variant="outline" onClick={() => void save()} disabled={saving()}>
+            <Button
+              variant="outline"
+              onClick={() => void save()}
+              disabled={saving() || currencySaving()}
+            >
               {saving()
                 ? t("student.onboarding.common.saving")
                 : t("student.onboarding.profile.submit")}
             </Button>
-            <Button onClick={() => void next()} disabled={saving() || selectedActiveCourseIds().length === 0}>
+            <Button
+              onClick={() => void next()}
+              disabled={
+                saving() || currencySaving() || selectedActiveCourseIds().length === 0
+              }
+            >
               {saving()
                 ? t("student.onboarding.common.saving")
                 : t("student.onboarding.profile.next")}
@@ -272,6 +406,11 @@ export function OnboardingCourses() {
           <Show when={saveError()}>
             <div class="rounded-md border border-error bg-error/10 p-3 text-sm text-error-foreground">
               {saveError()}
+            </div>
+          </Show>
+          <Show when={currencyError()}>
+            <div class="rounded-md border border-error bg-error/10 p-3 text-sm text-error-foreground">
+              {currencyError()}
             </div>
           </Show>
         </div>

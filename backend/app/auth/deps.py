@@ -16,6 +16,7 @@ from app.db.firestore import get_firestore_client
 
 security = HTTPBearer(auto_error=False)
 ExperienceLevel = Literal["beginner", "intermediate", "advanced"]
+SUPPORTED_CURRENCIES = {"USD", "EUR", "PLN", "RUB"}
 
 
 def _sanitize_optional_text(value: object) -> str | None:
@@ -43,6 +44,17 @@ def _normalize_selected_courses(value: object) -> list[str]:
             if trimmed:
                 normalized.append(trimmed)
     return normalized
+
+
+def _normalize_preferred_currency(value: object) -> str | None:
+    if not isinstance(value, str):
+        return None
+    code = value.strip().upper()
+    if not code:
+        return None
+    if code in SUPPORTED_CURRENCIES:
+        return code
+    return None
 
 
 def _build_user_payload(uid: str, decoded: dict, profile: dict | None) -> dict:
@@ -76,6 +88,10 @@ def _build_user_payload(uid: str, decoded: dict, profile: dict | None) -> dict:
             "notes": _sanitize_optional_text(profile_form.get("notes")),
         },
         "selectedCourses": _normalize_selected_courses(profile.get("selectedCourses")),
+        "preferredCurrency": _normalize_preferred_currency(
+            profile.get("preferredCurrency")
+        )
+        or "USD",
         "subscriptionSelected": (
             profile.get("subscriptionSelected")
             if isinstance(profile.get("subscriptionSelected"), bool)

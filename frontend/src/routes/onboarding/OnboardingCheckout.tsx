@@ -5,11 +5,17 @@ import { Button } from "../../components/ui/button";
 import { SectionCard } from "../../components/ui/section-card";
 import { useAuth } from "../../lib/auth";
 import { listGoals } from "../../lib/adminApi";
-import { listCourses, type Course } from "../../lib/coursesApi";
+import {
+  convertUsdCentsToCurrencyCents,
+  formatCents,
+  listCourses,
+  type Course,
+} from "../../lib/coursesApi";
+import { getFxRates } from "../../lib/fxApi";
 import { useI18n } from "../../lib/i18n";
 import { OnboardingLayout } from "./OnboardingLayout";
 
-const COMMUNITY_PRICE = 19;
+const COMMUNITY_PRICE_USD_CENTS = 1900;
 const BOOSTY_URL =
   import.meta.env.VITE_BOOSTY_URL ?? "https://boosty.to/storywalkers";
 const SUPPORT_CONTACT =
@@ -22,10 +28,22 @@ export function OnboardingCheckout() {
   const { t } = useI18n();
   const [goalTitle, setGoalTitle] = createSignal<string | null>(null);
   const [coursesById, setCoursesById] = createSignal<Record<string, Course>>({});
+  const [fxRates, setFxRates] = createSignal<Record<string, number>>({ USD: 1 });
   const me = () => auth.me();
+  const preferredCurrency = createMemo(() => me()?.preferredCurrency || "USD");
+  const currencyRate = createMemo(() => {
+    const rate = fxRates()[preferredCurrency()];
+    return typeof rate === "number" && rate > 0 ? rate : 1;
+  });
 
   const selectedCourseIds = createMemo(() => me()?.selectedCourses || []);
   const communitySelected = createMemo(() => Boolean(me()?.subscriptionSelected));
+
+  const formatPrice = (usdCents: number) =>
+    formatCents(
+      convertUsdCentsToCurrencyCents(usdCents, currencyRate()),
+      preferredCurrency(),
+    );
 
   const selectedCourseItems = createMemo(() =>
     selectedCourseIds().map((id) => {
@@ -33,17 +51,20 @@ export function OnboardingCheckout() {
       return {
         id,
         title: course?.title || id,
-        price: course?.price || 0,
+        priceUsdCents: course?.priceUsdCents || 0,
       };
     }),
   );
 
   const totalPrice = createMemo(() => {
     const coursesTotal = selectedCourseItems().reduce(
-      (sum, item) => sum + item.price,
+      (sum, item) => sum + item.priceUsdCents,
       0,
     );
-    return coursesTotal + (communitySelected() ? COMMUNITY_PRICE : 0);
+    return convertUsdCentsToCurrencyCents(
+      coursesTotal + (communitySelected() ? COMMUNITY_PRICE_USD_CENTS : 0),
+      currencyRate(),
+    );
   });
 
   onMount(() => {
@@ -60,12 +81,13 @@ export function OnboardingCheckout() {
       }
 
       try {
-        const response = await listCourses();
+        const [response, fxResponse] = await Promise.all([listCourses(), getFxRates()]);
         const nextMap: Record<string, Course> = {};
         for (const item of response.items) {
           nextMap[item.id] = item;
         }
         setCoursesById(nextMap);
+        setFxRates(fxResponse.rates || { USD: 1 });
       } catch {
         setCoursesById({});
       }
@@ -107,14 +129,14 @@ export function OnboardingCheckout() {
                   {(course) => (
                     <div class="flex items-center justify-between rounded-md border border-border/70 bg-card px-3 py-2">
                       <span>{course.title}</span>
-                      <span class="font-medium">${course.price}</span>
+                      <span class="font-medium">{formatPrice(course.priceUsdCents)}</span>
                     </div>
                   )}
                 </For>
                 <Show when={communitySelected()}>
                   <div class="flex items-center justify-between rounded-md border border-border/70 bg-card px-3 py-2">
                     <span>{t("student.onboarding.checkout.communityLabel")}</span>
-                    <span class="font-medium">${COMMUNITY_PRICE}</span>
+                    <span class="font-medium">{formatPrice(COMMUNITY_PRICE_USD_CENTS)}</span>
                   </div>
                 </Show>
               </div>
@@ -122,7 +144,9 @@ export function OnboardingCheckout() {
           </div>
           <div class="flex items-center justify-between rounded-xl border border-border/70 bg-muted/30 px-4 py-3">
             <span class="text-muted-foreground">{t("student.onboarding.checkout.totalLabel")}</span>
-            <span class="text-lg font-semibold">${totalPrice()}</span>
+            <span class="text-lg font-semibold">
+              {formatCents(totalPrice(), preferredCurrency())}
+            </span>
           </div>
           <div class="flex flex-wrap gap-2">
             <Button as={A} href="/onboarding/courses" variant="outline">

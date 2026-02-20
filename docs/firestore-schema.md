@@ -33,7 +33,10 @@ User profile + role.
 - `role`: `"student" | "admin" | "expert"`
 - `displayName`: `string`
 - `email`: `string`
-- `status`: `"active" | "disabled"`
+- `status`: `"disabled" | "active" | "community_only" | "expired"`
+- `preferredCurrency`: `"USD" | "EUR" | "PLN"` (optional; default UI fallback is `USD`)
+- `selectedGoalId`: `string | null` (optional)
+- `selectedCourses`: `array<string>` (optional)
 - `createdAt`: `timestamp`
 - `updatedAt`: `timestamp` (optional but recommended)
 
@@ -262,6 +265,57 @@ Published knowledge base entries, optionally derived from a question.
 
 ---
 
+## Courses / Lessons / FX
+
+### 11) `courses/{courseId}`
+
+Catalog of paid courses for onboarding/checkout.
+
+**Fields**
+
+- `title`: `string`
+- `description`: `string` (optional)
+- `goalIds`: `array<string>` (course can belong to many goals)
+- `priceUsdCents`: `int` (USD cents; source of truth)
+- `isActive`: `bool`
+- `createdAt`: `timestamp`
+- `updatedAt`: `timestamp`
+
+**Notes**
+
+- UI conversion to selected currency must use FX endpoint and keep USD cents as canonical value.
+- Inactive courses can be hidden or marked unavailable in UI.
+
+### 12) `courses/{courseId}/lessons/{lessonId}`
+
+Lesson content for a course.
+
+**Fields**
+
+- `title`: `string`
+- `type`: `"video" | "text" | "task"`
+- `content`: `string`
+- `order`: `int` (for sorting)
+- `isActive`: `bool`
+- `createdAt`: `timestamp`
+- `updatedAt`: `timestamp`
+
+**Access rule**
+
+- Read allowed only for `users/{uid}.status == "active"` students (staff always allowed).
+
+### 13) `fx_rates/latest`
+
+Latest FX snapshot used by frontend price conversion.
+
+**Fields**
+
+- `base`: `string` (usually `USD`)
+- `rates`: `map<string, number>` (example: `{ USD: 1, EUR: 0.92, RUB: 92.4 }`)
+- `updatedAt`: `timestamp`
+
+---
+
 ## Recommended indexes (Firestore composite)
 
 Create these if Firestore asks, or proactively:
@@ -284,6 +338,11 @@ Create these if Firestore asks, or proactively:
 ### Step completions feed
 
 6. `step_completions`: index/query on `completedAt DESC` for admin feed.
+
+### Courses and lessons
+
+7. `courses`: composite index for active catalog listing/filtering, e.g. `isActive ASC, title ASC`.
+8. `courses/{courseId}/lessons`: index for ordered active lessons, e.g. `isActive ASC, order ASC`.
 
 ---
 

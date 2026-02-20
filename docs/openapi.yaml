@@ -17,6 +17,7 @@ tags:
   - name: Admin - Settings
   - name: Questions
   - name: Library
+  - name: Courses
 
 components:
   securitySchemes:

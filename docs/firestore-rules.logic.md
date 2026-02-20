@@ -130,7 +130,28 @@ Goal-specific template steps.
 
 ---
 
-## 5) `step_templates/{templateId}`
+## 5) `courses/{courseId}` and `courses/{courseId}/lessons/{lessonId}`
+
+### Student access
+
+- Courses read: ✅ allowed only for active courses (`isActive == true`)
+- Courses write: ❌ denied
+- Lessons read/write: ❌ denied directly from client
+  - Lesson content must be served through backend API.
+
+### Staff access
+
+- Courses read/write: ✅ full CRUD
+- Lessons read/write: ✅ full CRUD
+
+### Thin client principle
+
+- Client does not write courses/lessons directly.
+- Any lesson reads for students should go through backend authorization/business logic.
+
+---
+
+## 6) `step_templates/{templateId}`
 
 ### Student access
 
@@ -148,7 +169,7 @@ Goal-specific template steps.
 
 ---
 
-## 6) `student_plans/{uid}`
+## 7) `student_plans/{uid}`
 
 Plan document for the student.
 **Document id equals student uid.**
@@ -174,7 +195,7 @@ Plan document for the student.
 
 ---
 
-## 7) `student_plans/{uid}/steps/{stepId}`
+## 8) `student_plans/{uid}/steps/{stepId}`
 
 Steps are stored as a subcollection under the student plan.
 
@@ -216,7 +237,7 @@ When student updates step:
 
 ---
 
-## 8) `questions/{questionId}`
+## 9) `questions/{questionId}`
 
 ### Student access
 
@@ -253,7 +274,7 @@ When student updates step:
 
 ---
 
-## 9) `library_entries/{entryId}`
+## 10) `library_entries/{entryId}`
 
 ### Student access
 
@@ -281,6 +302,8 @@ When student updates step:
 - `categories`: read
 - `goals`: read (recommended)
 - `goals/{goalId}/template_steps`: no access
+- `courses`: read active only
+- `courses/{courseId}/lessons`: no direct access
 - `step_templates`: read (optional)
 - `student_plans/{uid}`: read self; no write
 - `student_plans/{uid}/steps`: read self; update progress only (`isDone`, `doneAt`)

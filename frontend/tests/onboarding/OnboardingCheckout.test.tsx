@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { I18nProvider } from "../../src/lib/i18n";
 import { listGoals } from "../../src/lib/adminApi";
 import { listCourses } from "../../src/lib/coursesApi";
+import { getFxRates } from "../../src/lib/fxApi";
 import { OnboardingCheckout } from "../../src/routes/onboarding/OnboardingCheckout";
 
 vi.mock("@solidjs/router", () => ({
@@ -39,8 +40,18 @@ vi.mock("../../src/lib/adminApi", () => ({
   listGoals: vi.fn(),
 }));
 
-vi.mock("../../src/lib/coursesApi", () => ({
-  listCourses: vi.fn(),
+vi.mock("../../src/lib/coursesApi", async () => {
+  const actual = await vi.importActual<typeof import("../../src/lib/coursesApi")>(
+    "../../src/lib/coursesApi",
+  );
+  return {
+    ...actual,
+    listCourses: vi.fn(),
+  };
+});
+
+vi.mock("../../src/lib/fxApi", () => ({
+  getFxRates: vi.fn(),
 }));
 
 vi.mock("../../src/routes/onboarding/OnboardingLayout", () => ({
@@ -51,6 +62,12 @@ describe("OnboardingCheckout", () => {
   beforeEach(() => {
     vi.mocked(listGoals).mockReset();
     vi.mocked(listCourses).mockReset();
+    vi.mocked(getFxRates).mockReset();
+    vi.mocked(getFxRates).mockResolvedValue({
+      base: "USD",
+      rates: { USD: 1, EUR: 0.9, RUB: 90 },
+      updatedAt: null,
+    });
   });
 
   it("renders summary, total and payment instructions", async () => {
@@ -63,8 +80,9 @@ describe("OnboardingCheckout", () => {
           id: "course-1",
           title: "Course One",
           shortDescription: "Desc one",
-          price: 40,
+          priceUsdCents: 4000,
           isActive: true,
+          goalIds: ["goal-1"],
         },
       ],
     });
@@ -76,9 +94,9 @@ describe("OnboardingCheckout", () => {
     ));
 
     expect(await screen.findByText("Video Creator")).toBeInTheDocument();
-    expect(screen.getByText("Course One")).toBeInTheDocument();
+    expect(await screen.findByText("Course One")).toBeInTheDocument();
     expect(screen.getByText("Community")).toBeInTheDocument();
-    expect(screen.getByText("$59")).toBeInTheDocument();
+    expect(screen.getByText("$59.00")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Go to Boosty" })).toBeInTheDocument();
     expect(
       screen.getByText("Activation is manual after human review. Please wait for confirmation from the team."),

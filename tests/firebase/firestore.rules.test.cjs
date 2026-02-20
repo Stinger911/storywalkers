@@ -10,7 +10,7 @@ const {
 const { doc, setDoc, getDoc, updateDoc, deleteDoc, collection, addDoc } = require("firebase/firestore");
 
 const PROJECT_ID = "demo-rules-tests"; // any string for emulator
-const RULES_PATH = path.resolve(process.cwd(), "firestore.rules");
+const RULES_PATH = path.resolve(process.cwd(), "..", "..", "firebase", "firestore.rules");
 
 function userRef(db, uid) {
   return doc(db, "users", uid);
@@ -30,6 +30,14 @@ function questionRef(db, id) {
 
 function libraryRef(db, id) {
   return doc(db, "library_entries", id);
+}
+
+function courseRef(db, id) {
+  return doc(db, "courses", id);
+}
+
+function lessonRef(db, courseId, lessonId) {
+  return doc(db, "courses", courseId, "lessons", lessonId);
 }
 
 describe("Firestore security rules (MVP)", () => {
@@ -70,7 +78,7 @@ describe("Firestore security rules (MVP)", () => {
         role: "student",
         displayName: "Student B",
         email: "b@test.local",
-        status: "active",
+        status: "community_only",
         createdAt: new Date(),
         updatedAt: new Date(),
       });
@@ -145,6 +153,38 @@ describe("Firestore security rules (MVP)", () => {
         videoUrl: null,
         status: "draft",
         keywords: ["draft"],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      // Courses
+      await setDoc(courseRef(db, "course_video"), {
+        title: "Video Basics",
+        shortDescription: "Editing and export essentials",
+        description: "Full description",
+        priceUsdCents: 12900,
+        goalIds: ["goal_video_editor"],
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      await setDoc(courseRef(db, "course_inactive"), {
+        title: "Inactive Course",
+        shortDescription: "Inactive",
+        description: "Inactive description",
+        priceUsdCents: 9900,
+        goalIds: ["goal_video_editor"],
+        isActive: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      await setDoc(lessonRef(db, "course_video", "lesson_1"), {
+        title: "Lesson 1",
+        content: "Lesson content",
+        order: 1,
+        isActive: true,
         createdAt: new Date(),
         updatedAt: new Date(),
       });
@@ -363,6 +403,72 @@ describe("Firestore security rules (MVP)", () => {
 
     await assertFails(updateDoc(libraryRef(dbA, "kb_published"), { title: "Hacked" }));
     await assertFails(deleteDoc(libraryRef(dbA, "kb_published")));
+  });
+
+  test("Courses: students read only active; lessons are staff-only", async () => {
+    const dbA = testEnv.authenticatedContext(studentA.uid, studentA.token).firestore();
+    const dbB = testEnv.authenticatedContext(studentB.uid, studentB.token).firestore();
+    const dbStaff = testEnv.authenticatedContext(staff.uid, staff.token).firestore();
+
+    // students can read active courses
+    await assertSucceeds(getDoc(courseRef(dbA, "course_video")));
+    await assertSucceeds(getDoc(courseRef(dbB, "course_video")));
+    // students cannot read inactive courses
+    await assertFails(getDoc(courseRef(dbA, "course_inactive")));
+    await assertFails(getDoc(courseRef(dbB, "course_inactive")));
+
+    // staff can read any course
+    await assertSucceeds(getDoc(courseRef(dbStaff, "course_inactive")));
+
+    // students cannot read lessons directly
+    await assertFails(getDoc(lessonRef(dbA, "course_video", "lesson_1")));
+    await assertFails(getDoc(lessonRef(dbB, "course_video", "lesson_1")));
+
+    // students cannot write lessons directly
+    await assertFails(updateDoc(lessonRef(dbA, "course_video", "lesson_1"), { title: "Hack" }));
+
+    // staff has full lesson access
+    await assertSucceeds(getDoc(lessonRef(dbStaff, "course_video", "lesson_1")));
+    await assertSucceeds(updateDoc(lessonRef(dbStaff, "course_video", "lesson_1"), { title: "Staff Edit" }));
+  });
+
+  test("Courses/Lessons: staff can CRUD", async () => {
+    const dbStaff = testEnv.authenticatedContext(staff.uid, staff.token).firestore();
+
+    await assertSucceeds(setDoc(courseRef(dbStaff, "course_staff_new"), {
+      title: "Staff Course",
+      description: "Created by staff",
+      priceUsdCents: 19900,
+      goalIds: ["goal_video_editor"],
+      isActive: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }));
+
+    await assertSucceeds(setDoc(lessonRef(dbStaff, "course_staff_new", "lesson_new"), {
+      title: "Lesson New",
+      type: "text",
+      content: "Body",
+      order: 0,
+      isActive: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }));
+
+    await assertSucceeds(updateDoc(courseRef(dbStaff, "course_staff_new"), {
+      title: "Staff Course Updated",
+      updatedAt: new Date(),
+    }));
+    await assertSucceeds(updateDoc(lessonRef(dbStaff, "course_staff_new", "lesson_new"), {
+      order: 2,
+      updatedAt: new Date(),
+    }));
+
+    await assertSucceeds(getDoc(courseRef(dbStaff, "course_staff_new")));
+    await assertSucceeds(getDoc(lessonRef(dbStaff, "course_staff_new", "lesson_new")));
+
+    await assertSucceeds(deleteDoc(lessonRef(dbStaff, "course_staff_new", "lesson_new")));
+    await assertSucceeds(deleteDoc(courseRef(dbStaff, "course_staff_new")));
   });
 
   test("Staff can create/reorder steps and manage plans (sanity)", async () => {

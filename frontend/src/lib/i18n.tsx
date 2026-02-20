@@ -264,6 +264,7 @@ type RawDictionary = {
         subtitle: string;
         cardTitle: string;
         cardDescription: string;
+        currencyLabel: string;
         selected: string;
         clickToSelect: string;
         totalLabel: string;
@@ -274,6 +275,7 @@ type RawDictionary = {
         retry: string;
         loadError: string;
         saveError: string;
+        currencySaveError: string;
         empty: string;
       };
       checkout: {
@@ -564,6 +566,7 @@ const dictionaries: Record<Locale, RawDictionary> = {
           cardTitle: "Course selection",
           cardDescription:
             "Choose your paid courses and optionally add community access.",
+          currencyLabel: "Preferred currency",
           selected: "Selected",
           clickToSelect: "Click to select",
           totalLabel: "Total price",
@@ -575,6 +578,7 @@ const dictionaries: Record<Locale, RawDictionary> = {
           retry: "Retry",
           loadError: "Could not load courses.",
           saveError: "Could not save selected courses.",
+          currencySaveError: "Could not save preferred currency.",
           empty: "No courses selected yet.",
         },
         checkout: {
@@ -864,6 +868,7 @@ const dictionaries: Record<Locale, RawDictionary> = {
           cardTitle: "Выбор курсов",
           cardDescription:
             "Выберите платные курсы и при желании добавьте доступ в сообщество.",
+          currencyLabel: "Предпочитаемая валюта",
           selected: "Выбрано",
           clickToSelect: "Нажмите, чтобы выбрать",
           totalLabel: "Итоговая стоимость",
@@ -875,6 +880,7 @@ const dictionaries: Record<Locale, RawDictionary> = {
           retry: "Повторить",
           loadError: "Не удалось загрузить курсы.",
           saveError: "Не удалось сохранить выбранные курсы.",
+          currencySaveError: "Не удалось сохранить предпочитаемую валюту.",
           empty: "Курсы пока не выбраны.",
         },
         checkout: {

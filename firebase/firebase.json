@@ -22,5 +22,11 @@
         "destination": "/index.html"
       }
     ]
+  },
+  "emulators": {
+    "firestore": {
+      "host": "localhost",
+      "port": "8998"
+    }
   }
 }
