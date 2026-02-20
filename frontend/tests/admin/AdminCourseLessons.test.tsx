@@ -14,6 +14,7 @@ vi.mock("@solidjs/router", () => ({
     </a>
   ),
   useParams: () => ({ courseId: "course-1" }),
+  useSearchParams: () => [{}, () => {}],
 }));
 
 vi.mock("../../src/lib/adminApi", () => ({
@@ -38,7 +39,7 @@ describe("AdminCourseLessons", () => {
     vi.mocked(reorderAdminCourseLessons).mockReset();
   });
 
-  it("triggers reorder request on drag and drop", async () => {
+  it("triggers reorder request via fallback move control", async () => {
     vi.mocked(listAdminCourseLessons).mockResolvedValue({
       items: [
         {
@@ -66,18 +67,7 @@ describe("AdminCourseLessons", () => {
     expect(await screen.findByDisplayValue("Lesson One")).toBeInTheDocument();
     expect(await screen.findByDisplayValue("Lesson Two")).toBeInTheDocument();
 
-    const firstRow = screen
-      .getByDisplayValue("Lesson One")
-      .closest("div[draggable]");
-    const secondRow = screen
-      .getByDisplayValue("Lesson Two")
-      .closest("div[draggable]");
-
-    expect(firstRow).toBeTruthy();
-    expect(secondRow).toBeTruthy();
-
-    fireEvent.dragStart(firstRow as Element);
-    fireEvent.drop(secondRow as Element);
+    fireEvent.click(screen.getByRole("button", { name: "Move lesson l1 down" }));
 
     await waitFor(() => {
       expect(reorderAdminCourseLessons).toHaveBeenCalledWith("course-1", {

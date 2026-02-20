@@ -10,6 +10,7 @@ vi.mock("@solidjs/router", () => ({
       {props.children}
     </a>
   ),
+  useSearchParams: () => [{}, () => {}],
 }));
 
 vi.mock("../../src/lib/adminApi", () => ({
@@ -51,7 +52,7 @@ describe("AdminCourses", () => {
     expect(screen.getByText("Desc one")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Lessons" })).toHaveAttribute(
       "href",
-      "/admin/courses/course-1/lessons",
+      "/admin/courses/course-1/lessons?title=Course%20One",
     );
     await waitFor(() => {
       expect(listAdminCourses).toHaveBeenCalledWith({ q: undefined, limit: 200 });

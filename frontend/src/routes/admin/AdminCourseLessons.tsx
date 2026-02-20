@@ -1,4 +1,4 @@
-import { A, useParams } from "@solidjs/router";
+import { A, useParams, useSearchParams } from "@solidjs/router";
 import { createMemo, createSignal, createEffect, For, Show } from "solid-js";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
@@ -12,6 +12,14 @@ import {
 } from "../../components/ui/dialog";
 import { Page } from "../../components/ui/page";
 import { SectionCard } from "../../components/ui/section-card";
+import {
+  Select,
+  SelectContent,
+  SelectHiddenSelect,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../../components/ui/select";
 import {
   TextField,
   TextFieldInput,
@@ -40,27 +48,50 @@ type LessonDraft = {
   title: string;
   type: "video" | "text" | "task";
   content: string;
+  materialUrl: string;
   order: number;
   isActive: boolean;
 };
 
+type LessonTypeOption = {
+  value: "video" | "text" | "task";
+  label: string;
+};
+
+const LESSON_TYPE_OPTIONS: LessonTypeOption[] = [
+  { value: "video", label: "video" },
+  { value: "text", label: "text" },
+  { value: "task", label: "task" },
+];
+
 export function AdminCourseLessons() {
   const params = useParams();
+  const [searchParams] = useSearchParams();
   const courseId = createMemo(() => params.courseId || "");
+  const courseTitle = createMemo(() => {
+    const raw = searchParams.title;
+    return typeof raw === "string" && raw.trim() ? raw.trim() : courseId();
+  });
 
   const [loading, setLoading] = createSignal(true);
   const [saving, setSaving] = createSignal(false);
   const [error, setError] = createSignal<string | null>(null);
   const [items, setItems] = createSignal<LessonDraft[]>([]);
-  const [draggedId, setDraggedId] = createSignal<string | null>(null);
+  const [pointerDraggingId, setPointerDraggingId] = createSignal<string | null>(null);
+  const [pointerTargetId, setPointerTargetId] = createSignal<string | null>(null);
+  const [pointerDragX, setPointerDragX] = createSignal(0);
+  const [pointerDragY, setPointerDragY] = createSignal(0);
 
   const [newTitle, setNewTitle] = createSignal("");
   const [newType, setNewType] = createSignal<"video" | "text" | "task">("video");
   const [newContent, setNewContent] = createSignal("");
+  const [newMaterialUrl, setNewMaterialUrl] = createSignal("");
 
   const [contentModalOpen, setContentModalOpen] = createSignal(false);
   const [contentModalLessonId, setContentModalLessonId] = createSignal<string | null>(null);
   const [contentModalValue, setContentModalValue] = createSignal("");
+  const [contentModalMaterialUrl, setContentModalMaterialUrl] = createSignal("");
+  const [contentModalInitialMaterialUrl, setContentModalInitialMaterialUrl] = createSignal("");
 
   const normalizeLessons = (lessons: AdminLesson[]) =>
     lessons
@@ -71,6 +102,7 @@ export function AdminCourseLessons() {
         title: item.title,
         type: item.type,
         content: item.content,
+        materialUrl: item.materialUrl ?? "",
         order: item.order,
         isActive: item.isActive,
       }));
@@ -102,7 +134,6 @@ export function AdminCourseLessons() {
       await patchAdminCourseLesson(courseId(), lesson.id, {
         title: lesson.title.trim(),
         type: lesson.type,
-        content: lesson.content.trim(),
         order: lesson.order,
         isActive: lesson.isActive,
       });
@@ -128,9 +159,11 @@ export function AdminCourseLessons() {
         title: newTitle().trim(),
         type: newType(),
         content: newContent().trim(),
+        materialUrl: newMaterialUrl().trim() || null,
       });
       setNewTitle("");
       setNewContent("");
+      setNewMaterialUrl("");
       setNewType("video");
       showToast({ title: "Lesson created", variant: "success" });
       await load();
@@ -163,6 +196,8 @@ export function AdminCourseLessons() {
   const openContentModal = (lesson: LessonDraft) => {
     setContentModalLessonId(lesson.id);
     setContentModalValue(lesson.content);
+    setContentModalMaterialUrl(lesson.materialUrl);
+    setContentModalInitialMaterialUrl(lesson.materialUrl);
     setContentModalOpen(true);
   };
 
@@ -174,12 +209,46 @@ export function AdminCourseLessons() {
       setError("Content is required.");
       return;
     }
+    const isValidHttpUrl = (value: string) => {
+      try {
+        const parsed = new URL(value);
+        return parsed.protocol === "http:" || parsed.protocol === "https:";
+      } catch {
+        return false;
+      }
+    };
+
+    const materialUrl = contentModalMaterialUrl().trim();
+    const initialMaterialUrl = contentModalInitialMaterialUrl().trim();
+    const materialChanged = materialUrl !== initialMaterialUrl;
+
+    const payload: { content: string; materialUrl?: string | null } = { content };
+    if (materialUrl === "") {
+      payload.materialUrl = null;
+    } else if (isValidHttpUrl(materialUrl)) {
+      if (materialChanged) {
+        payload.materialUrl = materialUrl;
+      }
+    } else if (materialChanged) {
+      setError("Material URL must be a valid http(s) URL.");
+      return;
+    }
+
     setSaving(true);
     setError(null);
     try {
-      await patchAdminCourseLesson(courseId(), lessonId, { content });
+      await patchAdminCourseLesson(courseId(), lessonId, payload);
       setItems((prev) =>
-        prev.map((item) => (item.id === lessonId ? { ...item, content } : item)),
+        prev.map((item) =>
+          item.id === lessonId
+            ? {
+                ...item,
+                content,
+                materialUrl:
+                  payload.materialUrl !== undefined ? (payload.materialUrl ?? "") : item.materialUrl,
+              }
+            : item,
+        ),
       );
       showToast({ title: "Lesson content updated", variant: "success" });
       setContentModalOpen(false);
@@ -212,8 +281,7 @@ export function AdminCourseLessons() {
     }
   };
 
-  const onDrop = async (targetId: string) => {
-    const dragged = draggedId();
+  const reorderBetween = async (dragged: string, targetId: string) => {
     if (!dragged || dragged === targetId) return;
     const current = items();
     const from = current.findIndex((item) => item.id === dragged);
@@ -225,10 +293,65 @@ export function AdminCourseLessons() {
     await reorderPersist(next);
   };
 
+  const onHandlePointerDown = (event: PointerEvent, lessonId: string) => {
+    event.preventDefault();
+    setPointerDraggingId(lessonId);
+    setPointerTargetId(lessonId);
+    setPointerDragX(event.clientX);
+    setPointerDragY(event.clientY);
+    const target = event.currentTarget as HTMLElement | null;
+    target?.setPointerCapture(event.pointerId);
+  };
+
+  const onHandlePointerMove = (event: PointerEvent) => {
+    if (!pointerDraggingId()) return;
+    setPointerDragX(event.clientX);
+    setPointerDragY(event.clientY);
+    const el = document.elementFromPoint(event.clientX, event.clientY);
+    const row = el?.closest?.("[data-lesson-row-id]") as HTMLElement | null;
+    const rowId = row?.getAttribute("data-lesson-row-id");
+    if (rowId) {
+      setPointerTargetId(rowId);
+    }
+  };
+
+  const onHandlePointerEnd = async (event: PointerEvent) => {
+    const dragged = pointerDraggingId();
+    const dropTargetId = pointerTargetId();
+    const pointerTarget = event.currentTarget as HTMLElement | null;
+    if (pointerTarget?.hasPointerCapture(event.pointerId)) {
+      pointerTarget.releasePointerCapture(event.pointerId);
+    }
+    setPointerDraggingId(null);
+    setPointerTargetId(null);
+    setPointerDragX(0);
+    setPointerDragY(0);
+    if (!dragged || !dropTargetId || dragged === dropTargetId) return;
+    await reorderBetween(dragged, dropTargetId);
+  };
+
+  const draggedLessonTitle = createMemo(() => {
+    const id = pointerDraggingId();
+    if (!id) return "";
+    return items().find((item) => item.id === id)?.title || "";
+  });
+
+  const moveLesson = async (lessonId: string, direction: "up" | "down") => {
+    const current = items();
+    const index = current.findIndex((item) => item.id === lessonId);
+    if (index < 0) return;
+    const targetIndex = direction === "up" ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= current.length) return;
+    const next = current.slice();
+    const [moved] = next.splice(index, 1);
+    next.splice(targetIndex, 0, moved);
+    await reorderPersist(next);
+  };
+
   return (
     <Page
       title="Course lessons"
-      subtitle={`Manage lessons for course ${courseId()}`}
+      subtitle={`Manage lessons for course ${courseTitle()}`}
       breadcrumb={
         <Breadcrumb>
           <BreadcrumbList>
@@ -252,6 +375,18 @@ export function AdminCourseLessons() {
         </A>
       }
     >
+      <Show when={pointerDraggingId()}>
+        <div
+          class="pointer-events-none fixed z-[60] -translate-x-1/2 -translate-y-1/2 rounded-md border border-border/70 bg-card px-3 py-1 text-sm font-medium shadow-lg"
+          style={{
+            left: `${pointerDragX()}px`,
+            top: `${pointerDragY()}px`,
+          }}
+        >
+          {draggedLessonTitle()}
+        </div>
+      </Show>
+
       <Show when={error()}>
         <div class="rounded-2xl border border-error bg-error/10 p-4 text-sm text-error-foreground">
           {error()}
@@ -269,21 +404,36 @@ export function AdminCourseLessons() {
               placeholder="Lesson title"
             />
           </TextField>
-          <div class="grid gap-2">
-            <label class="text-sm font-medium" for="new-lesson-type">
-              Type
-            </label>
-            <select
-              id="new-lesson-type"
-              class="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={newType()}
-              onChange={(e) => setNewType(e.currentTarget.value as "video" | "text" | "task")}
+          <TextField>
+            <TextFieldLabel for="new-lesson-type">Type</TextFieldLabel>
+            <Select
+              value={LESSON_TYPE_OPTIONS.find((item) => item.value === newType())}
+              onChange={(value) => {
+                const raw = value?.value;
+                if (raw === "video" || raw === "text" || raw === "task") {
+                  setNewType(raw);
+                }
+              }}
+              options={LESSON_TYPE_OPTIONS}
+              optionValue={(option) => (option as LessonTypeOption).value}
+              optionTextValue={(option) => (option as LessonTypeOption).label}
+              itemComponent={(props) => (
+                <SelectItem item={props.item}>
+                  {(props.item.rawValue as LessonTypeOption).label}
+                </SelectItem>
+              )}
             >
-              <option value="video">video</option>
-              <option value="text">text</option>
-              <option value="task">task</option>
-            </select>
-          </div>
+              <SelectHiddenSelect id="new-lesson-type" />
+              <SelectTrigger aria-label="Type">
+                <SelectValue<LessonTypeOption>>
+                  {(state) =>
+                    (state?.selectedOption() as LessonTypeOption | undefined)?.label || "video"
+                  }
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent />
+            </Select>
+          </TextField>
         </div>
         <div class="mt-3">
           <TextField>
@@ -294,6 +444,17 @@ export function AdminCourseLessons() {
               value={newContent()}
               onInput={(e) => setNewContent(e.currentTarget.value)}
               placeholder="Lesson content"
+            />
+          </TextField>
+        </div>
+        <div class="mt-3">
+          <TextField>
+            <TextFieldLabel for="new-lesson-material-url">Material URL</TextFieldLabel>
+            <TextFieldInput
+              id="new-lesson-material-url"
+              value={newMaterialUrl()}
+              onInput={(e) => setNewMaterialUrl(e.currentTarget.value)}
+              placeholder="https://..."
             />
           </TextField>
         </div>
@@ -327,46 +488,69 @@ export function AdminCourseLessons() {
                 {(lesson) => (
                   <div
                     class="rounded-xl border border-border/70 bg-card p-3"
-                    draggable
-                    onDragStart={() => setDraggedId(lesson.id)}
-                    onDragOver={(e) => e.preventDefault()}
-                    onDrop={() => void onDrop(lesson.id)}
+                    data-lesson-row-id={lesson.id}
                   >
-                    <div class="grid gap-3 md:grid-cols-[60px_1fr_140px_160px_auto] md:items-center">
-                      <div class="text-sm font-semibold text-muted-foreground">
-                        #{lesson.order}
+                    <div class="grid gap-3 md:grid-cols-[64px_1fr_140px_160px_auto] md:items-center">
+                      <div class="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
+                        <span
+                          class="cursor-grab select-none rounded border border-border/70 px-2 py-1"
+                          classList={{ "cursor-grabbing": pointerDraggingId() === lesson.id }}
+                          onPointerDown={(e) => onHandlePointerDown(e, lesson.id)}
+                          onPointerMove={onHandlePointerMove}
+                          onPointerUp={(e) => void onHandlePointerEnd(e)}
+                          onPointerCancel={(e) => void onHandlePointerEnd(e)}
+                          title="Drag to reorder"
+                          aria-label={`Drag lesson ${lesson.id}`}
+                        >
+                          ::
+                        </span>
+                        <span>#{lesson.order}</span>
                       </div>
-                      <TextField>
-                        <TextFieldInput
-                          value={lesson.title}
-                          onInput={(e) =>
-                            setItems((prev) =>
-                              prev.map((item) =>
-                                item.id === lesson.id
-                                  ? { ...item, title: e.currentTarget.value }
-                                  : item,
-                              ),
-                            )
-                          }
-                        />
-                      </TextField>
-                      <select
-                        class="h-10 rounded-md border border-input bg-background px-3 text-sm"
-                        value={lesson.type}
-                        onChange={(e) =>
+                      <input
+                        class="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        value={lesson.title}
+                        onInput={(e) =>
                           setItems((prev) =>
                             prev.map((item) =>
                               item.id === lesson.id
-                                ? { ...item, type: e.currentTarget.value as "video" | "text" | "task" }
+                                ? { ...item, title: e.currentTarget.value }
                                 : item,
                             ),
                           )
                         }
+                      />
+                      <Select
+                        value={LESSON_TYPE_OPTIONS.find((item) => item.value === lesson.type)}
+                        onChange={(value) => {
+                          const raw = value?.value;
+                          if (raw === "video" || raw === "text" || raw === "task") {
+                            setItems((prev) =>
+                              prev.map((item) =>
+                                item.id === lesson.id ? { ...item, type: raw } : item,
+                              ),
+                            );
+                          }
+                        }}
+                        options={LESSON_TYPE_OPTIONS}
+                        optionValue={(option) => (option as LessonTypeOption).value}
+                        optionTextValue={(option) => (option as LessonTypeOption).label}
+                        itemComponent={(props) => (
+                          <SelectItem item={props.item}>
+                            {(props.item.rawValue as LessonTypeOption).label}
+                          </SelectItem>
+                        )}
                       >
-                        <option value="video">video</option>
-                        <option value="text">text</option>
-                        <option value="task">task</option>
-                      </select>
+                        <SelectHiddenSelect />
+                        <SelectTrigger aria-label={`Lesson type ${lesson.id}`}>
+                          <SelectValue<LessonTypeOption>>
+                            {(state) =>
+                              (state?.selectedOption() as LessonTypeOption | undefined)?.label ||
+                              lesson.type
+                            }
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent />
+                      </Select>
                       <div class="flex items-center gap-2">
                         <label class="text-xs text-muted-foreground">Active</label>
                         <input
@@ -387,6 +571,29 @@ export function AdminCourseLessons() {
                         </Badge>
                       </div>
                       <div class="flex flex-wrap justify-end gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => void moveLesson(lesson.id, "up")}
+                          disabled={saving() || items().findIndex((item) => item.id === lesson.id) === 0}
+                          title="Move up"
+                          aria-label={`Move lesson ${lesson.id} up`}
+                        >
+                          ↑
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => void moveLesson(lesson.id, "down")}
+                          disabled={
+                            saving() ||
+                            items().findIndex((item) => item.id === lesson.id) === items().length - 1
+                          }
+                          title="Move down"
+                          aria-label={`Move lesson ${lesson.id} down`}
+                        >
+                          ↓
+                        </Button>
                         <Button variant="outline" size="sm" onClick={() => openContentModal(lesson)}>
                           Content
                         </Button>
@@ -431,6 +638,15 @@ export function AdminCourseLessons() {
               rows={12}
               value={contentModalValue()}
               onInput={(e) => setContentModalValue(e.currentTarget.value)}
+            />
+          </TextField>
+          <TextField>
+            <TextFieldLabel for="lesson-material-url-modal">Material URL</TextFieldLabel>
+            <TextFieldInput
+              id="lesson-material-url-modal"
+              value={contentModalMaterialUrl()}
+              onInput={(e) => setContentModalMaterialUrl(e.currentTarget.value)}
+              placeholder="https://..."
             />
           </TextField>
           <DialogFooter>

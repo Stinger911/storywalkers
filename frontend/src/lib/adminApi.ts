@@ -31,6 +31,7 @@ export type AdminLesson = {
   title: string
   type: "video" | "text" | "task"
   content: string
+  materialUrl?: string | null
   order: number
   isActive: boolean
   createdAt?: unknown
@@ -241,6 +242,7 @@ export async function createAdminCourseLesson(
     title: string
     type: "video" | "text" | "task"
     content: string
+    materialUrl?: string | null
     order?: number
     isActive?: boolean
   },
@@ -259,6 +261,7 @@ export async function patchAdminCourseLesson(
     title?: string
     type?: "video" | "text" | "task"
     content?: string
+    materialUrl?: string | null
     order?: number
     isActive?: boolean
   },

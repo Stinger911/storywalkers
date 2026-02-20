@@ -58,6 +58,7 @@ def _lesson_from_doc(snap: firestore.DocumentSnapshot) -> dict[str, Any]:
         "id": snap.id,
         "title": _as_string(data.get("title")),
         "content": _as_string(data.get("content")),
+        "materialUrl": _as_string(data.get("materialUrl")) or None,
         "order": _as_int(data.get("order")),
         "isActive": _as_bool(data.get("isActive"), default=True),
         "updatedAt": data.get("updatedAt"),

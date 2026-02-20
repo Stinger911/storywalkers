@@ -1,5 +1,5 @@
 import { createSignal, For, onMount, Show } from "solid-js";
-import { A } from "@solidjs/router";
+import { A, useSearchParams } from "@solidjs/router";
 import { Button } from "../../components/ui/button";
 import { Page } from "../../components/ui/page";
 import { SectionCard } from "../../components/ui/section-card";
@@ -50,6 +50,7 @@ function dollarsToCents(value: string) {
 }
 
 export function AdminCourses() {
+  const [searchParams] = useSearchParams();
   const [items, setItems] = createSignal<AdminCourse[]>([]);
   const [goals, setGoals] = createSignal<Goal[]>([]);
   const [loading, setLoading] = createSignal(true);
@@ -64,6 +65,9 @@ export function AdminCourses() {
     isActive: true,
   });
 
+  const goalName = (goalId: string) =>
+    goals().find((goal) => goal.id === goalId)?.title ?? goalId;
+
   const loadGoals = async () => {
     const data = await listGoals();
     setGoals(data.items);
@@ -75,6 +79,13 @@ export function AdminCourses() {
     try {
       const data = await listAdminCourses({ q: query() || undefined, limit: 200 });
       setItems(data.items);
+      const editId = searchParams.edit;
+      if (editId) {
+        const match = data.items.find((item) => item.id === editId);
+        if (match) {
+          selectItem(match);
+        }
+      }
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -280,13 +291,15 @@ export function AdminCourses() {
                           </div>
                           <div class="mt-1 text-xs text-muted-foreground">
                             ${centsToDollars(item.priceUsdCents)} · goals:{" "}
-                            {item.goalIds.length ? item.goalIds.join(", ") : "none"}
+                            {item.goalIds.length
+                              ? item.goalIds.map((goalId) => goalName(goalId)).join(", ")
+                              : "none"}
                           </div>
                         </div>
                         <div class="flex flex-wrap gap-2">
                           <Button
                             as={A}
-                            href={`/admin/courses/${item.id}/lessons`}
+                            href={`/admin/courses/${item.id}/lessons?title=${encodeURIComponent(item.title)}`}
                             variant="outline"
                             size="sm"
                           >

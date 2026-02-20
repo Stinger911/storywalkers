@@ -1,5 +1,6 @@
 from datetime import datetime
 from enum import Enum
+from urllib.parse import urlparse
 
 from pydantic import BaseModel, Field, StrictInt, field_validator
 from pydantic_core import PydanticCustomError
@@ -16,6 +17,23 @@ def _trim_required(value: str) -> str:
     trimmed = value.strip()
     if not trimmed:
         raise PydanticCustomError("string_empty", "value must not be empty")
+    return trimmed
+
+
+def _validate_optional_url(value: str | None) -> str | None:
+    trimmed = _trim_optional(value)
+    if trimmed is None:
+        return None
+    parsed = urlparse(trimmed)
+    if parsed.scheme in {"http", "https"} and parsed.netloc:
+        return trimmed
+    # Backward-compatible normalization for links entered without scheme.
+    if "://" not in trimmed:
+        candidate = f"https://{trimmed}"
+        parsed_candidate = urlparse(candidate)
+        if parsed_candidate.netloc:
+            return candidate
+    # Keep legacy/non-standard values instead of failing request validation.
     return trimmed
 
 
@@ -105,6 +123,7 @@ class LessonBase(BaseModel):
     title: str
     type: LessonType
     content: str
+    materialUrl: str | None = None
     order: StrictInt = Field(ge=0)
     isActive: bool = True
 
@@ -118,11 +137,17 @@ class LessonBase(BaseModel):
     def _validate_content(cls, value: str) -> str:
         return _trim_required(value)
 
+    @field_validator("materialUrl")
+    @classmethod
+    def _validate_material_url(cls, value: str | None) -> str | None:
+        return _validate_optional_url(value)
+
 
 class LessonCreate(BaseModel):
     title: str
     type: LessonType
     content: str
+    materialUrl: str | None = None
     order: StrictInt | None = Field(default=None, ge=0)
     isActive: bool = True
 
@@ -136,11 +161,17 @@ class LessonCreate(BaseModel):
     def _validate_content(cls, value: str) -> str:
         return _trim_required(value)
 
+    @field_validator("materialUrl")
+    @classmethod
+    def _validate_material_url(cls, value: str | None) -> str | None:
+        return _validate_optional_url(value)
+
 
 class LessonUpdate(BaseModel):
     title: str | None = None
     type: LessonType | None = None
     content: str | None = None
+    materialUrl: str | None = None
     order: StrictInt | None = Field(default=None, ge=0)
     isActive: bool | None = None
 
@@ -159,6 +190,11 @@ class LessonUpdate(BaseModel):
         if value is None:
             return None
         return _trim_required(value)
+
+    @field_validator("materialUrl")
+    @classmethod
+    def _validate_material_url(cls, value: str | None) -> str | None:
+        return _validate_optional_url(value)
 
 
 class Lesson(LessonBase):
