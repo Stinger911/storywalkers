@@ -54,6 +54,18 @@ Notes:
 - Cloud Run service account must have permissions for Firebase Auth + Firestore.
 - Firestore uses database `pathways` when `FIREBASE_PROJECT_ID` is set.
 
+### Telegram webhook setup
+
+Required env var:
+- `TELEGRAM_WEBHOOK_SECRET` (used to validate `X-Telegram-Bot-Api-Secret-Token`)
+
+Expose the webhook endpoint:
+- If using Firebase Hosting rewrites, use `/api/webhooks/telegram` (rewritten to Cloud Run).
+- Or call the Cloud Run URL directly, for example `https://<CLOUD_RUN_HOST>/webhooks/telegram`.
+
+setWebhook command example (plain text):
+https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/setWebhook?url=https://<YOUR_HOST>/api/webhooks/telegram&secret_token=<TELEGRAM_WEBHOOK_SECRET>
+
 ## CI-ready scripts
 
 These scripts are safe to call from CI and expect environment variables:

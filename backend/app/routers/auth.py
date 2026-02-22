@@ -14,9 +14,16 @@ from app.auth.deps import (
 )
 from app.auth.user_status import UserStatus, ensure_user_status_with_migration
 from app.core.errors import AppError
+from app.core.logging import get_logger
 from app.db.firestore import get_firestore_client
+from app.services.telegram import send_admin_message
+from app.services.telegram_events import (
+    fmt_lesson_completed,
+    fmt_questionnaire_completed,
+)
 
 router = APIRouter(prefix="/api", tags=["Auth"])
+logger = get_logger("app.db")
 
 
 ExperienceLevel = Literal["beginner", "intermediate", "advanced"]
@@ -257,6 +264,29 @@ def _sanitize_selected_courses(value: list[str]) -> list[str]:
     return unique
 
 
+def _is_profile_complete(data: dict[str, Any]) -> bool:
+    profile_form = data.get("profileForm")
+    if not isinstance(profile_form, dict):
+        return False
+    return bool(
+        _sanitize_optional_text(profile_form.get("telegram"))
+        or _sanitize_optional_text(profile_form.get("socialUrl"))
+        or profile_form.get("experienceLevel")
+        or _sanitize_optional_text(profile_form.get("notes"))
+    )
+
+
+def _onboarding_step(data: dict[str, Any]) -> str:
+    if not _sanitize_optional_text(data.get("selectedGoalId")):
+        return "goal_selection"
+    if not _is_profile_complete(data):
+        return "questionnaire"
+    selected_courses = data.get("selectedCourses")
+    if not isinstance(selected_courses, list) or len(_sanitize_selected_courses(selected_courses)) == 0:
+        return "course_selection"
+    return "checkout"
+
+
 @router.patch("/me", response_model=MeResponse)
 async def patch_me(
     payload: PatchMeRequest,
@@ -315,13 +345,33 @@ async def patch_me(
     if "subscriptionSelected" in payload_data and user.get("role") == "student":
         ensure_active_student_status({**user, "status": current_status})
 
+    before_step = _onboarding_step(current)
+    next_state = {**current, **updates}
+    after_step = _onboarding_step(next_state)
+    telegram_events = (
+        current.get("telegramEvents")
+        if isinstance(current.get("telegramEvents"), dict)
+        else {}
+    )
+    already_notified = bool(telegram_events.get("questionnaireCompletedAt"))
+    should_send_questionnaire_completed = (
+        before_step != "course_selection"
+        and after_step == "course_selection"
+        and not already_notified
+    )
+    if should_send_questionnaire_completed:
+        updates["telegramEvents"] = {
+            **telegram_events,
+            "questionnaireCompletedAt": firestore.SERVER_TIMESTAMP,
+        }
+
     updates["updatedAt"] = firestore.SERVER_TIMESTAMP
     doc_ref.update(updates)
 
     response_data = {**current, **updates}
     role_raw = current.get("role") or user.get("roleRaw") or "student"
     role = "staff" if role_raw in {"admin", "expert"} else "student"
-    return {
+    me_response = {
         "uid": user["uid"],
         "email": user.get("email") or current.get("email") or "",
         "displayName": response_data.get("displayName") or user.get("displayName") or "",
@@ -349,6 +399,20 @@ async def patch_me(
             else None
         ),
     }
+    if should_send_questionnaire_completed:
+        try:
+            await send_admin_message(fmt_questionnaire_completed(me_response))
+        except Exception:
+            logger.warning(
+                "questionnaire_completed_telegram_notify_failed",
+                extra={
+                    "event": "questionnaire_completed_telegram_notify_failed",
+                    "uid": me_response.get("uid"),
+                    "email": me_response.get("email"),
+                },
+                exc_info=True,
+            )
+    return me_response
 
 
 def _doc_or_404(
@@ -484,8 +548,15 @@ async def update_my_step_progress(
 async def complete_my_step(
     step_id: str,
     payload: CompleteStepRequest | None = None,
-    user: dict = Depends(require_active_student),
+    user: dict = Depends(get_current_user),
 ):
+    if user.get("status") != "active":
+        raise AppError(
+            code="status_blocked",
+            message="Account disabled",
+            status_code=403,
+        )
+
     db = get_firestore_client()
     plan_ref = db.collection("student_plans").document(user["uid"])
     plan = _doc_or_404(plan_ref, "not_found", "Plan not found")
@@ -538,5 +609,25 @@ async def complete_my_step(
     batch.commit()
     if not was_done:
         _sync_user_progress(db, user["uid"], done_delta=1)
+    try:
+        await send_admin_message(
+            fmt_lesson_completed(
+                user,
+                stepId=step_id,
+                stepTitle=(step.get("title") or "").strip() or "-",
+                courseId=step.get("courseId"),
+                lessonId=step.get("lessonId"),
+            )
+        )
+    except Exception:
+        logger.warning(
+            "lesson_completed_telegram_notify_failed",
+            extra={
+                "event": "lesson_completed_telegram_notify_failed",
+                "uid": user.get("uid"),
+                "stepId": step_id,
+            },
+            exc_info=True,
+        )
 
     return {"status": "ok", "completionId": completion_ref.id}

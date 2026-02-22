@@ -20,6 +20,7 @@ from app.routers import (
     courses,
     library,
     questions,
+    telegram_webhook,
 )
 
 setup_logging()
@@ -136,3 +137,4 @@ app.include_router(admin_goals.router)
 app.include_router(admin_settings.router)
 app.include_router(questions.router)
 app.include_router(library.router)
+app.include_router(telegram_webhook.router)

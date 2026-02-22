@@ -1031,6 +1031,7 @@ paths:
     post:
       tags: [Admin - Students]
       summary: Create student user record
+      description: Best-effort side effect: sends a Telegram registration notification only when a new user record is created.
       operationId: adminCreateStudent
       requestBody:
         required: true
@@ -1056,6 +1057,7 @@ paths:
     patch:
       tags: [Admin - Students]
       summary: Update student profile/status
+      description: Best-effort side effect: when status changes, sends a Telegram status-change notification.
       operationId: adminPatchStudent
       parameters:
         - in: path
@@ -1558,6 +1560,7 @@ paths:
     post:
       tags: [Admin - Students]
       summary: Mark current student's step as completed
+      description: Requires active student status; on successful completion sends a best-effort Telegram lesson-completed notification.
       operationId: studentCompleteStep
       parameters:
         - in: path
@@ -1896,6 +1899,44 @@ paths:
         "400":
           $ref: "#/components/responses/ValidationError"
 
+  /webhooks/telegram:
+    post:
+      tags: [Auth]
+      summary: Receive Telegram webhook update
+      description: >
+        No Firebase auth. If TELEGRAM_WEBHOOK_SECRET is configured, requests must provide
+        header X-Telegram-Bot-Api-Secret-Token with matching value.
+      operationId: telegramWebhook
+      security: []   # no auth required
+      parameters:
+        - in: header
+          name: X-Telegram-Bot-Api-Secret-Token
+          required: false
+          schema:
+            type: string
+          description: Required when TELEGRAM_WEBHOOK_SECRET is set.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok]
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
   /healthz:
     get:
       tags: [Auth]
@@ -1919,6 +1960,7 @@ paths:
     get:
       tags: [Auth]
       summary: Service version and build info
+      description: Values are sourced from APP_NAME, APP_VERSION, GIT_COMMIT, and BUILD_TIME env vars. TELEGRAM_BOT_TOKEN and TELEGRAM_ADMIN_CHAT_ID enable Telegram side effects on other endpoints and are not returned here.
       operationId: version
       security: []   # no auth required
       responses:

@@ -1,7 +1,7 @@
 import time
 from typing import Any
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, Request, status
 from google.cloud import firestore
 from pydantic import BaseModel
 
@@ -17,6 +17,8 @@ from app.core.errors import AppError, forbidden_error
 from app.core.logging import get_logger
 from app.db.firestore import get_firestore_client
 from app.services.goal_template_steps import list_steps
+from app.services.telegram import send_admin_message
+from app.services.telegram_events import fmt_registration, fmt_status_changed
 
 router = APIRouter(prefix="/api/admin", tags=["Admin - Students"])
 logger = get_logger("app.db")
@@ -269,6 +271,7 @@ async def create_student(
     role = payload.role or "student"
     doc_ref = db.collection("users").document(auth_user.uid)
     existing = doc_ref.get()
+    is_new_user = not existing.exists
     created_at = (
         (existing.to_dict() or {}).get("createdAt", now) if existing.exists else now
     )
@@ -286,6 +289,19 @@ async def create_student(
     doc_ref.set(data)
     created = _doc_or_404(doc_ref)
     created["uid"] = created.pop("id")
+    if is_new_user:
+        try:
+            await send_admin_message(fmt_registration(created))
+        except Exception:
+            logger.warning(
+                "registration_telegram_notify_failed",
+                extra={
+                    "event": "registration_telegram_notify_failed",
+                    "uid": created.get("uid"),
+                    "email": created.get("email"),
+                },
+                exc_info=True,
+            )
     return created
 
 
@@ -293,6 +309,7 @@ async def create_student(
 async def update_student(
     uid: str,
     payload: PatchStudentRequest,
+    request: Request,
     user: dict = Depends(get_current_user),
 ):
     if user.get("role") != "staff":
@@ -329,33 +346,59 @@ async def update_student(
             )
         updates["displayName"] = display_name
     status = updates.get("status")
+    new_status: UserStatus | None = None
     if status is not None:
-        updates["status"] = validate_user_status_or_400(status)
+        new_status = validate_user_status_or_400(status)
+        updates["status"] = new_status
+    actor_uid = getattr(request.state, "uid", None) or user.get("uid") or ""
+    status_changed = new_status is not None and new_status != current_status
+    if status_changed:
+        updates["statusChangedAt"] = firestore.SERVER_TIMESTAMP
+        updates["statusChangedBy"] = actor_uid
     updates["updatedAt"] = firestore.SERVER_TIMESTAMP
     doc_ref.update(updates)
     data = _doc_or_404(doc_ref)
     ensure_user_status_with_migration(doc_ref, data)
+    data["uid"] = uid
 
-    new_status = updates.get("status")
-    if new_status is not None and new_status != current_status:
+    if status_changed and new_status is not None:
         logger.info(
             "status_changed",
             extra={
                 "event": "status_changed",
-                "actorUid": user.get("uid"),
+                "actorUid": actor_uid,
                 "targetUid": uid,
                 "oldStatus": current_status,
                 "newStatus": new_status,
             },
         )
         _emit_status_changed_event(
-            actor_uid=user.get("uid") or "",
+            actor_uid=actor_uid,
             target_uid=uid,
             old_status=current_status,
             new_status=new_status,
         )
-
-    data["uid"] = uid
+        try:
+            await send_admin_message(
+                fmt_status_changed(
+                    data,
+                    old=current_status,
+                    new=new_status,
+                    actor_uid=actor_uid,
+                )
+            )
+        except Exception:
+            logger.warning(
+                "status_changed_telegram_notify_failed",
+                extra={
+                    "event": "status_changed_telegram_notify_failed",
+                    "actorUid": actor_uid,
+                    "targetUid": uid,
+                    "oldStatus": current_status,
+                    "newStatus": new_status,
+                },
+                exc_info=True,
+            )
     return data
 
 

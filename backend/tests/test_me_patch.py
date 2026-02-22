@@ -208,6 +208,97 @@ def test_patch_me_updates_onboarding_fields(monkeypatch):
     app.dependency_overrides.clear()
 
 
+def test_patch_me_sends_questionnaire_completed_once_on_course_selection_transition(
+    monkeypatch,
+):
+    users = {
+        "u1": {
+            "displayName": "User One",
+            "email": "u1@example.com",
+            "role": "student",
+            "status": "active",
+            "selectedGoalId": "goal-1",
+            "selectedCourses": [],
+            "profileForm": {
+                "telegram": None,
+                "socialUrl": None,
+                "experienceLevel": None,
+                "notes": None,
+            },
+        }
+    }
+    fake_db = FakeFirestore(users)
+    monkeypatch.setattr(auth, "get_firestore_client", lambda: fake_db)
+    app.dependency_overrides[auth_deps.get_current_user] = _override_user
+    sent: dict[str, str] = {}
+
+    async def _fake_send_admin_message(text: str) -> None:
+        sent["text"] = text
+
+    monkeypatch.setattr(auth, "send_admin_message", _fake_send_admin_message)
+    client = TestClient(app)
+
+    response = client.patch(
+        "/api/me",
+        json={"profileForm": {"experienceLevel": "beginner"}},
+    )
+    assert response.status_code == 200
+    assert "text" in sent
+    assert "✅ Questionnaire completed" in sent["text"]
+    assert "uid: u1" in sent["text"]
+    assert "email: u1@example.com" in sent["text"]
+    assert "status: active" in sent["text"]
+    assert "role: student" in sent["text"]
+    assert (
+        users["u1"]["telegramEvents"]["questionnaireCompletedAt"]
+        is firestore.SERVER_TIMESTAMP
+    )
+
+    app.dependency_overrides.clear()
+
+
+def test_patch_me_does_not_resend_questionnaire_completed_when_already_marked(
+    monkeypatch,
+):
+    users = {
+        "u1": {
+            "displayName": "User One",
+            "email": "u1@example.com",
+            "role": "student",
+            "status": "active",
+            "selectedGoalId": "goal-1",
+            "selectedCourses": [],
+            "telegramEvents": {"questionnaireCompletedAt": "2026-01-01T00:00:00Z"},
+            "profileForm": {
+                "telegram": None,
+                "socialUrl": None,
+                "experienceLevel": None,
+                "notes": None,
+            },
+        }
+    }
+    fake_db = FakeFirestore(users)
+    monkeypatch.setattr(auth, "get_firestore_client", lambda: fake_db)
+    app.dependency_overrides[auth_deps.get_current_user] = _override_user
+    calls = {"count": 0}
+
+    async def _fake_send_admin_message(_text: str) -> None:
+        calls["count"] += 1
+
+    monkeypatch.setattr(auth, "send_admin_message", _fake_send_admin_message)
+    client = TestClient(app)
+
+    response = client.patch(
+        "/api/me",
+        json={"profileForm": {"experienceLevel": "beginner"}},
+    )
+    assert response.status_code == 200
+    assert calls["count"] == 0
+    assert users["u1"]["telegramEvents"]["questionnaireCompletedAt"] == "2026-01-01T00:00:00Z"
+
+    app.dependency_overrides.clear()
+
+
 def test_patch_me_accepts_preferred_currency_pln(monkeypatch):
     users = {
         "u1": {
