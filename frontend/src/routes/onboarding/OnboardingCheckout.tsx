@@ -18,8 +18,6 @@ import { OnboardingLayout } from "./OnboardingLayout";
 const COMMUNITY_PRICE_USD_CENTS = 1900;
 const BOOSTY_URL =
   import.meta.env.VITE_BOOSTY_URL ?? "https://boosty.to/storywalkers";
-const SUPPORT_CONTACT =
-  import.meta.env.VITE_SUPPORT_CONTACT ?? "t.me/storywalkers_support_bot";
 const SUPPORT_TELEGRAM_URL =
   import.meta.env.VITE_SUPPORT_TELEGRAM_URL ??
   "https://t.me/storywalkers_support_bot";
