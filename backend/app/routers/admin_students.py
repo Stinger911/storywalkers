@@ -22,6 +22,7 @@ from app.services.telegram_events import fmt_registration, fmt_status_changed
 
 router = APIRouter(prefix="/api/admin", tags=["Admin - Students"])
 logger = get_logger("app.db")
+ALLOWED_USER_ROLES = {"student", "admin", "expert"}
 
 
 class CreateStudentRequest(BaseModel):
@@ -33,6 +34,7 @@ class CreateStudentRequest(BaseModel):
 class PatchStudentRequest(BaseModel):
     displayName: str | None = None
     status: UserStatus | None = None
+    role: str | None = None
 
     model_config = {"extra": "forbid"}
 
@@ -345,6 +347,16 @@ async def update_student(
                 status_code=400,
             )
         updates["displayName"] = display_name
+    role = updates.get("role")
+    if role is not None:
+        role_normalized = (role or "").strip()
+        if role_normalized not in ALLOWED_USER_ROLES:
+            raise AppError(
+                code="validation_error",
+                message="Invalid role. Allowed: student, admin, expert",
+                status_code=400,
+            )
+        updates["role"] = role_normalized
     status = updates.get("status")
     new_status: UserStatus | None = None
     if status is not None:

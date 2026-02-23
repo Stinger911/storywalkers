@@ -42,6 +42,23 @@ describe("resolveGuardRedirect", () => {
     ).toBe("/blocked?type=expired");
   });
 
+  it("allows disabled students on onboarding paths", () => {
+    expect(
+      resolveGuardRedirect({
+        me: student("disabled"),
+        requiredRole: "student",
+        pathname: "/onboarding/goal",
+      }),
+    ).toBeNull();
+    expect(
+      resolveGuardRedirect({
+        me: student("disabled"),
+        requiredRole: "student",
+        pathname: "/onboarding/courses",
+      }),
+    ).toBeNull();
+  });
+
   it("allows community_only only on dashboard and library paths", () => {
     expect(
       resolveGuardRedirect({

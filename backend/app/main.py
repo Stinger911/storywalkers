@@ -26,6 +26,16 @@ from app.routers import (
 setup_logging()
 logger = get_logger("app")
 settings = get_settings()
+logger.info(
+    "telegram_webhook_setup",
+    extra={
+        "event": "telegram_webhook_setup",
+        "webhook_path": "/webhooks/telegram",
+        "has_webhook_secret": bool(settings.TELEGRAM_WEBHOOK_SECRET),
+        "has_admin_chat_id": bool(settings.TELEGRAM_ADMIN_CHAT_ID),
+        "has_bot_token": bool(settings.TELEGRAM_BOT_TOKEN),
+    },
+)
 
 OPENAPI_PATH = Path(__file__).with_name("openapi.yaml")
 

@@ -153,7 +153,7 @@ def test_webhook_accepts_valid_secret_and_logs_ids(monkeypatch):
         json={
             "update_id": 1003,
             "message": {
-                "from": {"id": 501},
+                "from": {"id": 501, "username": "alice", "first_name": "Alice", "last_name": "Doe"},
                 "chat": {"id": 502, "type": "private"},
                 "message_id": 888,
                 "text": "ping",
@@ -170,7 +170,13 @@ def test_webhook_accepts_valid_secret_and_logs_ids(monkeypatch):
     assert data.get("from_id") == 501
     assert data.get("chat_id") == 502
     assert "text" in sent
-    assert sent["text"].startswith("Support request from 501\n\nping\n\nMessageId: 888\nUTC: ")
+    assert sent["text"].startswith(
+        "Support request from 501\n\n"
+        "Username: alice\n"
+        "FirstName: Alice\n"
+        "LastName: Doe\n\n"
+        "ping\n\nUTC: "
+    )
     assert re.search(r"UTC: \d{4}-\d{2}-\d{2}T", sent["text"])
     assert fake_db._telegram_users["501"]["chatId"] == 502
 
@@ -371,6 +377,38 @@ def test_reply_command_ignored_from_non_admin_chat(monkeypatch):
     assert fake_db._telegram_users == {}
 
 
+def test_id_command_replies_with_current_chat_id(monkeypatch):
+    monkeypatch.setattr(telegram_webhook, "get_settings", lambda: _Settings(None, 999))
+    fake_db = _FakeFirestore()
+    monkeypatch.setattr(telegram_webhook, "get_firestore_client", lambda: fake_db)
+    sent: dict[str, object] = {}
+
+    async def _fake_send(chat_id, text: str):
+        sent["chat_id"] = chat_id
+        sent["text"] = text
+        return True, None
+
+    monkeypatch.setattr(telegram_webhook, "send_message", _fake_send)
+    client = TestClient(app)
+
+    response = client.post(
+        "/webhooks/telegram",
+        json={
+            "update_id": 1010,
+            "message": {
+                "from": {"id": 42},
+                "chat": {"id": -100777, "type": "group"},
+                "message_id": 13,
+                "text": "/id",
+            },
+        },
+    )
+
+    assert response.status_code == 200
+    assert sent["chat_id"] == -100777
+    assert sent["text"] == "chatId: -100777"
+
+
 def test_reply_command_parse_fail_sends_help(monkeypatch):
     monkeypatch.setattr(telegram_webhook, "get_settings", lambda: _Settings(None, 999))
     fake_db = _FakeFirestore()
@@ -444,6 +482,47 @@ def test_reply_command_sends_message_to_mapped_chat(monkeypatch):
     assert sent["text"] == "Support reply: Thanks for the details"
     assert confirmations
     assert confirmations[0].startswith("✅ Sent to 12345: Thanks for the details")
+
+
+def test_reply_command_works_from_admin_group_chat(monkeypatch):
+    monkeypatch.setattr(telegram_webhook, "get_settings", lambda: _Settings(None, -100999))
+    fake_db = _FakeFirestore()
+    fake_db._telegram_users["12345"] = {
+        "chatId": 555,
+        "firstSeenAt": "OLD",
+        "lastSeenAt": "OLD",
+    }
+    monkeypatch.setattr(telegram_webhook, "get_firestore_client", lambda: fake_db)
+    sent: dict[str, object] = {}
+
+    async def _fake_send(chat_id, text: str):
+        sent["chat_id"] = chat_id
+        sent["text"] = text
+        return True, None
+
+    async def _fake_admin(_text: str):
+        return True, None
+
+    monkeypatch.setattr(telegram_webhook, "send_message", _fake_send)
+    monkeypatch.setattr(telegram_webhook, "send_admin_message", _fake_admin)
+    client = TestClient(app)
+
+    response = client.post(
+        "/webhooks/telegram",
+        json={
+            "update_id": 1012,
+            "message": {
+                "from": {"id": 1},
+                "chat": {"id": -100999, "type": "group"},
+                "message_id": 15,
+                "text": "/reply 12345 Group-based admin reply",
+            },
+        },
+    )
+
+    assert response.status_code == 200
+    assert sent["chat_id"] == 555
+    assert sent["text"] == "Support reply: Group-based admin reply"
 
 
 def test_reply_command_sends_error_when_mapping_missing(monkeypatch):
@@ -545,6 +624,7 @@ def test_webhook_truncates_inbound_forward_text(monkeypatch):
 
     assert response.status_code == 200
     assert "Support request from 333\n\n" in sent["text"]
+    assert "Username: -\nFirstName: -\nLastName: -\n\n" in sent["text"]
     assert "x" * 3500 in sent["text"]
     assert "x" * 3501 not in sent["text"]
 

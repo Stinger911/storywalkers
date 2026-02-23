@@ -101,7 +101,9 @@ describe("OnboardingCheckout", () => {
     expect(
       screen.getByText("Activation is manual after human review. Please wait for confirmation from the team."),
     ).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "@storywalkers_support" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "t.me/storywalkers_support_bot" }),
+    ).toBeInTheDocument();
   });
 
   it("falls back to goal id when goals request fails", async () => {

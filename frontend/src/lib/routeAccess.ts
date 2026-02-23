@@ -17,6 +17,10 @@ function isCommunityOnlyAllowedPath(pathname: string) {
   );
 }
 
+function isOnboardingPath(pathname: string) {
+  return pathname.startsWith("/onboarding/");
+}
+
 export function resolveGuardRedirect(input: ResolveGuardInput): string | null {
   const { me, requiredRole, pathname } = input;
   if (!me) return "/login";
@@ -29,7 +33,7 @@ export function resolveGuardRedirect(input: ResolveGuardInput): string | null {
     return null;
   }
 
-  if (me.status === "disabled") {
+  if (me.status === "disabled" && !isOnboardingPath(pathname)) {
     return "/blocked";
   }
   if (me.status === "expired") {

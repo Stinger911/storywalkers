@@ -16,9 +16,25 @@ export default ({ mode }: { mode: string }) => {
       include: ["tests/**/*.test.ts", "tests/**/*.test.tsx"],
     },
     server: {
-      allowedHosts: ["683f-88-156-132-232.ngrok-free.app", "localhost"],
+      allowedHosts: ["f9dd-88-156-132-232.ngrok-free.app", "localhost"],
       proxy: {
         '/api': {
+          target: PROXY_TARGET,
+          changeOrigin: true,
+          secure: false,
+          headers: {
+            "Content-Type": "application/json",
+          },
+          configure: (proxy, _options) => {
+            proxy.on("error", (err, _req, _res) => {
+              console.log("proxy error", err);
+            });
+            proxy.on("proxyRes", (proxyRes, req, _res) => {
+              console.log("Received Response from the Target:", proxyRes.statusCode, req.url);
+            });
+          },
+        },
+        '/webhooks': {
           target: PROXY_TARGET,
           changeOrigin: true,
           secure: false,

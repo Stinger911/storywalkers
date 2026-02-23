@@ -302,7 +302,7 @@ def test_create_student_does_not_send_registration_telegram_for_existing_user(
     app.dependency_overrides.clear()
 
 
-def test_patch_student_rejects_role_field_even_for_staff(monkeypatch):
+def test_patch_student_updates_role_for_staff(monkeypatch):
     users = {"s1": {"role": "student", "status": "active", "email": "s1@x.com"}}
     fake_db = FakeFirestore(users)
     monkeypatch.setattr(admin_students, "get_firestore_client", lambda: fake_db)
@@ -310,8 +310,8 @@ def test_patch_student_rejects_role_field_even_for_staff(monkeypatch):
     client = TestClient(app)
 
     response = client.patch("/api/admin/students/s1", json={"role": "expert"})
-    assert response.status_code == 400
-    assert users["s1"]["role"] == "student"
+    assert response.status_code == 200
+    assert users["s1"]["role"] == "expert"
 
     app.dependency_overrides.clear()
 

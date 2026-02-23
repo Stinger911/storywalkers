@@ -91,8 +91,14 @@ async def telegram_webhook(request: Request) -> dict[str, bool]:
     raw_text = message_data.get("text")
     admin_chat_id = settings.TELEGRAM_ADMIN_CHAT_ID
     incoming_chat_id = chat_data.get("id")
+    is_reply_command = isinstance(raw_text, str) and raw_text.strip().startswith("/reply")
+    if isinstance(raw_text, str) and raw_text.strip().startswith("/id"):
+        if isinstance(incoming_chat_id, (int, str)):
+            await send_message(incoming_chat_id, f"chatId: {incoming_chat_id}")
+        return {"ok": True}
+
     is_admin_chat = bool(admin_chat_id) and str(incoming_chat_id) == str(admin_chat_id)
-    if isinstance(raw_text, str) and raw_text.strip().startswith("/reply") and not is_admin_chat:
+    if is_reply_command and not is_admin_chat:
         logger.warning(
             "telegram_reply_command_ignored",
             extra={
@@ -106,7 +112,7 @@ async def telegram_webhook(request: Request) -> dict[str, bool]:
         return {"ok": True}
 
     chat_type = chat_data.get("type")
-    if chat_type != "private":
+    if chat_type != "private" and not is_reply_command:
         logger.info(
             "telegram_webhook_ignored",
             extra={
@@ -147,6 +153,19 @@ async def telegram_webhook(request: Request) -> dict[str, bool]:
             },
         )
         return {"ok": True}
+
+    logger.info(
+        "telegram_message_received",
+        extra={
+            "event": "telegram_message_received",
+            "update_id": payload.get("update_id"),
+            "telegram_user_id": str(sender_id),
+            "chat_id": chat_id,
+            "message_id": message_id,
+            "text_length": len(text_raw.strip()),
+            "is_command": text_raw.strip().startswith("/"),
+        },
+    )
 
     telegram_user_id = str(sender_id)
     text = text_raw.strip()
@@ -257,10 +276,15 @@ async def telegram_webhook(request: Request) -> dict[str, bool]:
         )
 
     utc_now = datetime.now(timezone.utc).isoformat()
+    username = (from_data.get("username") or "").strip() if isinstance(from_data.get("username"), str) else ""
+    first_name = (from_data.get("first_name") or "").strip() if isinstance(from_data.get("first_name"), str) else ""
+    last_name = (from_data.get("last_name") or "").strip() if isinstance(from_data.get("last_name"), str) else ""
     relay_text = (
         f"Support request from {telegram_user_id}\n\n"
+        f"Username: {username or '-'}\n"
+        f"FirstName: {first_name or '-'}\n"
+        f"LastName: {last_name or '-'}\n\n"
         f"{text[:MAX_TELEGRAM_TEXT_LEN]}\n\n"
-        f"MessageId: {message_id}\n"
         f"UTC: {utc_now}"
     )
     try:
