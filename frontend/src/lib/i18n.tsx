@@ -73,6 +73,15 @@ type RawDictionary = {
       genericWithMessage: string;
     };
   };
+  blocked: {
+    titleDisabled: string;
+    descriptionDisabled: string;
+    titleExpired: string;
+    descriptionExpired: string;
+    renewalMessage: string;
+    continueOnboarding: string;
+    logout: string;
+  };
   student: {
     layout: {
       title: string;
@@ -377,6 +386,17 @@ const dictionaries: Record<Locale, RawDictionary> = {
         genericWithMessage: "Sign-in error: {{ message }}",
       },
     },
+    blocked: {
+      titleDisabled: "Account disabled",
+      descriptionDisabled:
+        "Your account is currently disabled. Access to protected sections is restricted.",
+      titleExpired: "Access expired",
+      descriptionExpired:
+        "Your access period has ended. Some sections are unavailable until renewal.",
+      renewalMessage: "To continue learning, contact support and request renewal.",
+      continueOnboarding: "Continue onboarding",
+      logout: "Log out",
+    },
     student: {
       layout: {
         title: "Student Dashboard",
@@ -680,6 +700,18 @@ const dictionaries: Record<Locale, RawDictionary> = {
         generic: "Не удалось выполнить вход. Попробуйте ещё раз.",
         genericWithMessage: "Ошибка входа: {{ message }}",
       },
+    },
+    blocked: {
+      titleDisabled: "Аккаунт отключен",
+      descriptionDisabled:
+        "Ваш аккаунт сейчас отключен. Доступ к защищенным разделам ограничен.",
+      titleExpired: "Доступ истек",
+      descriptionExpired:
+        "Срок доступа завершен. Некоторые разделы недоступны до продления.",
+      renewalMessage:
+        "Чтобы продолжить обучение, свяжитесь с поддержкой и запросите продление.",
+      continueOnboarding: "Продолжить онбординг",
+      logout: "Выйти",
     },
     student: {
       layout: {

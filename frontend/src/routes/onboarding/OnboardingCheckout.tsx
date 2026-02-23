@@ -28,8 +28,12 @@ export function OnboardingCheckout() {
   const auth = useAuth();
   const { t } = useI18n();
   const [goalTitle, setGoalTitle] = createSignal<string | null>(null);
-  const [coursesById, setCoursesById] = createSignal<Record<string, Course>>({});
-  const [fxRates, setFxRates] = createSignal<Record<string, number>>({ USD: 1 });
+  const [coursesById, setCoursesById] = createSignal<Record<string, Course>>(
+    {},
+  );
+  const [fxRates, setFxRates] = createSignal<Record<string, number>>({
+    USD: 1,
+  });
   const me = () => auth.me();
   const preferredCurrency = createMemo(() => me()?.preferredCurrency || "USD");
   const currencyRate = createMemo(() => {
@@ -38,7 +42,9 @@ export function OnboardingCheckout() {
   });
 
   const selectedCourseIds = createMemo(() => me()?.selectedCourses || []);
-  const communitySelected = createMemo(() => Boolean(me()?.subscriptionSelected));
+  const communitySelected = createMemo(() =>
+    Boolean(me()?.subscriptionSelected),
+  );
 
   const formatPrice = (usdCents: number) =>
     formatCents(
@@ -82,7 +88,10 @@ export function OnboardingCheckout() {
       }
 
       try {
-        const [response, fxResponse] = await Promise.all([listCourses(), getFxRates()]);
+        const [response, fxResponse] = await Promise.all([
+          listCourses(),
+          getFxRates(),
+        ]);
         const nextMap: Record<string, Course> = {};
         for (const item of response.items) {
           nextMap[item.id] = item;
@@ -96,7 +105,10 @@ export function OnboardingCheckout() {
   });
 
   const goalSummary = createMemo(
-    () => goalTitle() || me()?.selectedGoalId || t("student.onboarding.checkout.goalEmpty"),
+    () =>
+      goalTitle() ||
+      me()?.selectedGoalId ||
+      t("student.onboarding.checkout.goalEmpty"),
   );
 
   return (
@@ -130,21 +142,29 @@ export function OnboardingCheckout() {
                   {(course) => (
                     <div class="flex items-center justify-between rounded-md border border-border/70 bg-card px-3 py-2">
                       <span>{course.title}</span>
-                      <span class="font-medium">{formatPrice(course.priceUsdCents)}</span>
+                      <span class="font-medium">
+                        {formatPrice(course.priceUsdCents)}
+                      </span>
                     </div>
                   )}
                 </For>
                 <Show when={communitySelected()}>
                   <div class="flex items-center justify-between rounded-md border border-border/70 bg-card px-3 py-2">
-                    <span>{t("student.onboarding.checkout.communityLabel")}</span>
-                    <span class="font-medium">{formatPrice(COMMUNITY_PRICE_USD_CENTS)}</span>
+                    <span>
+                      {t("student.onboarding.checkout.communityLabel")}
+                    </span>
+                    <span class="font-medium">
+                      {formatPrice(COMMUNITY_PRICE_USD_CENTS)}
+                    </span>
                   </div>
                 </Show>
               </div>
             </Show>
           </div>
           <div class="flex items-center justify-between rounded-xl border border-border/70 bg-muted/30 px-4 py-3">
-            <span class="text-muted-foreground">{t("student.onboarding.checkout.totalLabel")}</span>
+            <span class="text-muted-foreground">
+              {t("student.onboarding.checkout.totalLabel")}
+            </span>
             <span class="text-lg font-semibold">
               {formatCents(totalPrice(), preferredCurrency())}
             </span>
@@ -178,7 +198,7 @@ export function OnboardingCheckout() {
               target="_blank"
               rel="noopener noreferrer"
             >
-              {SUPPORT_CONTACT}
+              {t("common.contactSupport")}
             </a>
           </p>
         </div>

@@ -4,7 +4,6 @@ import { AdminLayout } from "./routes/admin/AdminLayout.tsx";
 import { AdminCategories } from "./routes/admin/AdminCategories.tsx";
 import { AdminHome } from "./routes/admin/AdminHome.tsx";
 import { AdminGoals } from "./routes/admin/AdminGoals.tsx";
-import { AdminStepTemplates } from "./routes/admin/AdminStepTemplates.tsx";
 import { AdminStudentProfile } from "./routes/admin/AdminStudentProfile.tsx";
 import { AdminStudents } from "./routes/admin/AdminStudents.tsx";
 import { AdminQuestions } from "./routes/admin/AdminQuestions.tsx";
@@ -63,12 +62,6 @@ const AdminCategoriesRoute = () => (
 const AdminGoalsRoute = () => (
   <AdminLayout>
     <AdminGoals />
-  </AdminLayout>
-);
-
-const AdminStepTemplatesRoute = () => (
-  <AdminLayout>
-    <AdminStepTemplates />
   </AdminLayout>
 );
 
@@ -294,7 +287,6 @@ export default function App() {
         <Route path="/admin/library/:id" component={AdminLibraryDetailRoute} />
         <Route path="/admin/categories" component={AdminCategoriesRoute} />
         <Route path="/admin/goals" component={AdminGoalsRoute} />
-        <Route path="/admin/step-templates" component={AdminStepTemplatesRoute} />
         <Route path="*" component={NotFound} />
       </Router>
       <Toaster />

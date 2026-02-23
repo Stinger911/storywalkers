@@ -8,8 +8,8 @@ import {
   getStudent,
   getStudentPlan,
   getStudentPlanSteps,
+  listAdminCourses,
   listGoals,
-  listStepTemplates,
   previewResetFromGoal,
   updateStudent,
   assignPlan,
@@ -89,6 +89,7 @@ vi.mock("../../src/lib/adminApi", () => ({
   getStudent: vi.fn(),
   getStudentPlan: vi.fn(),
   getStudentPlanSteps: vi.fn(),
+  listAdminCourses: vi.fn(),
   listGoals: vi.fn(),
   listStepTemplates: vi.fn(),
   previewResetFromGoal: vi.fn(),
@@ -99,8 +100,8 @@ vi.mock("../../src/lib/adminApi", () => ({
 const getStudentMock = getStudent as unknown as ReturnType<typeof vi.fn>;
 const getStudentPlanMock = getStudentPlan as unknown as ReturnType<typeof vi.fn>;
 const getStudentPlanStepsMock = getStudentPlanSteps as unknown as ReturnType<typeof vi.fn>;
+const listAdminCoursesMock = listAdminCourses as unknown as ReturnType<typeof vi.fn>;
 const listGoalsMock = listGoals as unknown as ReturnType<typeof vi.fn>;
-const listStepTemplatesMock = listStepTemplates as unknown as ReturnType<typeof vi.fn>;
 const updateStudentMock = updateStudent as unknown as ReturnType<typeof vi.fn>;
 const previewResetMock = previewResetFromGoal as unknown as ReturnType<typeof vi.fn>;
 const assignPlanMock = assignPlan as unknown as ReturnType<typeof vi.fn>;
@@ -123,14 +124,15 @@ describe("AdminStudentProfile", () => {
     getStudentMock.mockReset();
     getStudentPlanMock.mockReset();
     getStudentPlanStepsMock.mockReset();
+    listAdminCoursesMock.mockReset();
     listGoalsMock.mockReset();
-    listStepTemplatesMock.mockReset();
     updateStudentMock.mockReset();
     previewResetMock.mockReset();
     assignPlanMock.mockReset();
     deleteStudentMock.mockReset();
     deleteStudentPlanStepMock.mockReset();
     navigateMock.mockReset();
+    listAdminCoursesMock.mockResolvedValue({ items: [] });
   });
 
   it("updates role via access controls", async () => {
@@ -142,8 +144,15 @@ describe("AdminStudentProfile", () => {
     });
     getStudentPlanMock.mockRejectedValue(new Error("no plan"));
     getStudentPlanStepsMock.mockResolvedValue({ items: [] });
-    listGoalsMock.mockResolvedValue({ items: [] });
-    listStepTemplatesMock.mockResolvedValue({ items: [] });
+    listGoalsMock.mockResolvedValue({
+      items: [{ id: "goal-42", title: "Portrait Creator" }],
+    });
+    listAdminCoursesMock.mockResolvedValue({
+      items: [
+        { id: "course-a", title: "Light Basics" },
+        { id: "course-b", title: "Color Workflow" },
+      ],
+    });
     updateStudentMock.mockResolvedValue({ role: "expert" });
 
     renderWithShell();
@@ -174,8 +183,15 @@ describe("AdminStudentProfile", () => {
     });
     getStudentPlanMock.mockRejectedValue(new Error("no plan"));
     getStudentPlanStepsMock.mockResolvedValue({ items: [] });
-    listGoalsMock.mockResolvedValue({ items: [] });
-    listStepTemplatesMock.mockResolvedValue({ items: [] });
+    listGoalsMock.mockResolvedValue({
+      items: [{ id: "goal-42", title: "Portrait Creator" }],
+    });
+    listAdminCoursesMock.mockResolvedValue({
+      items: [
+        { id: "course-a", title: "Light Basics" },
+        { id: "course-b", title: "Color Workflow" },
+      ],
+    });
     updateStudentMock.mockResolvedValue({ role: "student", status: "disabled" });
 
     renderWithShell();
@@ -203,8 +219,15 @@ describe("AdminStudentProfile", () => {
     });
     getStudentPlanMock.mockRejectedValue(new Error("no plan"));
     getStudentPlanStepsMock.mockResolvedValue({ items: [] });
-    listGoalsMock.mockResolvedValue({ items: [] });
-    listStepTemplatesMock.mockResolvedValue({ items: [] });
+    listGoalsMock.mockResolvedValue({
+      items: [{ id: "goal-42", title: "Portrait Creator" }],
+    });
+    listAdminCoursesMock.mockResolvedValue({
+      items: [
+        { id: "course-a", title: "Light Basics" },
+        { id: "course-b", title: "Color Workflow" },
+      ],
+    });
     updateStudentMock.mockResolvedValue({ displayName: "New Name" });
 
     renderWithShell();
@@ -219,6 +242,57 @@ describe("AdminStudentProfile", () => {
     });
   });
 
+  it("shows questionnaire answers in questionnaire tab", async () => {
+    getStudentMock.mockResolvedValue({
+      uid: "u1",
+      displayName: "Student One",
+      email: "s1@x.com",
+      role: "student",
+      onboardingStep: "course_selection",
+      selectedGoalId: "goal-42",
+      profileForm: {
+        telegram: "@student_one",
+        socialUrl: "https://instagram.com/student_one",
+        experienceLevel: "intermediate",
+        notes: "Wants feedback on editing pace.",
+      },
+      selectedCourses: ["course-a", "course-b"],
+      preferredCurrency: "EUR",
+      subscriptionSelected: true,
+      telegramEvents: {
+        questionnaireCompletedAt: "2026-02-23T10:00:00Z",
+      },
+    });
+    getStudentPlanMock.mockRejectedValue(new Error("no plan"));
+    getStudentPlanStepsMock.mockResolvedValue({ items: [] });
+    listGoalsMock.mockResolvedValue({
+      items: [{ id: "goal-42", title: "Portrait Creator" }],
+    });
+    listAdminCoursesMock.mockResolvedValue({
+      items: [
+        { id: "course-a", title: "Light Basics" },
+        { id: "course-b", title: "Color Workflow" },
+      ],
+    });
+
+    renderWithShell();
+
+    await screen.findByText("Student One");
+    fireEvent.click(await screen.findByRole("button", { name: "Questionnaire" }));
+
+    expect(await screen.findByText("Questionnaire answers")).toBeInTheDocument();
+    expect(await screen.findByText("Portrait Creator")).toBeInTheDocument();
+    expect(screen.getByText("@student_one")).toBeInTheDocument();
+    expect(screen.getByText("https://instagram.com/student_one")).toBeInTheDocument();
+    expect(screen.getByText("Intermediate")).toBeInTheDocument();
+    expect(screen.getByText("Wants feedback on editing pace.")).toBeInTheDocument();
+    expect(await screen.findByText("Light Basics")).toBeInTheDocument();
+    expect(await screen.findByText("Color Workflow")).toBeInTheDocument();
+    expect(screen.getByText("EUR")).toBeInTheDocument();
+    expect(screen.getByText("Yes")).toBeInTheDocument();
+    expect(screen.getByText("2026-02-23T10:00:00Z")).toBeInTheDocument();
+  });
+
   it("previews and confirms reset from goal template", async () => {
     getStudentMock.mockResolvedValue({
       uid: "u1",
@@ -229,7 +303,6 @@ describe("AdminStudentProfile", () => {
     getStudentPlanMock.mockResolvedValue({ goalId: "" });
     getStudentPlanStepsMock.mockResolvedValue({ items: [] });
     listGoalsMock.mockResolvedValue({ items: [{ id: "g1", title: "Goal 1" }] });
-    listStepTemplatesMock.mockResolvedValue({ items: [] });
     previewResetMock.mockResolvedValue({
       existingSteps: 3,
       willCreateSteps: 4,
@@ -253,7 +326,7 @@ describe("AdminStudentProfile", () => {
     fireEvent.change(goalSelect, { target: { value: "g1" } });
 
     const resetButton = await screen.findByText(
-      "Assign goal + Replace steps from template",
+      "Assign goal + Replace steps",
     );
     fireEvent.click(resetButton);
 
@@ -305,7 +378,6 @@ describe("AdminStudentProfile", () => {
       ],
     });
     listGoalsMock.mockResolvedValue({ items: [] });
-    listStepTemplatesMock.mockResolvedValue({ items: [] });
     deleteStudentPlanStepMock.mockResolvedValue({ deleted: "s1" });
 
     renderWithShell();
@@ -330,7 +402,6 @@ describe("AdminStudentProfile", () => {
     getStudentPlanMock.mockResolvedValue({ goalId: "g1" });
     getStudentPlanStepsMock.mockResolvedValue({ items: [] });
     listGoalsMock.mockResolvedValue({ items: [] });
-    listStepTemplatesMock.mockResolvedValue({ items: [] });
     deleteStudentMock.mockResolvedValue({
       deleted: "u1",
       deletedSteps: 0,
