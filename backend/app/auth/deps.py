@@ -13,6 +13,8 @@ from app.core.config import get_settings
 from app.core.errors import AppError, forbidden_error, unauthorized_error
 from app.core.logging import get_logger
 from app.db.firestore import get_firestore_client
+from app.services.telegram import send_admin_message
+from app.services.telegram_events import fmt_registration
 
 security = HTTPBearer(auto_error=False)
 ExperienceLevel = Literal["beginner", "intermediate", "advanced"]
@@ -145,16 +147,37 @@ async def get_current_user(
         logger.warning(
             f"User profile not found for uid {uid} create new student profile"
         )
-        user_ref.set(
-            {
-                "role": "student",
-                "status": DEFAULT_NEW_USER_STATUS,
-                "email": decoded.get("email", ""),
-                "displayName": decoded.get("name", decoded.get("email", "")),
-                "createdAt": datetime.now(timezone.utc),
-                "updatedAt": datetime.now(timezone.utc),
-            }
-        )
+        created_profile = {
+            "role": "student",
+            "status": DEFAULT_NEW_USER_STATUS,
+            "email": decoded.get("email", ""),
+            "displayName": decoded.get("name", decoded.get("email", "")),
+            "createdAt": datetime.now(timezone.utc),
+            "updatedAt": datetime.now(timezone.utc),
+        }
+        user_ref.set(created_profile)
+        try:
+            await send_admin_message(
+                fmt_registration(
+                    {
+                        "uid": uid,
+                        "email": created_profile.get("email"),
+                        "displayName": created_profile.get("displayName"),
+                        "role": created_profile.get("role"),
+                        "status": created_profile.get("status"),
+                    }
+                )
+            )
+        except Exception:
+            logger.warning(
+                "registration_telegram_notify_failed",
+                extra={
+                    "event": "registration_telegram_notify_failed",
+                    "uid": uid,
+                    "email": created_profile.get("email"),
+                },
+                exc_info=True,
+            )
         doc = user_ref.get()
 
     profile = doc.to_dict() or {}

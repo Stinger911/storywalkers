@@ -4,6 +4,7 @@ import {
   signInWithPopup,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
+  sendPasswordResetEmail,
   sendSignInLinkToEmail,
   isSignInWithEmailLink,
   signInWithEmailLink,
@@ -110,6 +111,26 @@ export function Login() {
       await signInWithEmailAndPassword(auth, email().trim(), password());
       setInfo(t("login.messages.signedIn"));
       await redirectIfLoggedIn();
+    } catch (e) {
+      setError(friendlyAuthError(e, t));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onPasswordReset() {
+    setError(null);
+    setInfo(null);
+    setBusy(true);
+    try {
+      const userEmail = email().trim();
+      if (!userEmail) {
+        throw Object.assign(new Error("missing email"), {
+          code: "auth/missing-email",
+        });
+      }
+      await sendPasswordResetEmail(auth, userEmail);
+      setInfo(t("login.messages.passwordResetSent"));
     } catch (e) {
       setError(friendlyAuthError(e, t));
     } finally {
@@ -368,6 +389,17 @@ export function Login() {
               autocomplete="current-password"
             />
           </TextField>
+
+          <div class="flex justify-end">
+            <button
+              type="button"
+              class="text-sm text-primary underline-offset-4 hover:underline disabled:opacity-50"
+              disabled={busy()}
+              onClick={onPasswordReset}
+            >
+              {t("login.forgotPassword")}
+            </button>
+          </div>
 
           <div class="grid gap-2">
             <Button disabled={busy()} onClick={onEmailPasswordLogin}>

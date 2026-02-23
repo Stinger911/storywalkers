@@ -8,6 +8,7 @@ const {
   authMock,
   createUserWithEmailAndPasswordMock,
   fetchSignInMethodsForEmailMock,
+  sendPasswordResetEmailMock,
   sendSignInLinkToEmailMock,
   isSignInWithEmailLinkMock,
   signInWithEmailLinkMock,
@@ -20,6 +21,7 @@ const {
     authMock: auth,
     createUserWithEmailAndPasswordMock: vi.fn(),
     fetchSignInMethodsForEmailMock: vi.fn(),
+    sendPasswordResetEmailMock: vi.fn(),
     sendSignInLinkToEmailMock: vi.fn(),
     isSignInWithEmailLinkMock: vi.fn(),
     signInWithEmailLinkMock: vi.fn(),
@@ -45,6 +47,7 @@ vi.mock("firebase/auth", () => ({
   isSignInWithEmailLink: isSignInWithEmailLinkMock,
   signInWithEmailLink: signInWithEmailLinkMock,
   fetchSignInMethodsForEmail: fetchSignInMethodsForEmailMock,
+  sendPasswordResetEmail: sendPasswordResetEmailMock,
   updatePassword: updatePasswordMock,
 }));
 
@@ -95,6 +98,7 @@ describe("Login linking", () => {
     authMock.currentUser = null;
     createUserWithEmailAndPasswordMock.mockReset();
     fetchSignInMethodsForEmailMock.mockReset();
+    sendPasswordResetEmailMock.mockReset();
     sendSignInLinkToEmailMock.mockReset();
     isSignInWithEmailLinkMock.mockReset();
     signInWithEmailLinkMock.mockReset();
@@ -176,5 +180,33 @@ describe("Login linking", () => {
 
     expect(localStorage.getItem("emailForSignIn")).toBeNull();
     expect(localStorage.getItem("pendingPasswordForSignIn")).toBeNull();
+  });
+
+  it("starts password recovery from login screen", async () => {
+    isSignInWithEmailLinkMock.mockReturnValue(false);
+    sendPasswordResetEmailMock.mockResolvedValue(undefined);
+
+    render(() => (
+      <I18nProvider>
+        <Login />
+      </I18nProvider>
+    ));
+
+    fireEvent.input(screen.getByLabelText("Email"), {
+      target: { value: "reset@example.com" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Forgot password?" }));
+
+    await waitFor(() => {
+      expect(sendPasswordResetEmailMock).toHaveBeenCalledWith(
+        authMock,
+        "reset@example.com",
+      );
+    });
+    expect(
+      await screen.findByText(
+        "Password reset email sent. Check your inbox for next steps.",
+      ),
+    ).toBeInTheDocument();
   });
 });

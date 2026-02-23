@@ -25,6 +25,12 @@ curl -H "Authorization: Bearer <FIREBASE_ID_TOKEN>" \
   http://localhost:8080/api/me
 ```
 
+## Telegram notifications
+
+- `TELEGRAM_BOT_TOKEN`: Telegram bot token used to call `sendMessage`.
+- `TELEGRAM_ADMIN_CHAT_ID`: Chat ID (user/group/channel) that receives admin alerts.
+- If either variable is missing, Telegram sends are skipped and logged as warnings.
+
 ## Tests
 
 ```bash

@@ -1,5 +1,8 @@
 import { useSearchParams } from "@solidjs/router";
 import { Show } from "solid-js";
+import { Button } from "../components/ui/button";
+import { useAuth } from "../lib/auth";
+import { useI18n } from "../lib/i18n";
 import {
   Card,
   CardContent,
@@ -17,10 +20,10 @@ type BlockedVariantContent = {
 };
 
 const SUPPORT_URL =
-  import.meta.env.VITE_SUPPORT_URL ?? "mailto:support@storywalkers.app";
-const SUPPORT_LABEL = import.meta.env.VITE_SUPPORT_LABEL ?? "Contact support";
+  import.meta.env.VITE_SUPPORT_URL ?? "https://t.me/storywalkers_support_bot";
 const TELEGRAM_URL = import.meta.env.VITE_SUPPORT_TELEGRAM_URL ?? "";
-const TELEGRAM_LABEL = import.meta.env.VITE_SUPPORT_CONTACT ?? "Telegram support";
+const TELEGRAM_LABEL =
+  import.meta.env.VITE_SUPPORT_CONTACT ?? "t.me/storywalkers_support_bot";
 
 const VARIANTS: Record<BlockedVariant, BlockedVariantContent> = {
   disabled: {
@@ -44,6 +47,8 @@ function normalizeVariant(raw: string | string[] | undefined): BlockedVariant {
 }
 
 export function Blocked() {
+  const auth = useAuth();
+  const { t } = useI18n();
   const [params] = useSearchParams();
   const variant = () => normalizeVariant(params.type);
   const content = () => VARIANTS[variant()];
@@ -65,7 +70,7 @@ export function Blocked() {
             rel="noopener noreferrer"
             class="inline-flex text-sm font-medium text-primary underline-offset-4 hover:underline"
           >
-            {SUPPORT_LABEL}
+            {t("common.contactSupport")}
           </a>
           <Show when={TELEGRAM_URL}>
             <div>
@@ -79,6 +84,24 @@ export function Blocked() {
               </a>
             </div>
           </Show>
+          <div class="flex items-center gap-2">
+            <a
+              href="/onboarding/goal"
+              class="inline-flex h-10 items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium"
+            >
+              Continue onboarding
+            </a>
+            <Button
+              variant="outline"
+              class="ml-auto"
+              onClick={() => {
+                void auth.logout();
+                window.location.href = "/";
+              }}
+            >
+              Log out
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </div>

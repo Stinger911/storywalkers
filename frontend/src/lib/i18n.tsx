@@ -24,6 +24,7 @@ type RawDictionary = {
     question: string;
     answer: string;
     language: string;
+    contactSupport: string;
     status: {
       new: string;
       answered: string;
@@ -38,6 +39,7 @@ type RawDictionary = {
     emailPlaceholder: string;
     passwordLabel: string;
     passwordPlaceholder: string;
+    forgotPassword: string;
     signInPassword: string;
     createAccount: string;
     sendLink: string;
@@ -52,6 +54,7 @@ type RawDictionary = {
       emailLinkSentSetPassword: string;
       linkSignedIn: string;
       linkSignedInPasswordEnabled: string;
+      passwordResetSent: string;
     };
     errors: {
       unauthorizedDomain: string;
@@ -317,6 +320,7 @@ const dictionaries: Record<Locale, RawDictionary> = {
       question: "Question",
       answer: "Answer",
       language: "Language",
+      contactSupport: "Contact Support",
       status: {
         new: "New",
         answered: "Answered",
@@ -331,6 +335,7 @@ const dictionaries: Record<Locale, RawDictionary> = {
       emailPlaceholder: "you@example.com",
       passwordLabel: "Password",
       passwordPlaceholder: "••••••••",
+      forgotPassword: "Forgot password?",
       signInPassword: "Sign in with password",
       createAccount: "Create account (email/password)",
       sendLink: "Send sign-in link (passwordless)",
@@ -349,6 +354,8 @@ const dictionaries: Record<Locale, RawDictionary> = {
         linkSignedIn: "Signed in with the email link.",
         linkSignedInPasswordEnabled:
           "Signed in with email link. Password login is now enabled for this email.",
+        passwordResetSent:
+          "Password reset email sent. Check your inbox for next steps.",
       },
       errors: {
         unauthorizedDomain:
@@ -617,6 +624,7 @@ const dictionaries: Record<Locale, RawDictionary> = {
       question: "Вопрос",
       answer: "Ответ",
       language: "Язык",
+      contactSupport: "Связаться с поддержкой",
       status: {
         new: "Новые",
         answered: "Отвеченные",
@@ -631,6 +639,7 @@ const dictionaries: Record<Locale, RawDictionary> = {
       emailPlaceholder: "you@example.com",
       passwordLabel: "Пароль",
       passwordPlaceholder: "••••••••",
+      forgotPassword: "Забыли пароль?",
       signInPassword: "Войти по паролю",
       createAccount: "Создать аккаунт (email/пароль)",
       sendLink: "Отправить ссылку для входа",
@@ -649,6 +658,8 @@ const dictionaries: Record<Locale, RawDictionary> = {
         linkSignedIn: "Вход по ссылке выполнен.",
         linkSignedInPasswordEnabled:
           "Вход по ссылке выполнен. Вход по паролю для этого email теперь включён.",
+        passwordResetSent:
+          "Письмо для сброса пароля отправлено. Проверьте почту для дальнейших шагов.",
       },
       errors: {
         unauthorizedDomain:

@@ -249,11 +249,26 @@ def _b64_cursor(completed_at: datetime, doc_id: str) -> str:
 def test_student_complete_step_writes_step_and_feed(monkeypatch):
     fake_db = FakeFirestore(
         plans={"u1": {"goalId": "g1"}},
-        steps={"u1": {"s1": {"title": "Step One", "isDone": False}}},
+        steps={
+            "u1": {
+                "s1": {
+                    "title": "Step One",
+                    "isDone": False,
+                    "courseId": "c1",
+                    "lessonId": "l1",
+                }
+            }
+        },
         goals={"g1": {"title": "Goal One"}},
         users={"u1": {"stepsDone": 0, "stepsTotal": 1}},
     )
     monkeypatch.setattr(auth, "get_firestore_client", lambda: fake_db)
+    telegram_messages: list[str] = []
+
+    async def _fake_send_admin_message(text: str) -> None:
+        telegram_messages.append(text)
+
+    monkeypatch.setattr(auth, "send_admin_message", _fake_send_admin_message)
     app.dependency_overrides[get_current_user] = _override_student
     client = TestClient(app)
 
@@ -287,6 +302,12 @@ def test_student_complete_step_writes_step_and_feed(monkeypatch):
     assert completion["updatedAt"] == "SERVER_TIMESTAMP"
     assert completion["revokedAt"] is None
     assert completion["revokedBy"] is None
+    assert len(telegram_messages) == 1
+    assert "📚 Lesson completed" in telegram_messages[0]
+    assert "step_id: s1" in telegram_messages[0]
+    assert "step_title: Step One" in telegram_messages[0]
+    assert "course_id: c1" in telegram_messages[0]
+    assert "lesson_id: l1" in telegram_messages[0]
 
     app.dependency_overrides.clear()
 
@@ -606,5 +627,30 @@ def test_student_complete_sanitizes_and_validates_link(monkeypatch):
     assert completion["link"] is None
     assert step["doneComment"] == "done"
     assert step["doneLink"] is None
+
+    app.dependency_overrides.clear()
+
+
+def test_student_complete_telegram_failure_does_not_break_request(monkeypatch):
+    fake_db = FakeFirestore(
+        plans={"u1": {"goalId": "g1"}},
+        steps={"u1": {"s1": {"title": "Step One", "isDone": False}}},
+        goals={"g1": {"title": "Goal One"}},
+        users={"u1": {"stepsDone": 0, "stepsTotal": 1}},
+    )
+    monkeypatch.setattr(auth, "get_firestore_client", lambda: fake_db)
+
+    async def _raise_send(_text: str) -> None:
+        raise RuntimeError("telegram down")
+
+    monkeypatch.setattr(auth, "send_admin_message", _raise_send)
+    app.dependency_overrides[get_current_user] = _override_student
+    client = TestClient(app)
+
+    response = client.post("/api/student/steps/s1/complete", json={})
+    assert response.status_code == 201
+    payload = response.json()
+    assert payload["status"] == "ok"
+    assert payload["completionId"] in fake_db._completions
 
     app.dependency_overrides.clear()

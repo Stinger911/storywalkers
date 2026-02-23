@@ -17,6 +17,9 @@ class Settings(BaseSettings):
     AUTH_REQUIRED: bool = True
     GIT_COMMIT: str | None = None
     BUILD_TIME: str | None = None
+    TELEGRAM_BOT_TOKEN: str | None = None
+    TELEGRAM_ADMIN_CHAT_ID: str | None = None
+    TELEGRAM_WEBHOOK_SECRET: str | None = None
 
 
 @lru_cache(maxsize=1)

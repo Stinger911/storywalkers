@@ -226,7 +226,83 @@ def test_create_student_defaults_status_to_disabled(monkeypatch):
     app.dependency_overrides.clear()
 
 
-def test_patch_student_rejects_role_field_even_for_staff(monkeypatch):
+def test_create_student_sends_registration_telegram_for_new_user(monkeypatch):
+    users = {}
+    fake_db = FakeFirestore(users)
+    monkeypatch.setattr(admin_students, "get_firestore_client", lambda: fake_db)
+    monkeypatch.setattr(
+        admin_students,
+        "get_or_create_user",
+        lambda email, display_name=None: type("AuthUser", (), {"uid": "new-u2"})(),
+    )
+
+    captured: dict[str, str] = {}
+
+    async def _fake_send_admin_message(text: str) -> None:
+        captured["text"] = text
+
+    monkeypatch.setattr(admin_students, "send_admin_message", _fake_send_admin_message)
+    app.dependency_overrides[require_staff] = _override_staff
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/admin/students",
+        json={
+            "email": "new2@example.com",
+            "displayName": "New Two",
+            "role": "expert",
+        },
+    )
+    assert response.status_code == 201
+    assert "text" in captured
+    assert "uid: new-u2" in captured["text"]
+    assert "email: new2@example.com" in captured["text"]
+    assert "status: disabled" in captured["text"]
+    assert "role: expert" in captured["text"]
+
+    app.dependency_overrides.clear()
+
+
+def test_create_student_does_not_send_registration_telegram_for_existing_user(
+    monkeypatch,
+):
+    users = {
+        "existing-u1": {
+            "email": "existing@example.com",
+            "displayName": "Existing",
+            "role": "student",
+            "status": "active",
+            "createdAt": "OLD",
+        }
+    }
+    fake_db = FakeFirestore(users)
+    monkeypatch.setattr(admin_students, "get_firestore_client", lambda: fake_db)
+    monkeypatch.setattr(
+        admin_students,
+        "get_or_create_user",
+        lambda email, display_name=None: type("AuthUser", (), {"uid": "existing-u1"})(),
+    )
+
+    calls = {"count": 0}
+
+    async def _fake_send_admin_message(_text: str) -> None:
+        calls["count"] += 1
+
+    monkeypatch.setattr(admin_students, "send_admin_message", _fake_send_admin_message)
+    app.dependency_overrides[require_staff] = _override_staff
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/admin/students",
+        json={"email": "existing@example.com", "displayName": "Existing"},
+    )
+    assert response.status_code == 201
+    assert calls["count"] == 0
+
+    app.dependency_overrides.clear()
+
+
+def test_patch_student_updates_role_for_staff(monkeypatch):
     users = {"s1": {"role": "student", "status": "active", "email": "s1@x.com"}}
     fake_db = FakeFirestore(users)
     monkeypatch.setattr(admin_students, "get_firestore_client", lambda: fake_db)
@@ -234,8 +310,8 @@ def test_patch_student_rejects_role_field_even_for_staff(monkeypatch):
     client = TestClient(app)
 
     response = client.patch("/api/admin/students/s1", json={"role": "expert"})
-    assert response.status_code == 400
-    assert users["s1"]["role"] == "student"
+    assert response.status_code == 200
+    assert users["s1"]["role"] == "expert"
 
     app.dependency_overrides.clear()
 
@@ -266,6 +342,7 @@ def test_patch_student_status_change_logs_and_emits_hook(monkeypatch):
 
     logged: list[tuple[str, dict]] = []
     emitted: list[dict] = []
+    telegram_messages: list[str] = []
 
     def _fake_log(message, extra=None):
         logged.append((message, extra or {}))
@@ -273,11 +350,23 @@ def test_patch_student_status_change_logs_and_emits_hook(monkeypatch):
     def _fake_emit(**kwargs):
         emitted.append(kwargs)
 
+    async def _fake_send_admin_message(text: str) -> None:
+        telegram_messages.append(text)
+
     monkeypatch.setattr(admin_students.logger, "info", _fake_log)
     monkeypatch.setattr(admin_students, "_emit_status_changed_event", _fake_emit)
+    monkeypatch.setattr(admin_students, "send_admin_message", _fake_send_admin_message)
 
     response = client.patch("/api/admin/students/s1", json={"status": "expired"})
     assert response.status_code == 200
+    assert users["s1"]["statusChangedBy"] == "staff-1"
+    assert users["s1"]["statusChangedAt"] == "SERVER_TIMESTAMP"
+    assert len(telegram_messages) == 1
+    assert "🔄 Status changed" in telegram_messages[0]
+    assert "actor_uid: staff-1" in telegram_messages[0]
+    assert "uid: s1" in telegram_messages[0]
+    assert "old_status: active" in telegram_messages[0]
+    assert "new_status: expired" in telegram_messages[0]
 
     assert any(
         msg == "status_changed"
@@ -296,6 +385,36 @@ def test_patch_student_status_change_logs_and_emits_hook(monkeypatch):
             "new_status": "expired",
         }
     ]
+
+    app.dependency_overrides.clear()
+
+
+def test_patch_student_does_not_send_telegram_when_status_unchanged(monkeypatch):
+    users = {
+        "s1": {
+            "role": "student",
+            "status": "active",
+            "email": "s1@x.com",
+            "displayName": "Student One",
+        }
+    }
+    fake_db = FakeFirestore(users)
+    monkeypatch.setattr(admin_students, "get_firestore_client", lambda: fake_db)
+    app.dependency_overrides[get_current_user] = _override_staff
+    client = TestClient(app)
+
+    calls = {"count": 0}
+
+    async def _fake_send_admin_message(_text: str) -> None:
+        calls["count"] += 1
+
+    monkeypatch.setattr(admin_students, "send_admin_message", _fake_send_admin_message)
+
+    response = client.patch("/api/admin/students/s1", json={"status": "active"})
+    assert response.status_code == 200
+    assert calls["count"] == 0
+    assert "statusChangedBy" not in users["s1"]
+    assert "statusChangedAt" not in users["s1"]
 
     app.dependency_overrides.clear()
 
