@@ -25,21 +25,6 @@ const TELEGRAM_URL = import.meta.env.VITE_SUPPORT_TELEGRAM_URL ?? "";
 const TELEGRAM_LABEL =
   import.meta.env.VITE_SUPPORT_CONTACT ?? "t.me/storywalkers_support_bot";
 
-const VARIANTS: Record<BlockedVariant, BlockedVariantContent> = {
-  disabled: {
-    title: "Account disabled",
-    description:
-      "Your account is currently disabled. Access to protected sections is restricted.",
-  },
-  expired: {
-    title: "Access expired",
-    description:
-      "Your access period has ended. Some sections are unavailable until renewal.",
-    renewalMessage:
-      "To continue learning, contact support and request renewal.",
-  },
-};
-
 function normalizeVariant(raw: string | string[] | undefined): BlockedVariant {
   const value = Array.isArray(raw) ? raw[0] : raw;
   if (value === "expired") return "expired";
@@ -51,7 +36,17 @@ export function Blocked() {
   const { t } = useI18n();
   const [params] = useSearchParams();
   const variant = () => normalizeVariant(params.type);
-  const content = () => VARIANTS[variant()];
+  const content = (): BlockedVariantContent =>
+    variant() === "expired"
+      ? {
+          title: t("blocked.titleExpired"),
+          description: t("blocked.descriptionExpired"),
+          renewalMessage: t("blocked.renewalMessage"),
+        }
+      : {
+          title: t("blocked.titleDisabled"),
+          description: t("blocked.descriptionDisabled"),
+        };
 
   return (
     <div class="min-h-screen grid place-items-center bg-muted/20 p-6">
@@ -89,7 +84,7 @@ export function Blocked() {
               href="/onboarding/goal"
               class="inline-flex h-10 items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium"
             >
-              Continue onboarding
+              {t("blocked.continueOnboarding")}
             </a>
             <Button
               variant="outline"
@@ -99,7 +94,7 @@ export function Blocked() {
                 window.location.href = "/";
               }}
             >
-              Log out
+              {t("blocked.logout")}
             </Button>
           </div>
         </CardContent>

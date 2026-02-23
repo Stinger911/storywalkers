@@ -41,19 +41,18 @@ import {
 import { TextField, TextFieldInput, TextFieldLabel } from "../../components/ui/text-field";
 import {
   assignPlan,
-  bulkAddSteps,
   deleteStudentPlanStep,
   deleteStudent,
   getStudent,
   getStudentPlan,
   getStudentPlanSteps,
+  listAdminCourses,
   listGoals,
-  listStepTemplates,
   previewResetFromGoal,
   reorderSteps,
   updateStudent,
+  type AdminCourse,
   type Goal,
-  type StepTemplate,
 } from "../../lib/adminApi";
 
 type StudentProfile = {
@@ -61,6 +60,20 @@ type StudentProfile = {
   email?: string;
   role?: string;
   status?: string;
+  selectedGoalId?: string | null;
+  onboardingStep?: string | null;
+  profileForm?: {
+    telegram?: string | null;
+    socialUrl?: string | null;
+    experienceLevel?: "beginner" | "intermediate" | "advanced" | null;
+    notes?: string | null;
+  };
+  selectedCourses?: string[] | null;
+  preferredCurrency?: "USD" | "EUR" | "PLN" | "RUB" | null;
+  subscriptionSelected?: boolean | null;
+  telegramEvents?: {
+    questionnaireCompletedAt?: unknown;
+  } | null;
 };
 
 type StudentPlan = {
@@ -94,14 +107,16 @@ export function AdminStudentProfile() {
   const [, setPlan] = createSignal<StudentPlan | null>(null);
   const [steps, setSteps] = createSignal<PlanStep[]>([]);
   const [goals, setGoals] = createSignal<Goal[]>([]);
-  const [templates, setTemplates] = createSignal<StepTemplate[]>([]);
+  const [courses, setCourses] = createSignal<AdminCourse[]>([]);
   const [goalId, setGoalId] = createSignal("");
-  const [selectedTemplates, setSelectedTemplates] = createSignal<string[]>([]);
   const [loading, setLoading] = createSignal(true);
   const [error, setError] = createSignal<string | null>(null);
   const [saving, setSaving] = createSignal(false);
   const [savingProfile, setSavingProfile] = createSignal(false);
   const [savingName, setSavingName] = createSignal(false);
+  const [activeTab, setActiveTab] = createSignal<"profile" | "questionnaire">(
+    "profile",
+  );
   const [nameError, setNameError] = createSignal<string | null>(null);
   const [roleDraft, setRoleDraft] = createSignal("student");
   const [statusDraft, setStatusDraft] = createSignal("active");
@@ -125,11 +140,13 @@ export function AdminStudentProfile() {
     setLoading(true);
     setError(null);
     try {
-      const [studentData, planData, stepsData] = await Promise.all([
+      const [studentData, planData] = await Promise.all([
         getStudent(uid()),
         getStudentPlan(uid()).catch(() => null),
-        getStudentPlanSteps(uid()).catch(() => ({ items: [] })),
       ]);
+      const stepsData = planData
+        ? await getStudentPlanSteps(uid()).catch(() => ({ items: [] }))
+        : { items: [] };
       setStudent(studentData as StudentProfile);
       if (planData) {
         setPlan(planData as StudentPlan);
@@ -173,12 +190,12 @@ export function AdminStudentProfile() {
   createEffect(() => {
     const load = async () => {
       try {
-        const [goalData, templateData] = await Promise.all([
+        const [goalData, courseData] = await Promise.all([
           listGoals(),
-          listStepTemplates(),
+          listAdminCourses({ limit: 200 }).catch(() => ({ items: [] })),
         ]);
         setGoals(goalData.items);
-        setTemplates(templateData.items);
+        setCourses(courseData.items);
       } catch (err) {
         setError((err as Error).message);
       }
@@ -193,6 +210,49 @@ export function AdminStudentProfile() {
   });
 
   const currentGoal = createMemo(() => goals().find((g) => g.id === goalId()));
+  const goalTitleById = createMemo(
+    () => new Map(goals().map((goal) => [goal.id, goal.title])),
+  );
+  const courseTitleById = createMemo(
+    () => new Map(courses().map((course) => [course.id, course.title])),
+  );
+  const questionnaireGoalLabel = createMemo(() => {
+    const selectedGoalId = student()?.selectedGoalId;
+    if (!selectedGoalId) return "Not provided";
+    return goalTitleById().get(selectedGoalId) || selectedGoalId;
+  });
+  const questionnaireSelectedCourses = createMemo(
+    () => student()?.selectedCourses?.filter((value) => typeof value === "string") ?? [],
+  );
+  const questionnaireSelectedCourseLabels = createMemo(() =>
+    questionnaireSelectedCourses().map(
+      (courseId) => courseTitleById().get(courseId) || courseId,
+    ),
+  );
+  const questionnaireExperience = createMemo(() => {
+    const level = student()?.profileForm?.experienceLevel;
+    if (level === "beginner") return "Beginner";
+    if (level === "intermediate") return "Intermediate";
+    if (level === "advanced") return "Advanced";
+    return "Not provided";
+  });
+  const questionnaireCurrency = createMemo(
+    () => student()?.preferredCurrency || "Not provided",
+  );
+  const questionnaireSubscription = createMemo(() => {
+    const value = student()?.subscriptionSelected;
+    if (value === true) return "Yes";
+    if (value === false) return "No";
+    return "Not provided";
+  });
+  const questionnaireCompletedAt = createMemo(() => {
+    const raw = student()?.telegramEvents?.questionnaireCompletedAt as
+      | { toDate?: () => Date }
+      | undefined;
+    if (raw?.toDate) return raw.toDate().toISOString();
+    if (typeof raw === "string") return raw;
+    return "Not sent";
+  });
   const roleOptions: SelectOption[] = [
     { value: "student", label: "Student" },
     { value: "expert", label: "Expert" },
@@ -218,15 +278,6 @@ export function AdminStudentProfile() {
   const selectedGoalOption = createMemo(() =>
     goalOptions().find((option) => option.value === goalId()) ?? null,
   );
-
-  const toggleTemplate = (id: string) => {
-    const current = selectedTemplates();
-    if (current.includes(id)) {
-      setSelectedTemplates(current.filter((value) => value !== id));
-    } else {
-      setSelectedTemplates([...current, id]);
-    }
-  };
 
   const saveGoal = async () => {
     if (!goalId()) {
@@ -282,26 +333,6 @@ export function AdminStudentProfile() {
       await load();
     } catch (err) {
       setPreviewError((err as Error).message);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const addSteps = async () => {
-    if (selectedTemplates().length === 0) {
-      setError("Select at least one template.");
-      return;
-    }
-    setSaving(true);
-    setError(null);
-    try {
-      await bulkAddSteps(uid(), {
-        items: selectedTemplates().map((templateId) => ({ templateId })),
-      });
-      setSelectedTemplates([]);
-      await load();
-    } catch (err) {
-      setError((err as Error).message);
     } finally {
       setSaving(false);
     }
@@ -522,211 +553,278 @@ export function AdminStudentProfile() {
         </div>
       </Show>
 
-      <div class="space-y-6">
-        <SectionCard title="Access">
-          <div class="grid gap-4">
-            <div class="grid gap-4 md:grid-cols-2">
-              <div class="grid gap-2">
-                <Select
-                  value={selectedRoleOption()}
-                  onChange={(value) =>
-                    setRoleDraft(
-                      (value as SelectOption | null)?.value ?? "student",
-                    )
-                  }
-                  options={roleOptions}
-                  optionValue={(option) =>
-                    (option as unknown as SelectOption).value
-                  }
-                  optionTextValue={(option) =>
-                    (option as unknown as SelectOption).label
-                  }
-                  itemComponent={(props) => (
-                    <SelectItem item={props.item}>
-                      {
-                        (props.item.rawValue as unknown as { label: string })
-                          .label
-                      }
-                    </SelectItem>
-                  )}
-                >
-                  <SelectLabel for="role-select">Role</SelectLabel>
-                  <SelectHiddenSelect id="role-select" />
-                  <SelectTrigger aria-label="Role">
-                    <SelectValue<string>>
-                      {(state) =>
-                        (
-                          (state?.selectedOption() || {}) as unknown as {
-                            label: string;
-                          }
-                        ).label ?? "Select role"
-                      }
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent />
-                </Select>
-              </div>
-              <div class="grid gap-2">
-                <Select
-                  value={selectedStatusOption()}
-                  onChange={(value) =>
-                    setStatusDraft(
-                      (value as SelectOption | null)?.value ?? "active",
-                    )
-                  }
-                  options={statusOptions}
-                  optionValue={(option) =>
-                    (option as unknown as SelectOption).value
-                  }
-                  optionTextValue={(option) =>
-                    (option as unknown as SelectOption).label
-                  }
-                  itemComponent={(props) => (
-                    <SelectItem item={props.item}>
-                      {
-                        (props.item.rawValue as unknown as { label: string })
-                          .label
-                      }
-                    </SelectItem>
-                  )}
-                >
-                  <SelectLabel for="status-select">Status</SelectLabel>
-                  <SelectHiddenSelect id="status-select" />
-                  <SelectTrigger aria-label="Status">
-                    <SelectValue<string>>
-                      {(state) =>
-                        (
-                          (state?.selectedOption() || {}) as unknown as {
-                            label: string;
-                          }
-                        ).label ?? "Select status"
-                      }
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent />
-                </Select>
-              </div>
-            </div>
-            <Button
-              onClick={() => void saveProfile()}
-              disabled={savingProfile()}
-            >
-              Save access
-            </Button>
-          </div>
-        </SectionCard>
-
-        <SectionCard title="Danger zone">
-          <div class="space-y-3 text-sm text-muted-foreground">
-            <div>
-              Deleting this student removes their account, plan, steps, and step
-              completion records.
-            </div>
-            <Button
-              variant="destructive"
-              onClick={openDeleteDialog}
-              disabled={deletingStudent()}
-              data-testid="open-delete-student"
-            >
-              Delete student
-            </Button>
-          </div>
-        </SectionCard>
-
-        <SectionCard title="Assign goal">
-          <div class="grid gap-4">
-            <div class="grid gap-2">
-              <Select
-                value={selectedGoalOption()}
-                onChange={(value) =>
-                  setGoalId((value as SelectOption | null)?.value ?? "")
-                }
-                options={goalOptions()}
-                optionValue={(option) =>
-                  (option as unknown as SelectOption).value
-                }
-                optionTextValue={(option) =>
-                  (option as unknown as SelectOption).label
-                }
-                itemComponent={(props) => (
-                  <SelectItem item={props.item}>
-                    {
-                      (props.item.rawValue as unknown as { label: string })
-                        .label
+      <div class="space-y-4">
+        <div class="flex gap-2 border-b border-border/70 pb-2">
+          <Button
+            variant={activeTab() === "profile" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setActiveTab("profile")}
+          >
+            Profile
+          </Button>
+          <Button
+            variant={activeTab() === "questionnaire" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setActiveTab("questionnaire")}
+          >
+            Questionnaire
+          </Button>
+        </div>
+        <Show when={activeTab() === "profile"}>
+          <div class="space-y-6">
+          <SectionCard title="Access">
+            <div class="grid gap-4">
+              <div class="grid gap-4 md:grid-cols-2">
+                <div class="grid gap-2">
+                  <Select
+                    value={selectedRoleOption()}
+                    onChange={(value) =>
+                      setRoleDraft(
+                        (value as SelectOption | null)?.value ?? "student",
+                      )
                     }
-                  </SelectItem>
-                )}
-              >
-                <SelectLabel for="goal-select">Goal</SelectLabel>
-                <SelectHiddenSelect id="goal-select" />
-                <SelectTrigger aria-label="Goal">
-                  <SelectValue<string>>
-                    {(state) =>
-                      (
-                        (state?.selectedOption() || {}) as unknown as {
-                          label: string;
+                    options={roleOptions}
+                    optionValue={(option) =>
+                      (option as unknown as SelectOption).value
+                    }
+                    optionTextValue={(option) =>
+                      (option as unknown as SelectOption).label
+                    }
+                    itemComponent={(props) => (
+                      <SelectItem item={props.item}>
+                        {
+                          (props.item.rawValue as unknown as { label: string })
+                            .label
                         }
-                      ).label ?? "Select goal"
+                      </SelectItem>
+                    )}
+                  >
+                    <SelectLabel for="role-select">Role</SelectLabel>
+                    <SelectHiddenSelect id="role-select" />
+                    <SelectTrigger aria-label="Role">
+                      <SelectValue<string>>
+                        {(state) =>
+                          (
+                            (state?.selectedOption() || {}) as unknown as {
+                              label: string;
+                            }
+                          ).label ?? "Select role"
+                        }
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent />
+                  </Select>
+                </div>
+                <div class="grid gap-2">
+                  <Select
+                    value={selectedStatusOption()}
+                    onChange={(value) =>
+                      setStatusDraft(
+                        (value as SelectOption | null)?.value ?? "active",
+                      )
                     }
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent />
-              </Select>
-            </div>
-            <Show when={currentGoal()}>
-              <div class="rounded-xl border p-4 text-sm text-muted-foreground">
-                <div class="font-medium text-foreground">
-                  {currentGoal()?.title}
+                    options={statusOptions}
+                    optionValue={(option) =>
+                      (option as unknown as SelectOption).value
+                    }
+                    optionTextValue={(option) =>
+                      (option as unknown as SelectOption).label
+                    }
+                    itemComponent={(props) => (
+                      <SelectItem item={props.item}>
+                        {
+                          (props.item.rawValue as unknown as { label: string })
+                            .label
+                        }
+                      </SelectItem>
+                    )}
+                  >
+                    <SelectLabel for="status-select">Status</SelectLabel>
+                    <SelectHiddenSelect id="status-select" />
+                    <SelectTrigger aria-label="Status">
+                      <SelectValue<string>>
+                        {(state) =>
+                          (
+                            (state?.selectedOption() || {}) as unknown as {
+                              label: string;
+                            }
+                          ).label ?? "Select status"
+                        }
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent />
+                  </Select>
                 </div>
-                <div>{currentGoal()?.description || "No description"}</div>
               </div>
-            </Show>
-            <Button onClick={() => void saveGoal()} disabled={saving()}>
-              Save goal
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={() => void openResetPreview()}
-              disabled={saving() || previewLoading()}
-            >
-              Assign goal + Replace steps from template
-            </Button>
-          </div>
-        </SectionCard>
+              <Button
+                onClick={() => void saveProfile()}
+                disabled={savingProfile()}
+              >
+                Save access
+              </Button>
+            </div>
+          </SectionCard>
 
-        <SectionCard title="Add steps from templates">
-          <div class="grid gap-3 max-h-[420px] overflow-y-auto">
-            {templates().map((template) => (
-              <label class="flex items-start gap-3 rounded-xl border p-3">
-                <input
-                  type="checkbox"
-                  checked={selectedTemplates().includes(template.id)}
-                  onChange={() => toggleTemplate(template.id)}
-                />
-                <div>
-                  <div class="text-sm font-semibold">{template.title}</div>
-                  <div class="text-xs text-muted-foreground">
-                    {template.description}
+          <SectionCard title="Danger zone">
+            <div class="space-y-3 text-sm text-muted-foreground">
+              <div>
+                Deleting this student removes their account, plan, steps, and step
+                completion records.
+              </div>
+              <Button
+                variant="destructive"
+                onClick={openDeleteDialog}
+                disabled={deletingStudent()}
+                data-testid="open-delete-student"
+              >
+                Delete student
+              </Button>
+            </div>
+          </SectionCard>
+
+          <SectionCard title="Assign goal">
+            <div class="grid gap-4">
+              <div class="grid gap-2">
+                <Select
+                  value={selectedGoalOption()}
+                  onChange={(value) =>
+                    setGoalId((value as SelectOption | null)?.value ?? "")
+                  }
+                  options={goalOptions()}
+                  optionValue={(option) =>
+                    (option as unknown as SelectOption).value
+                  }
+                  optionTextValue={(option) =>
+                    (option as unknown as SelectOption).label
+                  }
+                  itemComponent={(props) => (
+                    <SelectItem item={props.item}>
+                      {
+                        (props.item.rawValue as unknown as { label: string })
+                          .label
+                      }
+                    </SelectItem>
+                  )}
+                >
+                  <SelectLabel for="goal-select">Goal</SelectLabel>
+                  <SelectHiddenSelect id="goal-select" />
+                  <SelectTrigger aria-label="Goal">
+                    <SelectValue<string>>
+                      {(state) =>
+                        (
+                          (state?.selectedOption() || {}) as unknown as {
+                            label: string;
+                          }
+                        ).label ?? "Select goal"
+                      }
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent />
+                </Select>
+              </div>
+              <Show when={currentGoal()}>
+                <div class="rounded-xl border p-4 text-sm text-muted-foreground">
+                  <div class="font-medium text-foreground">
+                    {currentGoal()?.title}
                   </div>
+                  <div>{currentGoal()?.description || "No description"}</div>
                 </div>
-              </label>
-            ))}
+              </Show>
+              <Button onClick={() => void saveGoal()} disabled={saving()}>
+                Save goal
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => void openResetPreview()}
+                disabled={saving() || previewLoading()}
+              >
+                Assign goal + Replace steps
+              </Button>
+            </div>
+          </SectionCard>
           </div>
-          <div class="mt-4 flex flex-wrap gap-2">
-            <Button onClick={() => void addSteps()} disabled={saving()}>
-              Add selected steps
-            </Button>
-            <Button variant="outline" onClick={() => setSelectedTemplates([])}>
-              Clear selection
-            </Button>
-          </div>
-        </SectionCard>
+        </Show>
+        <Show when={activeTab() === "questionnaire"}>
+          <SectionCard title="Questionnaire answers">
+            <div class="grid gap-4 text-sm">
+              <div class="grid gap-1">
+                <div class="text-xs font-semibold uppercase text-muted-foreground">
+                  Onboarding step
+                </div>
+                <div>{student()?.onboardingStep || "Not provided"}</div>
+              </div>
+              <div class="grid gap-1">
+                <div class="text-xs font-semibold uppercase text-muted-foreground">
+                  Selected goal
+                </div>
+                <div>{questionnaireGoalLabel()}</div>
+              </div>
+              <div class="grid gap-1">
+                <div class="text-xs font-semibold uppercase text-muted-foreground">
+                  Telegram
+                </div>
+                <div>{student()?.profileForm?.telegram || "Not provided"}</div>
+              </div>
+              <div class="grid gap-1">
+                <div class="text-xs font-semibold uppercase text-muted-foreground">
+                  Social URL
+                </div>
+                <div>{student()?.profileForm?.socialUrl || "Not provided"}</div>
+              </div>
+              <div class="grid gap-1">
+                <div class="text-xs font-semibold uppercase text-muted-foreground">
+                  Experience level
+                </div>
+                <div>{questionnaireExperience()}</div>
+              </div>
+              <div class="grid gap-1">
+                <div class="text-xs font-semibold uppercase text-muted-foreground">
+                  Notes
+                </div>
+                <div>{student()?.profileForm?.notes || "Not provided"}</div>
+              </div>
+              <div class="grid gap-1">
+                <div class="text-xs font-semibold uppercase text-muted-foreground">
+                  Selected courses
+                </div>
+                <Show
+                  when={questionnaireSelectedCourseLabels().length > 0}
+                  fallback={<div>Not provided</div>}
+                >
+                  <ul class="list-disc pl-5">
+                    {questionnaireSelectedCourseLabels().map((courseTitle) => (
+                      <li>{courseTitle}</li>
+                    ))}
+                  </ul>
+                </Show>
+              </div>
+              <div class="grid gap-1">
+                <div class="text-xs font-semibold uppercase text-muted-foreground">
+                  Preferred currency
+                </div>
+                <div>{questionnaireCurrency()}</div>
+              </div>
+              <div class="grid gap-1">
+                <div class="text-xs font-semibold uppercase text-muted-foreground">
+                  Community selected
+                </div>
+                <div>{questionnaireSubscription()}</div>
+              </div>
+              <div class="grid gap-1">
+                <div class="text-xs font-semibold uppercase text-muted-foreground">
+                  Questionnaire completed event
+                </div>
+                <div>{questionnaireCompletedAt()}</div>
+              </div>
+            </div>
+          </SectionCard>
+        </Show>
       </div>
 
       <Dialog open={previewOpen()} onOpenChange={setPreviewOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Replace steps from template?</DialogTitle>
+            <DialogTitle>Replace steps?</DialogTitle>
             <DialogDescription>
               Review the impact before resetting the student plan steps.
             </DialogDescription>
@@ -751,7 +849,7 @@ export function AdminStudentProfile() {
               <Show when={previewData()!.sampleTitles.length > 0}>
                 <div class="rounded-lg border p-3">
                   <div class="text-xs font-semibold uppercase text-muted-foreground">
-                    Sample template steps
+                    Sample steps
                   </div>
                   <ul class="mt-2 list-disc space-y-1 pl-5 text-sm">
                     {previewData()!.sampleTitles.map((title) => (

@@ -18,6 +18,19 @@ vi.mock("../../src/lib/i18n", () => ({
   useI18n: () => ({
     t: (key: string) => {
       if (key === "common.contactSupport") return "Contact Support";
+      if (key === "blocked.titleDisabled") return "Account disabled";
+      if (key === "blocked.descriptionDisabled") {
+        return "Your account is currently disabled. Access to protected sections is restricted.";
+      }
+      if (key === "blocked.titleExpired") return "Access expired";
+      if (key === "blocked.descriptionExpired") {
+        return "Your access period has ended. Some sections are unavailable until renewal.";
+      }
+      if (key === "blocked.renewalMessage") {
+        return "To continue learning, contact support and request renewal.";
+      }
+      if (key === "blocked.continueOnboarding") return "Continue onboarding";
+      if (key === "blocked.logout") return "Log out";
       return key;
     },
   }),
