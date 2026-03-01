@@ -202,6 +202,16 @@ def test_admin_payments_forbidden_for_non_staff(monkeypatch):
     assert response_get.status_code == 403
     assert response_get.json()["error"]["code"] == "forbidden"
 
+    response_activate = client.post("/api/admin/payments/p1/activate")
+    assert response_activate.status_code == 403
+    assert response_activate.json()["error"]["code"] == "forbidden"
+
+    response_reject = client.post(
+        "/api/admin/payments/p1/reject", json={"reason": "invalid"}
+    )
+    assert response_reject.status_code == 403
+    assert response_reject.json()["error"]["code"] == "forbidden"
+
     app.dependency_overrides.clear()
 
 
@@ -301,40 +311,12 @@ def test_admin_payments_list_supports_cursor_pagination(monkeypatch):
     assert [item["id"] for item in first_payload["items"]] == ["p1"]
     assert isinstance(first_payload["nextCursor"], str) and first_payload["nextCursor"]
 
-    second = client.get(f"/api/admin/payments?limit=1&cursor={first_payload['nextCursor']}")
+    second = client.get(
+        f"/api/admin/payments?limit=1&cursor={first_payload['nextCursor']}"
+    )
     assert second.status_code == 200
     second_payload = second.json()
     assert [item["id"] for item in second_payload["items"]] == ["p2"]
-
-    app.dependency_overrides.clear()
-
-
-def test_admin_payment_actions_forbidden_for_non_staff(monkeypatch):
-    fake_db = FakeFirestore(
-        payments={
-            "p1": {
-                "userUid": "u1",
-                "email": "a@example.com",
-                "provider": "boosty",
-                "selectedCourses": ["c1"],
-                "amount": 1000,
-                "currency": "USD",
-                "activationCode": "SW-AAA11111",
-                "status": "created",
-                "createdAt": datetime(2026, 2, 3, tzinfo=timezone.utc),
-                "updatedAt": datetime(2026, 2, 3, tzinfo=timezone.utc),
-            }
-        },
-        users={"u1": {"status": "disabled"}},
-    )
-    monkeypatch.setattr(admin_payments, "get_firestore_client", lambda: fake_db)
-    app.dependency_overrides[auth_deps.get_current_user] = _student
-    client = TestClient(app)
-
-    activate = client.post("/api/admin/payments/p1/activate")
-    assert activate.status_code == 403
-    reject = client.post("/api/admin/payments/p1/reject", json={"reason": "bad receipt"})
-    assert reject.status_code == 403
 
     app.dependency_overrides.clear()
 
@@ -403,7 +385,9 @@ def test_admin_reject_payment_idempotency(monkeypatch):
     app.dependency_overrides[auth_deps.get_current_user] = _staff
     client = TestClient(app)
 
-    first = client.post("/api/admin/payments/p2/reject", json={"reason": "manual review"})
+    first = client.post(
+        "/api/admin/payments/p2/reject", json={"reason": "manual review"}
+    )
     assert first.status_code == 200
     assert first.json()["result"] == "rejected"
     assert fake_db._payments["p2"]["status"] == "rejected"

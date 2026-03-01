@@ -108,7 +108,9 @@ async def list_admin_payments(
 ):
     _ = user
     db = get_firestore_client()
-    provider_value = provider.strip() if isinstance(provider, str) and provider.strip() else None
+    provider_value = (
+        provider.strip() if isinstance(provider, str) and provider.strip() else None
+    )
     cursor_value = _decode_cursor(cursor) if cursor else None
 
     # Keep pagination deterministic while supporting in-memory q filter.
@@ -145,7 +147,9 @@ async def list_admin_payments(
         if isinstance(last_payment.createdAt, datetime):
             next_cursor = _encode_cursor(last_payment.createdAt, last_id)
     return {
-        "items": [_payment_payload(payment_id, payment) for payment_id, payment in items],
+        "items": [
+            _payment_payload(payment_id, payment) for payment_id, payment in items
+        ],
         "nextCursor": next_cursor,
     }
 
@@ -177,8 +181,15 @@ async def activate_admin_payment(
     if payment_data.get("status") == PaymentStatus.activated.value:
         payment = get_payment(db, payment_id)
         if not payment:
-            raise AppError(code="not_found", message="Payment not found", status_code=404)
-        return {"status": "ok", "id": payment_id, "result": "noop", "payment": _payment_payload(payment_id, payment)}
+            raise AppError(
+                code="not_found", message="Payment not found", status_code=404
+            )
+        return {
+            "status": "ok",
+            "id": payment_id,
+            "result": "noop",
+            "payment": _payment_payload(payment_id, payment),
+        }
 
     user_uid = payment_data.get("userUid")
     if not isinstance(user_uid, str) or not user_uid.strip():
@@ -214,7 +225,12 @@ async def activate_admin_payment(
     payment = get_payment(db, payment_id)
     if not payment:
         raise AppError(code="not_found", message="Payment not found", status_code=404)
-    return {"status": "ok", "id": payment_id, "result": "activated", "payment": _payment_payload(payment_id, payment)}
+    return {
+        "status": "ok",
+        "id": payment_id,
+        "result": "activated",
+        "payment": _payment_payload(payment_id, payment),
+    }
 
 
 @router.post("/payments/{payment_id}/reject")
@@ -232,8 +248,15 @@ async def reject_admin_payment(
     if payment_data.get("status") == PaymentStatus.rejected.value:
         payment = get_payment(db, payment_id)
         if not payment:
-            raise AppError(code="not_found", message="Payment not found", status_code=404)
-        return {"status": "ok", "id": payment_id, "result": "noop", "payment": _payment_payload(payment_id, payment)}
+            raise AppError(
+                code="not_found", message="Payment not found", status_code=404
+            )
+        return {
+            "status": "ok",
+            "id": payment_id,
+            "result": "noop",
+            "payment": _payment_payload(payment_id, payment),
+        }
 
     payment_ref.update(
         {
@@ -247,4 +270,9 @@ async def reject_admin_payment(
     payment = get_payment(db, payment_id)
     if not payment:
         raise AppError(code="not_found", message="Payment not found", status_code=404)
-    return {"status": "ok", "id": payment_id, "result": "rejected", "payment": _payment_payload(payment_id, payment)}
+    return {
+        "status": "ok",
+        "id": payment_id,
+        "result": "rejected",
+        "payment": _payment_payload(payment_id, payment),
+    }

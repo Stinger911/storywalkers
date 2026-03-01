@@ -59,9 +59,22 @@ export type AdminPayment = {
   activationCode?: string | null
   status: PaymentStatus
   emailEvidence?: string | null
+  activatedBy?: string | null
+  rejectedAt?: unknown
+  rejectedBy?: string | null
+  rejectionReason?: string | null
   createdAt?: unknown
   updatedAt?: unknown
   activatedAt?: unknown
+}
+
+export type AdminPaymentActionResult = "activated" | "rejected" | "noop"
+
+export type AdminPaymentActionResponse = {
+  status: "ok"
+  id: string
+  result: AdminPaymentActionResult
+  payment: AdminPayment
 }
 
 type StepTemplate = {
@@ -534,6 +547,21 @@ export async function listAdminPayments(params?: {
 export async function getAdminPayment(id: string) {
   const response = await apiFetch(`/api/admin/payments/${id}`)
   return handleJson<AdminPayment>(response)
+}
+
+export async function activateAdminPayment(id: string) {
+  const response = await apiFetch(`/api/admin/payments/${id}/activate`, {
+    method: "POST",
+  })
+  return handleJson<AdminPaymentActionResponse>(response)
+}
+
+export async function rejectAdminPayment(id: string, payload: { reason?: string | null }) {
+  const response = await apiFetch(`/api/admin/payments/${id}/reject`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  })
+  return handleJson<AdminPaymentActionResponse>(response)
 }
 
 export type {

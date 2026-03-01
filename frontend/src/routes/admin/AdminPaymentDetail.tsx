@@ -21,7 +21,13 @@ import { Page } from "../../components/ui/page";
 import { Skeleton } from "../../components/ui/skeleton";
 import { showToast } from "../../components/ui/toast";
 import { formatDate } from "../../lib/utils";
-import { getAdminPayment, getStudent, type AdminPayment } from "../../lib/adminApi";
+import {
+  activateAdminPayment,
+  getAdminPayment,
+  getStudent,
+  rejectAdminPayment,
+  type AdminPayment,
+} from "../../lib/adminApi";
 
 type StudentProfile = {
   uid: string;
@@ -61,6 +67,10 @@ export function AdminPaymentDetail() {
   const [student, setStudent] = createSignal<StudentProfile | null>(null);
   const [loading, setLoading] = createSignal(true);
   const [error, setError] = createSignal<string | null>(null);
+  const [activateConfirm, setActivateConfirm] = createSignal("");
+  const [rejectReason, setRejectReason] = createSignal("");
+  const [activating, setActivating] = createSignal(false);
+  const [rejecting, setRejecting] = createSignal(false);
 
   const evidence = createMemo(() => parseEvidence(payment()?.emailEvidence));
 
@@ -86,41 +96,98 @@ export function AdminPaymentDetail() {
     }
   };
 
+  const load = async (id: string, keepError = false) => {
+    setLoading(true);
+    if (!keepError) setError(null);
+    setStudent(null);
+    try {
+      const paymentData = await getAdminPayment(id);
+      setPayment(paymentData);
+      try {
+        const userData = await getStudent(paymentData.userUid);
+        setStudent({
+          uid: paymentData.userUid,
+          displayName: userData.displayName,
+          email: userData.email,
+          role: userData.role,
+          status: userData.status,
+        });
+      } catch {
+        setStudent({
+          uid: paymentData.userUid,
+          displayName: undefined,
+          email: undefined,
+          role: undefined,
+          status: undefined,
+        });
+      }
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   createEffect(() => {
     const id = paymentId();
     if (!id) return;
-    void (async () => {
-      setLoading(true);
-      setError(null);
-      setStudent(null);
-      try {
-        const paymentData = await getAdminPayment(id);
-        setPayment(paymentData);
-        try {
-          const userData = await getStudent(paymentData.userUid);
-          setStudent({
-            uid: paymentData.userUid,
-            displayName: userData.displayName,
-            email: userData.email,
-            role: userData.role,
-            status: userData.status,
-          });
-        } catch {
-          setStudent({
-            uid: paymentData.userUid,
-            displayName: undefined,
-            email: undefined,
-            role: undefined,
-            status: undefined,
-          });
-        }
-      } catch (err) {
-        setError((err as Error).message);
-      } finally {
-        setLoading(false);
-      }
-    })();
+    void load(id);
   });
+
+  const onActivate = async () => {
+    const id = paymentId();
+    if (!id || activating()) return;
+    if (activateConfirm().trim() !== "ACTIVATE") {
+      showToast({
+        variant: "warning",
+        title: "Confirmation mismatch",
+        description: 'Type "ACTIVATE" to confirm activation.',
+      });
+      return;
+    }
+    setActivating(true);
+    try {
+      const result = await activateAdminPayment(id);
+      showToast({
+        variant: "success",
+        title: result.result === "noop" ? "Already activated" : "Payment activated",
+      });
+      setActivateConfirm("");
+      await load(id, true);
+    } catch (err) {
+      showToast({
+        variant: "error",
+        title: "Activation failed",
+        description: (err as Error).message,
+      });
+    } finally {
+      setActivating(false);
+    }
+  };
+
+  const onReject = async () => {
+    const id = paymentId();
+    if (!id || rejecting()) return;
+    setRejecting(true);
+    try {
+      const reason = rejectReason().trim();
+      const result = await rejectAdminPayment(id, { reason: reason || null });
+      showToast({
+        variant: "success",
+        title: result.result === "noop" ? "Already rejected" : "Payment rejected",
+      });
+      setRejectReason("");
+      await load(id, true);
+    } catch (err) {
+      showToast({
+        variant: "error",
+        title: "Reject failed",
+        description: (err as Error).message,
+      });
+    } finally {
+      setRejecting(false);
+    }
+  };
 
   return (
     <Page
@@ -303,6 +370,60 @@ export function AdminPaymentDetail() {
             </CardContent>
           </Card>
         </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Actions</CardTitle>
+            <CardDescription>Manual payment moderation actions.</CardDescription>
+          </CardHeader>
+          <CardContent class="grid gap-4 md:grid-cols-2">
+            <div class="space-y-3 rounded-xl border border-border/70 p-4">
+              <div>
+                <div class="text-sm font-medium">Activate</div>
+                <p class="text-xs text-muted-foreground">
+                  Type <code>ACTIVATE</code> to confirm and activate this user.
+                </p>
+              </div>
+              <input
+                class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                value={activateConfirm()}
+                onInput={(event) => setActivateConfirm(event.currentTarget.value)}
+                placeholder="ACTIVATE"
+                disabled={activating() || rejecting()}
+              />
+              <Button
+                onClick={() => void onActivate()}
+                disabled={activating() || rejecting() || !paymentId()}
+              >
+                {activating() ? "Activating..." : "Activate"}
+              </Button>
+            </div>
+
+            <div class="space-y-3 rounded-xl border border-border/70 p-4">
+              <div>
+                <div class="text-sm font-medium">Reject</div>
+                <p class="text-xs text-muted-foreground">
+                  Optionally provide a rejection reason for audit history.
+                </p>
+              </div>
+              <textarea
+                class="flex min-h-[96px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                value={rejectReason()}
+                onInput={(event) => setRejectReason(event.currentTarget.value)}
+                placeholder="Reason (optional)"
+                rows={4}
+                disabled={activating() || rejecting()}
+              />
+              <Button
+                variant="destructive"
+                onClick={() => void onReject()}
+                disabled={activating() || rejecting() || !paymentId()}
+              >
+                {rejecting() ? "Rejecting..." : "Reject"}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
 
         <A href="/admin/payments" class="inline-block text-sm text-primary underline">
           Back to payments

@@ -67,8 +67,9 @@ export function AdminPayments() {
     setLoading(true);
     setError(null);
     try {
+      const selectedStatus = statusFilter();
       const data = await listAdminPayments({
-        status: statusFilter() === "all" ? undefined : statusFilter(),
+        status: selectedStatus === "all" ? undefined : selectedStatus,
         q: query().trim() || undefined,
         limit: 100,
       });
