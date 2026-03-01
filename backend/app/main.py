@@ -17,6 +17,7 @@ from app.routers import (
     admin_step_completions,
     admin_students,
     auth,
+    checkout,
     courses,
     library,
     questions,
@@ -139,6 +140,7 @@ async def version():
 
 
 app.include_router(auth.router)
+app.include_router(checkout.router)
 app.include_router(courses.router)
 app.include_router(admin_courses.router)
 app.include_router(admin_students.router)
