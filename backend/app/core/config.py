@@ -20,6 +20,9 @@ class Settings(BaseSettings):
     TELEGRAM_BOT_TOKEN: str | None = None
     TELEGRAM_ADMIN_CHAT_ID: str | None = None
     TELEGRAM_WEBHOOK_SECRET: str | None = None
+    GMAIL_REFRESH_TOKEN: str | None = None
+    GMAIL_CLIENT_ID: str | None = None
+    GMAIL_CLIENT_SECRET: str | None = None
 
 
 @lru_cache(maxsize=1)
