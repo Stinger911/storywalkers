@@ -69,6 +69,10 @@ class Payment(BaseModel):
     activationCode: str | None = None
     status: PaymentStatus = DEFAULT_PAYMENT_STATUS
     emailEvidence: str | None = None
+    activatedBy: str | None = None
+    rejectedAt: datetime | None = None
+    rejectedBy: str | None = None
+    rejectionReason: str | None = None
     createdAt: datetime | None = None
     updatedAt: datetime | None = None
     activatedAt: datetime | None = None
@@ -80,7 +84,13 @@ class Payment(BaseModel):
     def _validate_required_strings(cls, value: str) -> str:
         return _trim_required(value)
 
-    @field_validator("activationCode", "emailEvidence")
+    @field_validator(
+        "activationCode",
+        "emailEvidence",
+        "activatedBy",
+        "rejectedBy",
+        "rejectionReason",
+    )
     @classmethod
     def _validate_optional_strings(cls, value: str | None) -> str | None:
         return _trim_optional(value)

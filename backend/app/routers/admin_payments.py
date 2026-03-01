@@ -3,6 +3,8 @@ import json
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, Query
+from google.cloud import firestore
+from pydantic import BaseModel, field_validator
 
 from app.auth.deps import require_staff
 from app.core.errors import AppError
@@ -11,6 +13,20 @@ from app.repositories.payments import get_payment, list_payments_page
 from app.schemas.payments import Payment, PaymentStatus
 
 router = APIRouter(prefix="/api/admin", tags=["Admin - Payments"])
+
+
+class RejectPaymentRequest(BaseModel):
+    reason: str | None = None
+
+    model_config = {"extra": "forbid"}
+
+    @field_validator("reason")
+    @classmethod
+    def _trim_reason(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        trimmed = value.strip()
+        return trimmed or None
 
 
 def _encode_cursor(created_at: datetime, payment_id: str) -> str:
@@ -52,6 +68,10 @@ def _payment_payload(payment_id: str, payment: Payment) -> dict:
         "activationCode": payment.activationCode,
         "status": payment.status.value,
         "emailEvidence": payment.emailEvidence,
+        "activatedBy": payment.activatedBy,
+        "rejectedAt": payment.rejectedAt,
+        "rejectedBy": payment.rejectedBy,
+        "rejectionReason": payment.rejectionReason,
         "createdAt": payment.createdAt,
         "updatedAt": payment.updatedAt,
         "activatedAt": payment.activatedAt,
@@ -141,3 +161,90 @@ async def get_admin_payment(
     if not payment:
         raise AppError(code="not_found", message="Payment not found", status_code=404)
     return _payment_payload(payment_id, payment)
+
+
+@router.post("/payments/{payment_id}/activate")
+async def activate_admin_payment(
+    payment_id: str,
+    user: dict = Depends(require_staff),
+):
+    db = get_firestore_client()
+    payment_ref = db.collection("payments").document(payment_id)
+    payment_snap = payment_ref.get()
+    if not payment_snap.exists:
+        raise AppError(code="not_found", message="Payment not found", status_code=404)
+    payment_data = payment_snap.to_dict() or {}
+    if payment_data.get("status") == PaymentStatus.activated.value:
+        payment = get_payment(db, payment_id)
+        if not payment:
+            raise AppError(code="not_found", message="Payment not found", status_code=404)
+        return {"status": "ok", "id": payment_id, "result": "noop", "payment": _payment_payload(payment_id, payment)}
+
+    user_uid = payment_data.get("userUid")
+    if not isinstance(user_uid, str) or not user_uid.strip():
+        raise AppError(
+            code="validation_error",
+            message="Payment has invalid userUid",
+            status_code=400,
+        )
+    user_ref = db.collection("users").document(user_uid)
+    user_snap = user_ref.get()
+    if not user_snap.exists:
+        raise AppError(code="not_found", message="User not found", status_code=404)
+
+    tx = db.transaction()
+    tx.update(
+        user_ref,
+        {"status": "active", "updatedAt": firestore.SERVER_TIMESTAMP},
+    )
+    tx.update(
+        payment_ref,
+        {
+            "status": PaymentStatus.activated.value,
+            "activatedAt": firestore.SERVER_TIMESTAMP,
+            "activatedBy": user.get("uid"),
+            "rejectedAt": None,
+            "rejectedBy": None,
+            "rejectionReason": None,
+            "updatedAt": firestore.SERVER_TIMESTAMP,
+        },
+    )
+    tx.commit()
+
+    payment = get_payment(db, payment_id)
+    if not payment:
+        raise AppError(code="not_found", message="Payment not found", status_code=404)
+    return {"status": "ok", "id": payment_id, "result": "activated", "payment": _payment_payload(payment_id, payment)}
+
+
+@router.post("/payments/{payment_id}/reject")
+async def reject_admin_payment(
+    payment_id: str,
+    payload: RejectPaymentRequest,
+    user: dict = Depends(require_staff),
+):
+    db = get_firestore_client()
+    payment_ref = db.collection("payments").document(payment_id)
+    payment_snap = payment_ref.get()
+    if not payment_snap.exists:
+        raise AppError(code="not_found", message="Payment not found", status_code=404)
+    payment_data = payment_snap.to_dict() or {}
+    if payment_data.get("status") == PaymentStatus.rejected.value:
+        payment = get_payment(db, payment_id)
+        if not payment:
+            raise AppError(code="not_found", message="Payment not found", status_code=404)
+        return {"status": "ok", "id": payment_id, "result": "noop", "payment": _payment_payload(payment_id, payment)}
+
+    payment_ref.update(
+        {
+            "status": PaymentStatus.rejected.value,
+            "rejectedAt": firestore.SERVER_TIMESTAMP,
+            "rejectedBy": user.get("uid"),
+            "rejectionReason": payload.reason,
+            "updatedAt": firestore.SERVER_TIMESTAMP,
+        }
+    )
+    payment = get_payment(db, payment_id)
+    if not payment:
+        raise AppError(code="not_found", message="Payment not found", status_code=404)
+    return {"status": "ok", "id": payment_id, "result": "rejected", "payment": _payment_payload(payment_id, payment)}

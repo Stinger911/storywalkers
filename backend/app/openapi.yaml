@@ -270,6 +270,19 @@ components:
         emailEvidence:
           type: string
           nullable: true
+        activatedBy:
+          type: string
+          nullable: true
+        rejectedAt:
+          type: string
+          format: date-time
+          nullable: true
+        rejectedBy:
+          type: string
+          nullable: true
+        rejectionReason:
+          type: string
+          nullable: true
         createdAt:
           type: string
           format: date-time
@@ -282,6 +295,29 @@ components:
           type: string
           format: date-time
           nullable: true
+
+    RejectPaymentRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        reason:
+          type: string
+          nullable: true
+
+    PaymentActionResponse:
+      type: object
+      required: [status, id, result, payment]
+      properties:
+        status:
+          type: string
+          enum: [ok]
+        id:
+          type: string
+        result:
+          type: string
+          enum: [activated, rejected, noop]
+        payment:
+          $ref: "#/components/schemas/PaymentAdmin"
 
     CoursesSummaryResponse:
       type: object
@@ -1663,6 +1699,64 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+
+  /admin/payments/{id}/activate:
+    post:
+      tags: [Admin - Payments]
+      summary: Activate payment and user (staff)
+      operationId: adminActivatePayment
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentActionResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+
+  /admin/payments/{id}/reject:
+    post:
+      tags: [Admin - Payments]
+      summary: Reject payment (staff)
+      operationId: adminRejectPayment
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RejectPaymentRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentActionResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "400":
+          $ref: "#/components/responses/ValidationError"
 
   /admin/courses/{id}:
     patch:
