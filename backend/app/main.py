@@ -19,6 +19,7 @@ from app.routers import (
     auth,
     checkout,
     courses,
+    jobs,
     library,
     questions,
     telegram_webhook,
@@ -147,6 +148,7 @@ app.include_router(admin_students.router)
 app.include_router(admin_step_completions.router)
 app.include_router(admin_goals.router)
 app.include_router(admin_settings.router)
+app.include_router(jobs.router)
 app.include_router(questions.router)
 app.include_router(library.router)
 app.include_router(telegram_webhook.router)

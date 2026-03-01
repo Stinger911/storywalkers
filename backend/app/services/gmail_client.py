@@ -30,9 +30,13 @@ class GmailClient:
         timeout_seconds: float = 10.0,
     ) -> None:
         settings = get_settings()
-        self._refresh_token = (refresh_token or settings.GMAIL_REFRESH_TOKEN or "").strip()
+        self._refresh_token = (
+            refresh_token or settings.GMAIL_REFRESH_TOKEN or ""
+        ).strip()
         self._client_id = (client_id or settings.GMAIL_CLIENT_ID or "").strip()
-        self._client_secret = (client_secret or settings.GMAIL_CLIENT_SECRET or "").strip()
+        self._client_secret = (
+            client_secret or settings.GMAIL_CLIENT_SECRET or ""
+        ).strip()
         if not self._refresh_token or not self._client_id or not self._client_secret:
             raise GmailClientError(
                 "Missing Gmail OAuth config: GMAIL_REFRESH_TOKEN, GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET"
@@ -56,7 +60,9 @@ class GmailClient:
         payload = self._json_or_raise(response, "token_exchange")
         token = payload.get("access_token")
         if not isinstance(token, str) or not token:
-            raise GmailClientError("Token exchange succeeded but access_token is missing")
+            raise GmailClientError(
+                "Token exchange succeeded but access_token is missing"
+            )
         expires_in = payload.get("expires_in")
         if isinstance(expires_in, (int, float)) and expires_in > 0:
             ttl = max(0.0, float(expires_in) - _TOKEN_REFRESH_SKEW_SECONDS)
@@ -96,7 +102,11 @@ class GmailClient:
             if page_token:
                 params["pageToken"] = page_token
             payload = self._authorized_request("GET", "/history", params=params)
-            for item in payload.get("history", []) if isinstance(payload.get("history"), list) else []:
+            for item in (
+                payload.get("history", [])
+                if isinstance(payload.get("history"), list)
+                else []
+            ):
                 if not isinstance(item, dict):
                     continue
                 for message in self._iter_history_messages(item):
@@ -167,7 +177,9 @@ class GmailClient:
             )
         return self._json_or_raise(response, f"gmail_api_{method.lower()}_{path}")
 
-    def _json_or_raise(self, response: requests.Response, context: str) -> dict[str, Any]:
+    def _json_or_raise(
+        self, response: requests.Response, context: str
+    ) -> dict[str, Any]:
         if response.status_code >= 400:
             raise GmailClientError(
                 f"{context} failed with status {response.status_code}: {response.text[:200]}"

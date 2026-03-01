@@ -141,7 +141,9 @@ def _resolve_active_course_prices(
     return total_usd_cents, invalid
 
 
-@router.post("/checkout/intents", response_model=CheckoutIntentResponse, status_code=201)
+@router.post(
+    "/checkout/intents", response_model=CheckoutIntentResponse, status_code=201
+)
 async def create_checkout_intent(
     payload: CheckoutIntentRequest,
     user: dict = Depends(get_current_user),

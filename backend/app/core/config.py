@@ -23,6 +23,8 @@ class Settings(BaseSettings):
     GMAIL_REFRESH_TOKEN: str | None = None
     GMAIL_CLIENT_ID: str | None = None
     GMAIL_CLIENT_SECRET: str | None = None
+    GMAIL_PUBSUB_TOPIC: str | None = None
+    JOB_TOKEN: str | None = None
 
 
 @lru_cache(maxsize=1)
