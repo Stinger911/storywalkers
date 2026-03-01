@@ -40,6 +40,14 @@ function lessonRef(db, courseId, lessonId) {
   return doc(db, "courses", courseId, "lessons", lessonId);
 }
 
+function paymentRef(db, id) {
+  return doc(db, "payments", id);
+}
+
+function settingRef(db, id) {
+  return doc(db, "settings", id);
+}
+
 describe("Firestore security rules (MVP)", () => {
   /** @type {import("@firebase/rules-unit-testing").RulesTestEnvironment} */
   let testEnv;
@@ -187,6 +195,26 @@ describe("Firestore security rules (MVP)", () => {
         isActive: true,
         createdAt: new Date(),
         updatedAt: new Date(),
+      });
+
+      // Payments + settings
+      await setDoc(paymentRef(db, "pay_1"), {
+        userUid: studentA.uid,
+        email: "a@test.local",
+        provider: "boosty",
+        selectedCourses: ["course_video"],
+        amount: 12900,
+        currency: "USD",
+        activationCode: "SW-ABCD1234",
+        status: "created",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+      await setDoc(settingRef(db, "gmail"), {
+        enabled: true,
+        watchTopic: "projects/p/topics/gmail",
+        lastHistoryId: "100",
+        watchExpiration: new Date(),
       });
 
       // A question owned by studentA
@@ -469,6 +497,19 @@ describe("Firestore security rules (MVP)", () => {
 
     await assertSucceeds(deleteDoc(lessonRef(dbStaff, "course_staff_new", "lesson_new")));
     await assertSucceeds(deleteDoc(courseRef(dbStaff, "course_staff_new")));
+  });
+
+  test("Payments: student cannot read payments and cannot activate/write", async () => {
+    const dbA = testEnv.authenticatedContext(studentA.uid, studentA.token).firestore();
+
+    await assertFails(getDoc(paymentRef(dbA, "pay_1")));
+    await assertFails(updateDoc(paymentRef(dbA, "pay_1"), { status: "activated" }));
+    await assertFails(updateDoc(settingRef(dbA, "gmail"), { lastHistoryId: "101" }));
+  });
+
+  test("Payments: staff can read payment docs", async () => {
+    const dbStaff = testEnv.authenticatedContext(staff.uid, staff.token).firestore();
+    await assertSucceeds(getDoc(paymentRef(dbStaff, "pay_1")));
   });
 
   test("Staff can create/reorder steps and manage plans (sanity)", async () => {

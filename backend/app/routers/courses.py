@@ -81,7 +81,9 @@ async def list_courses(
 ):
     _ = user
     db = get_firestore_client()
-    goal_id_filter = goal_id.strip() if isinstance(goal_id, str) and goal_id.strip() else None
+    goal_id_filter = (
+        goal_id.strip() if isinstance(goal_id, str) and goal_id.strip() else None
+    )
     courses = list_active_courses(db, goal_id_filter)
     items = [
         {
@@ -160,9 +162,7 @@ async def list_course_lessons(
         raise AppError(code="not_found", message="Course not found", status_code=404)
 
     query = (
-        course_ref.collection("lessons")
-        .where("isActive", "==", True)
-        .order_by("order")
+        course_ref.collection("lessons").where("isActive", "==", True).order_by("order")
     )
     items: list[dict[str, Any]] = []
     for snap in query.stream():

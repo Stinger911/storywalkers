@@ -62,7 +62,11 @@ class FakeCollection:
         return FakeDoc(self._store, doc_id, sub)
 
     def stream(self):
-        return [FakeSnap(FakeDoc(self._store, doc_id), data) for doc_id, data in self._store.items() if data is not None]
+        return [
+            FakeSnap(FakeDoc(self._store, doc_id), data)
+            for doc_id, data in self._store.items()
+            if data is not None
+        ]
 
     def order_by(self, _field, direction=None):
         return self
@@ -83,7 +87,11 @@ class FakeSubCollection:
         return FakeDoc(self._store, doc_id)
 
     def stream(self):
-        return [FakeSnap(FakeDoc(self._store, doc_id), data) for doc_id, data in self._store.items() if data is not None]
+        return [
+            FakeSnap(FakeDoc(self._store, doc_id), data)
+            for doc_id, data in self._store.items()
+            if data is not None
+        ]
 
     def order_by(self, _field, direction=None):
         return self
@@ -222,8 +230,18 @@ def test_assign_reset_replaces_steps(monkeypatch):
         admin_students,
         "list_steps",
         lambda db, goal_id: [
-            {"title": "New 1", "description": "D1", "materialUrl": "https://x", "order": 0},
-            {"title": "New 2", "description": "D2", "materialUrl": "https://y", "order": 1},
+            {
+                "title": "New 1",
+                "description": "D1",
+                "materialUrl": "https://x",
+                "order": 0,
+            },
+            {
+                "title": "New 2",
+                "description": "D2",
+                "materialUrl": "https://y",
+                "order": 1,
+            },
         ],
     )
     app.dependency_overrides[require_staff] = _override_staff

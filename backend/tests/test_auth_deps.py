@@ -1,8 +1,10 @@
-from app.auth.deps import _build_user_payload
-from app.auth import deps as auth_deps
+import asyncio
+
 from fastapi.security import HTTPAuthorizationCredentials
 from starlette.requests import Request
-import asyncio
+
+from app.auth import deps as auth_deps
+from app.auth.deps import _build_user_payload
 
 
 class _FakeSnap:
@@ -83,7 +85,9 @@ def test_build_user_payload_includes_onboarding_fields():
 
 
 def test_build_user_payload_defaults_missing_onboarding_fields():
-    payload = _build_user_payload("u1", {"email": "u1@example.com"}, {"role": "student"})
+    payload = _build_user_payload(
+        "u1", {"email": "u1@example.com"}, {"role": "student"}
+    )
 
     assert payload["selectedGoalId"] is None
     assert payload["profileForm"] == {

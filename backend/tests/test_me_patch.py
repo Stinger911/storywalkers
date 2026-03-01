@@ -294,7 +294,10 @@ def test_patch_me_does_not_resend_questionnaire_completed_when_already_marked(
     )
     assert response.status_code == 200
     assert calls["count"] == 0
-    assert users["u1"]["telegramEvents"]["questionnaireCompletedAt"] == "2026-01-01T00:00:00Z"
+    assert (
+        users["u1"]["telegramEvents"]["questionnaireCompletedAt"]
+        == "2026-01-01T00:00:00Z"
+    )
 
     app.dependency_overrides.clear()
 

@@ -88,7 +88,9 @@ class FakeBatch:
 
 
 class FakeFirestore:
-    def __init__(self, users=None, plans=None, steps=None, goals=None, completions=None):
+    def __init__(
+        self, users=None, plans=None, steps=None, goals=None, completions=None
+    ):
         self._users = users or {}
         self._plans = plans or {}
         self._steps = steps or {}
@@ -202,7 +204,9 @@ def test_telegram_questionnaire_completion_is_idempotent(monkeypatch):
     app.dependency_overrides[auth_deps.get_current_user] = _override_student
     client = TestClient(app)
 
-    first = client.patch("/api/me", json={"profileForm": {"experienceLevel": "beginner"}})
+    first = client.patch(
+        "/api/me", json={"profileForm": {"experienceLevel": "beginner"}}
+    )
     assert first.status_code == 200
     assert calls["count"] == 1
     assert (

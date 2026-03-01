@@ -20,6 +20,16 @@ class Settings(BaseSettings):
     TELEGRAM_BOT_TOKEN: str | None = None
     TELEGRAM_ADMIN_CHAT_ID: str | None = None
     TELEGRAM_WEBHOOK_SECRET: str | None = None
+    GMAIL_REFRESH_TOKEN: str | None = None
+    GMAIL_CLIENT_ID: str | None = None
+    GMAIL_CLIENT_SECRET: str | None = None
+    GMAIL_PUBSUB_TOPIC: str | None = None
+    GMAIL_WEBHOOK_SECRET: str | None = None
+    BOOSTY_EMAIL_FILTER: str = "Boosty"
+    GMAIL_WEBHOOK_MAX_MESSAGES: int = 20
+    JOB_TOKEN: str | None = None
+    PAYMENT_REJECT_NOTIFY: bool = True
+    PAYMENT_AUTO_ACTIVATE_NOTIFY: bool = True
 
 
 @lru_cache(maxsize=1)

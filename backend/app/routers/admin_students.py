@@ -5,14 +5,14 @@ from fastapi import APIRouter, Depends, Query, Request, status
 from google.cloud import firestore
 from pydantic import BaseModel
 
+from app.auth.deps import get_current_user, require_staff
+from app.auth.firebase import get_or_create_user
 from app.auth.user_status import (
     DEFAULT_NEW_USER_STATUS,
     UserStatus,
     ensure_user_status_with_migration,
     validate_user_status_or_400,
 )
-from app.auth.deps import get_current_user, require_staff
-from app.auth.firebase import get_or_create_user
 from app.core.errors import AppError, forbidden_error
 from app.core.logging import get_logger
 from app.db.firestore import get_firestore_client
@@ -125,7 +125,9 @@ def _sync_user_progress(
     )
 
 
-def _recalculate_progress_from_steps(db: firestore.Client, uid: str) -> tuple[int, int, int]:
+def _recalculate_progress_from_steps(
+    db: firestore.Client, uid: str
+) -> tuple[int, int, int]:
     plan_ref = db.collection("student_plans").document(uid)
     if not plan_ref.get().exists:
         _sync_user_progress(db, uid, absolute_done=0, absolute_total=0)
@@ -497,7 +499,9 @@ async def assign_plan(
                 status_code=400,
             )
 
-        created_at = (snap.to_dict() or {}).get("createdAt", now) if snap.exists else now
+        created_at = (
+            (snap.to_dict() or {}).get("createdAt", now) if snap.exists else now
+        )
         source_version = goal_data.get("updatedAt") or now
 
         plan_data = {
@@ -594,9 +598,7 @@ async def preview_reset_from_goal(
                 done_total += 1
 
     sample_titles = [
-        step.get("title", "")
-        for step in template_steps[:5]
-        if step.get("title")
+        step.get("title", "") for step in template_steps[:5] if step.get("title")
     ]
 
     return {

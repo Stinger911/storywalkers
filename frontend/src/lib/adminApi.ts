@@ -38,6 +38,45 @@ export type AdminLesson = {
   updatedAt?: unknown
 }
 
+export type PaymentStatus =
+  | "created"
+  | "email_detected"
+  | "pending"
+  | "paid"
+  | "activated"
+  | "rejected"
+  | "failed"
+  | "cancelled"
+
+export type AdminPayment = {
+  id: string
+  userUid: string
+  email: string
+  provider: string
+  selectedCourses: string[]
+  amount: number
+  currency: string
+  activationCode?: string | null
+  status: PaymentStatus
+  emailEvidence?: string | null
+  activatedBy?: string | null
+  rejectedAt?: unknown
+  rejectedBy?: string | null
+  rejectionReason?: string | null
+  createdAt?: unknown
+  updatedAt?: unknown
+  activatedAt?: unknown
+}
+
+export type AdminPaymentActionResult = "activated" | "rejected" | "noop"
+
+export type AdminPaymentActionResponse = {
+  status: "ok"
+  id: string
+  result: AdminPaymentActionResult
+  payment: AdminPayment
+}
+
 type StepTemplate = {
   id: string
   title: string
@@ -485,6 +524,44 @@ export async function revokeStepCompletion(id: string) {
     method: 'POST',
   })
   return handleJson<{ status: 'ok' }>(response)
+}
+
+export async function listAdminPayments(params?: {
+  status?: PaymentStatus
+  provider?: string
+  q?: string
+  limit?: number
+  cursor?: string
+}) {
+  const query = new URLSearchParams()
+  if (params?.status) query.set("status", params.status)
+  if (params?.provider) query.set("provider", params.provider)
+  if (params?.q) query.set("q", params.q)
+  if (params?.limit) query.set("limit", String(params.limit))
+  if (params?.cursor) query.set("cursor", params.cursor)
+  const suffix = query.toString()
+  const response = await apiFetch(`/api/admin/payments${suffix ? `?${suffix}` : ""}`)
+  return handleJson<ApiList<AdminPayment>>(response)
+}
+
+export async function getAdminPayment(id: string) {
+  const response = await apiFetch(`/api/admin/payments/${id}`)
+  return handleJson<AdminPayment>(response)
+}
+
+export async function activateAdminPayment(id: string) {
+  const response = await apiFetch(`/api/admin/payments/${id}/activate`, {
+    method: "POST",
+  })
+  return handleJson<AdminPaymentActionResponse>(response)
+}
+
+export async function rejectAdminPayment(id: string, payload: { reason?: string | null }) {
+  const response = await apiFetch(`/api/admin/payments/${id}/reject`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  })
+  return handleJson<AdminPaymentActionResponse>(response)
 }
 
 export type {

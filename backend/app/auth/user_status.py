@@ -25,10 +25,7 @@ def validate_user_status_or_400(value: object) -> UserStatus:
         return value
     raise AppError(
         code="validation_error",
-        message=(
-            "Invalid status. Allowed: "
-            + ", ".join(USER_STATUSES)
-        ),
+        message=("Invalid status. Allowed: " + ", ".join(USER_STATUSES)),
         status_code=400,
     )
 

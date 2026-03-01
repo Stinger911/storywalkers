@@ -33,20 +33,12 @@ def _user_summary(user: Mapping[str, Any]) -> str:
 
 def fmt_registration(user: Mapping[str, Any]) -> str:
     timestamp = _iso_now()
-    return (
-        "🆕 Registration\n"
-        f"time: {timestamp}\n"
-        f"{_user_summary(user)}"
-    )
+    return f"🆕 Registration\ntime: {timestamp}\n{_user_summary(user)}"
 
 
 def fmt_questionnaire_completed(user: Mapping[str, Any]) -> str:
     timestamp = _iso_now()
-    return (
-        "✅ Questionnaire completed\n"
-        f"time: {timestamp}\n"
-        f"{_user_summary(user)}"
-    )
+    return f"✅ Questionnaire completed\ntime: {timestamp}\n{_user_summary(user)}"
 
 
 def fmt_status_changed(
@@ -68,22 +60,30 @@ def fmt_status_changed(
 
 def fmt_lesson_completed(
     user: Mapping[str, Any],
-    stepId: str,
     stepTitle: str,
-    courseId: str | None = None,
-    lessonId: str | None = None,
+    goalTitle: str | None = None,
+    lessonTitle: str | None = None,
+    comment: str | None = None,
 ) -> str:
     timestamp = _iso_now()
-    course = (courseId or "-").strip() or "-"
-    lesson = (lessonId or "-").strip() or "-"
-    step_id = (stepId or "-").strip() or "-"
+    display_name = _user_value(user, "displayName")
+    email = _user_value(user, "email")
+    role = _user_value(user, "role")
+    status = _user_value(user, "status")
     step_title = (stepTitle or "-").strip() or "-"
+    goal_title = (goalTitle or "-").strip() or "-"
+    lesson_title = (lessonTitle or "-").strip() or "-"
+    comment_text = (comment or "").strip()
+    comment_line = f"\ncomment: {comment_text}" if comment_text else ""
     return (
         "📚 Lesson completed\n"
         f"time: {timestamp}\n"
-        f"course_id: {course}\n"
-        f"lesson_id: {lesson}\n"
-        f"step_id: {step_id}\n"
+        f"name: {display_name}\n"
+        f"email: {email}\n"
+        f"role: {role}\n"
+        f"status: {status}\n"
+        f"goal_title: {goal_title}\n"
+        f"lesson_title: {lesson_title}\n"
         f"step_title: {step_title}\n"
-        f"{_user_summary(user)}"
+        f"{comment_line}".rstrip()
     )

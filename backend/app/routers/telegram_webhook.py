@@ -91,7 +91,9 @@ async def telegram_webhook(request: Request) -> dict[str, bool]:
     raw_text = message_data.get("text")
     admin_chat_id = settings.TELEGRAM_ADMIN_CHAT_ID
     incoming_chat_id = chat_data.get("id")
-    is_reply_command = isinstance(raw_text, str) and raw_text.strip().startswith("/reply")
+    is_reply_command = isinstance(raw_text, str) and raw_text.strip().startswith(
+        "/reply"
+    )
     if isinstance(raw_text, str) and raw_text.strip().startswith("/id"):
         if isinstance(incoming_chat_id, (int, str)):
             await send_message(incoming_chat_id, f"chatId: {incoming_chat_id}")
@@ -208,7 +210,9 @@ async def telegram_webhook(request: Request) -> dict[str, bool]:
                     f"Cannot reply: user {target_uid} not found (no DM received yet)."
                 )
                 return {"ok": True}
-            ok, error_summary = await send_message(target_chat_id, f"Support reply: {reply_text}")
+            ok, error_summary = await send_message(
+                target_chat_id, f"Support reply: {reply_text}"
+            )
             if ok:
                 preview = reply_text[:60]
                 if len(reply_text) > 60:
@@ -229,9 +233,7 @@ async def telegram_webhook(request: Request) -> dict[str, bool]:
                 },
                 exc_info=True,
             )
-            await send_admin_message(
-                f"Cannot reply to {target_uid}: internal error"
-            )
+            await send_admin_message(f"Cannot reply to {target_uid}: internal error")
         return {"ok": True}
 
     try:
@@ -249,9 +251,8 @@ async def telegram_webhook(request: Request) -> dict[str, bool]:
 
         last_forwarded_at = _as_utc_datetime(existing_data.get("lastForwardedAt"))
         now_utc = datetime.now(timezone.utc)
-        if (
-            last_forwarded_at is not None
-            and now_utc - last_forwarded_at < timedelta(seconds=FORWARD_COOLDOWN_SECONDS)
+        if last_forwarded_at is not None and now_utc - last_forwarded_at < timedelta(
+            seconds=FORWARD_COOLDOWN_SECONDS
         ):
             logger.info(
                 "telegram_webhook_ignored",
@@ -276,9 +277,21 @@ async def telegram_webhook(request: Request) -> dict[str, bool]:
         )
 
     utc_now = datetime.now(timezone.utc).isoformat()
-    username = (from_data.get("username") or "").strip() if isinstance(from_data.get("username"), str) else ""
-    first_name = (from_data.get("first_name") or "").strip() if isinstance(from_data.get("first_name"), str) else ""
-    last_name = (from_data.get("last_name") or "").strip() if isinstance(from_data.get("last_name"), str) else ""
+    username = (
+        (from_data.get("username") or "").strip()
+        if isinstance(from_data.get("username"), str)
+        else ""
+    )
+    first_name = (
+        (from_data.get("first_name") or "").strip()
+        if isinstance(from_data.get("first_name"), str)
+        else ""
+    )
+    last_name = (
+        (from_data.get("last_name") or "").strip()
+        if isinstance(from_data.get("last_name"), str)
+        else ""
+    )
     relay_text = (
         f"Support request from {telegram_user_id}\n\n"
         f"Username: {username or '-'}\n"

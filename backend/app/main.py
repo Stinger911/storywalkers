@@ -13,11 +13,15 @@ from app.core.middleware import RequestIdMiddleware, RequestLoggingMiddleware
 from app.routers import (
     admin_courses,
     admin_goals,
+    admin_payments,
     admin_settings,
     admin_step_completions,
     admin_students,
     auth,
+    checkout,
     courses,
+    gmail_webhook,
+    jobs,
     library,
     questions,
     telegram_webhook,
@@ -139,12 +143,16 @@ async def version():
 
 
 app.include_router(auth.router)
+app.include_router(checkout.router)
 app.include_router(courses.router)
 app.include_router(admin_courses.router)
+app.include_router(admin_payments.router)
 app.include_router(admin_students.router)
 app.include_router(admin_step_completions.router)
 app.include_router(admin_goals.router)
 app.include_router(admin_settings.router)
+app.include_router(jobs.router)
+app.include_router(gmail_webhook.router)
 app.include_router(questions.router)
 app.include_router(library.router)
 app.include_router(telegram_webhook.router)

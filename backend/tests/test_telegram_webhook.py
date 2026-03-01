@@ -1,6 +1,7 @@
-from fastapi.testclient import TestClient
 import re
 from datetime import datetime, timezone
+
+from fastapi.testclient import TestClient
 from google.cloud import firestore
 
 from app.main import app
@@ -153,7 +154,12 @@ def test_webhook_accepts_valid_secret_and_logs_ids(monkeypatch):
         json={
             "update_id": 1003,
             "message": {
-                "from": {"id": 501, "username": "alice", "first_name": "Alice", "last_name": "Doe"},
+                "from": {
+                    "id": 501,
+                    "username": "alice",
+                    "first_name": "Alice",
+                    "last_name": "Doe",
+                },
                 "chat": {"id": 502, "type": "private"},
                 "message_id": 888,
                 "text": "ping",
@@ -485,7 +491,9 @@ def test_reply_command_sends_message_to_mapped_chat(monkeypatch):
 
 
 def test_reply_command_works_from_admin_group_chat(monkeypatch):
-    monkeypatch.setattr(telegram_webhook, "get_settings", lambda: _Settings(None, -100999))
+    monkeypatch.setattr(
+        telegram_webhook, "get_settings", lambda: _Settings(None, -100999)
+    )
     fake_db = _FakeFirestore()
     fake_db._telegram_users["12345"] = {
         "chatId": 555,

@@ -11,6 +11,8 @@ import { AdminQuestionDetail } from "./routes/admin/AdminQuestionDetail.tsx";
 import { AdminStepCompletions } from "./routes/admin/AdminStepCompletions.tsx";
 import { AdminCourses } from "./routes/admin/AdminCourses.tsx";
 import { AdminCourseLessons } from "./routes/admin/AdminCourseLessons.tsx";
+import { AdminPayments } from "./routes/admin/AdminPayments.tsx";
+import { AdminPaymentDetail } from "./routes/admin/AdminPaymentDetail.tsx";
 import { Landing } from "./routes/Landing.tsx";
 import { Login } from "./routes/Login.tsx";
 import { NotFound } from "./routes/NotFound.tsx";
@@ -92,6 +94,18 @@ const AdminCoursesRoute = () => (
 const AdminCourseLessonsRoute = () => (
   <AdminLayout>
     <AdminCourseLessons />
+  </AdminLayout>
+);
+
+const AdminPaymentsRoute = () => (
+  <AdminLayout>
+    <AdminPayments />
+  </AdminLayout>
+);
+
+const AdminPaymentDetailRoute = () => (
+  <AdminLayout>
+    <AdminPaymentDetail />
   </AdminLayout>
 );
 
@@ -283,6 +297,8 @@ export default function App() {
         <Route path="/admin/step-completions" component={AdminStepCompletionsRoute} />
         <Route path="/admin/courses" component={AdminCoursesRoute} />
         <Route path="/admin/courses/:courseId/lessons" component={AdminCourseLessonsRoute} />
+        <Route path="/admin/payments" component={AdminPaymentsRoute} />
+        <Route path="/admin/payments/:id" component={AdminPaymentDetailRoute} />
         <Route path="/admin/library" component={AdminLibraryRoute} />
         <Route path="/admin/library/:id" component={AdminLibraryDetailRoute} />
         <Route path="/admin/categories" component={AdminCategoriesRoute} />

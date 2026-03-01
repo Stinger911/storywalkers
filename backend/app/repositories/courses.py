@@ -141,9 +141,11 @@ def soft_delete_course(db: firestore.Client, course_id: str) -> bool:
 
 
 def compute_next_lesson_order(db: firestore.Client, course_id: str) -> int:
-    query = _lessons_collection(db, course_id).order_by(
-        "order", direction=firestore.Query.DESCENDING
-    ).limit(1)
+    query = (
+        _lessons_collection(db, course_id)
+        .order_by("order", direction=firestore.Query.DESCENDING)
+        .limit(1)
+    )
     snaps = list(query.stream())
     if not snaps:
         return 0

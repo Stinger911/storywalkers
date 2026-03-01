@@ -75,9 +75,7 @@ class ReorderLessonsRequest(BaseModel):
             raise PydanticCustomError("items_required", "items must not be empty")
         lesson_ids = [item.lessonId for item in value]
         if len(set(lesson_ids)) != len(lesson_ids):
-            raise PydanticCustomError(
-                "lesson_ids_unique", "lessonIds must be unique"
-            )
+            raise PydanticCustomError("lesson_ids_unique", "lessonIds must be unique")
         orders = [item.order for item in value]
         if len(set(orders)) != len(orders):
             raise PydanticCustomError("orders_unique", "orders must be unique")
@@ -99,7 +97,9 @@ async def list_admin_courses(
     items = admin_list_courses(
         db,
         is_active=is_active,
-        goal_id=goal_id.strip() if isinstance(goal_id, str) and goal_id.strip() else None,
+        goal_id=goal_id.strip()
+        if isinstance(goal_id, str) and goal_id.strip()
+        else None,
         q=q,
         limit=limit,
     )

@@ -86,6 +86,14 @@ export function AdminHome() {
             </p>
           </A>
         </Col>
+        <Col>
+          <A href="/admin/payments" class="panel panel--center hover:shadow-lg">
+            <h3 class="text-lg font-semibold">Payments</h3>
+            <p class="text-sm text-muted-foreground">
+              Monitor payment status and activation records.
+            </p>
+          </A>
+        </Col>
       </Grid>
     </Page>
   );
