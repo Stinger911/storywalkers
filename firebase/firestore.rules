@@ -256,5 +256,23 @@ service cloud.firestore {
       // Writes: staff only
       allow create, update, delete: if isStaff();
     }
+
+    /* =========================
+     * payments/{paymentId}
+     * ========================= */
+    match /payments/{paymentId} {
+      // Staff can inspect payment records; all writes go through backend.
+      allow get, list: if isStaff();
+      allow create, update, delete: if false;
+    }
+
+    /* =========================
+     * settings/{settingId}
+     * ========================= */
+    match /settings/{settingId} {
+      // Operational settings are backend-managed; staff read-only.
+      allow get, list: if isStaff();
+      allow create, update, delete: if false;
+    }
   }
 }
