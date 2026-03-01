@@ -15,6 +15,7 @@ tags:
   - name: Auth
   - name: Admin - Students
   - name: Admin - Courses
+  - name: Admin - Payments
   - name: Admin - Settings
   - name: Questions
   - name: Library
@@ -214,6 +215,70 @@ components:
           format: date-time
           nullable: true
         updatedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    PaymentAdmin:
+      type: object
+      required:
+        [id, userUid, email, provider, selectedCourses, amount, currency, status]
+      properties:
+        id:
+          type: string
+          example: pay_001
+        userUid:
+          type: string
+          example: UID123
+        email:
+          type: string
+          format: email
+          example: alex@example.com
+        provider:
+          type: string
+          example: boosty
+        selectedCourses:
+          type: array
+          items:
+            type: string
+          example: [course_video_basics]
+        amount:
+          type: integer
+          minimum: 0
+          example: 12900
+        currency:
+          type: string
+          example: USD
+        activationCode:
+          type: string
+          nullable: true
+          example: SW-ABCD1234
+        status:
+          type: string
+          enum:
+            [
+              created,
+              email_detected,
+              pending,
+              paid,
+              activated,
+              rejected,
+              failed,
+              cancelled,
+            ]
+          example: created
+        emailEvidence:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+          nullable: true
+        updatedAt:
+          type: string
+          format: date-time
+          nullable: true
+        activatedAt:
           type: string
           format: date-time
           nullable: true
@@ -1514,6 +1579,90 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "400":
           $ref: "#/components/responses/ValidationError"
+
+  /admin/payments:
+    get:
+      tags: [Admin - Payments]
+      summary: List payments (staff)
+      operationId: adminListPayments
+      parameters:
+        - in: query
+          name: status
+          required: false
+          schema:
+            type: string
+            enum:
+              [
+                created,
+                email_detected,
+                pending,
+                paid,
+                activated,
+                rejected,
+                failed,
+                cancelled,
+              ]
+        - in: query
+          name: provider
+          required: false
+          schema: { type: string }
+        - in: query
+          name: q
+          required: false
+          schema: { type: string }
+        - in: query
+          name: limit
+          required: false
+          schema: { type: integer, default: 50, minimum: 1, maximum: 100 }
+        - in: query
+          name: cursor
+          required: false
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Paginated"
+                  - type: object
+                    required: [items]
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/PaymentAdmin"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+
+  /admin/payments/{id}:
+    get:
+      tags: [Admin - Payments]
+      summary: Get payment by id (staff)
+      operationId: adminGetPayment
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentAdmin"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   /admin/courses/{id}:
     patch:
