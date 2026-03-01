@@ -1,6 +1,7 @@
+from datetime import datetime, timezone
+
 from fastapi.testclient import TestClient
 from google.cloud import firestore
-from datetime import datetime, timezone
 
 from app.auth import deps as auth_deps
 from app.main import app
@@ -169,7 +170,9 @@ def _staff():
 
 
 def test_admin_course_lessons_forbidden_for_non_staff(monkeypatch):
-    fake_db = FakeFirestore({"c1": {"title": "Course 1", "goalIds": [], "priceUsdCents": 100}})
+    fake_db = FakeFirestore(
+        {"c1": {"title": "Course 1", "goalIds": [], "priceUsdCents": 100}}
+    )
     monkeypatch.setattr(admin_courses, "get_firestore_client", lambda: fake_db)
     app.dependency_overrides[auth_deps.get_current_user] = _student
     client = TestClient(app)
@@ -185,8 +188,24 @@ def test_admin_reorder_lessons_forbidden_for_non_staff(monkeypatch):
     now = datetime.now(timezone.utc)
     lessons_store = {
         "c1": {
-            "l1": {"title": "One", "type": "video", "content": "A", "order": 0, "isActive": True, "createdAt": now, "updatedAt": now},
-            "l2": {"title": "Two", "type": "text", "content": "B", "order": 1, "isActive": True, "createdAt": now, "updatedAt": now},
+            "l1": {
+                "title": "One",
+                "type": "video",
+                "content": "A",
+                "order": 0,
+                "isActive": True,
+                "createdAt": now,
+                "updatedAt": now,
+            },
+            "l2": {
+                "title": "Two",
+                "type": "text",
+                "content": "B",
+                "order": 1,
+                "isActive": True,
+                "createdAt": now,
+                "updatedAt": now,
+            },
         }
     }
     fake_db = FakeFirestore(
@@ -199,7 +218,9 @@ def test_admin_reorder_lessons_forbidden_for_non_staff(monkeypatch):
 
     response = client.patch(
         "/api/admin/courses/c1/lessons/reorder",
-        json={"items": [{"lessonId": "l1", "order": 1}, {"lessonId": "l2", "order": 0}]},
+        json={
+            "items": [{"lessonId": "l1", "order": 1}, {"lessonId": "l2", "order": 0}]
+        },
     )
 
     assert response.status_code == 403
@@ -226,8 +247,20 @@ def test_admin_list_lessons_includes_inactive_order_asc(monkeypatch):
         {"c1": {"title": "Course 1", "goalIds": [], "priceUsdCents": 100}},
         {
             "c1": {
-                "l2": {"title": "Second", "type": "text", "content": "B", "order": 2, "isActive": False},
-                "l1": {"title": "First", "type": "video", "content": "A", "order": 1, "isActive": True},
+                "l2": {
+                    "title": "Second",
+                    "type": "text",
+                    "content": "B",
+                    "order": 2,
+                    "isActive": False,
+                },
+                "l1": {
+                    "title": "First",
+                    "type": "video",
+                    "content": "A",
+                    "order": 1,
+                    "isActive": True,
+                },
             }
         },
     )
@@ -249,8 +282,20 @@ def test_admin_create_lesson_default_order_is_max_plus_one(monkeypatch):
         {"c1": {"title": "Course 1", "goalIds": [], "priceUsdCents": 100}},
         {
             "c1": {
-                "l1": {"title": "First", "type": "video", "content": "A", "order": 1, "isActive": True},
-                "l5": {"title": "Fifth", "type": "task", "content": "B", "order": 5, "isActive": True},
+                "l1": {
+                    "title": "First",
+                    "type": "video",
+                    "content": "A",
+                    "order": 1,
+                    "isActive": True,
+                },
+                "l5": {
+                    "title": "Fifth",
+                    "type": "task",
+                    "content": "B",
+                    "order": 5,
+                    "isActive": True,
+                },
             }
         },
     )
@@ -294,7 +339,13 @@ def test_admin_patch_lesson_allowlist_and_soft_delete(monkeypatch):
 
     patch_response = client.patch(
         "/api/admin/courses/c1/lessons/l1",
-        json={"title": "Updated", "type": "task", "content": "Done", "order": 3, "isActive": True},
+        json={
+            "title": "Updated",
+            "type": "task",
+            "content": "Done",
+            "order": 3,
+            "isActive": True,
+        },
     )
     assert patch_response.status_code == 200
     assert lessons_store["c1"]["l1"]["title"] == "Updated"
@@ -313,8 +364,24 @@ def test_admin_reorder_lessons_success(monkeypatch):
     now = datetime.now(timezone.utc)
     lessons_store = {
         "c1": {
-            "l1": {"title": "One", "type": "video", "content": "A", "order": 0, "isActive": True, "createdAt": now, "updatedAt": now},
-            "l2": {"title": "Two", "type": "text", "content": "B", "order": 1, "isActive": True, "createdAt": now, "updatedAt": now},
+            "l1": {
+                "title": "One",
+                "type": "video",
+                "content": "A",
+                "order": 0,
+                "isActive": True,
+                "createdAt": now,
+                "updatedAt": now,
+            },
+            "l2": {
+                "title": "Two",
+                "type": "text",
+                "content": "B",
+                "order": 1,
+                "isActive": True,
+                "createdAt": now,
+                "updatedAt": now,
+            },
         }
     }
     fake_db = FakeFirestore(
@@ -327,7 +394,9 @@ def test_admin_reorder_lessons_success(monkeypatch):
 
     response = client.patch(
         "/api/admin/courses/c1/lessons/reorder",
-        json={"items": [{"lessonId": "l1", "order": 2}, {"lessonId": "l2", "order": 0}]},
+        json={
+            "items": [{"lessonId": "l1", "order": 2}, {"lessonId": "l2", "order": 0}]
+        },
     )
 
     assert response.status_code == 200
@@ -342,8 +411,24 @@ def test_admin_reorder_lessons_rejects_duplicate_orders(monkeypatch):
     now = datetime.now(timezone.utc)
     lessons_store = {
         "c1": {
-            "l1": {"title": "One", "type": "video", "content": "A", "order": 0, "isActive": True, "createdAt": now, "updatedAt": now},
-            "l2": {"title": "Two", "type": "text", "content": "B", "order": 1, "isActive": True, "createdAt": now, "updatedAt": now},
+            "l1": {
+                "title": "One",
+                "type": "video",
+                "content": "A",
+                "order": 0,
+                "isActive": True,
+                "createdAt": now,
+                "updatedAt": now,
+            },
+            "l2": {
+                "title": "Two",
+                "type": "text",
+                "content": "B",
+                "order": 1,
+                "isActive": True,
+                "createdAt": now,
+                "updatedAt": now,
+            },
         }
     }
     fake_db = FakeFirestore(
@@ -356,7 +441,9 @@ def test_admin_reorder_lessons_rejects_duplicate_orders(monkeypatch):
 
     response = client.patch(
         "/api/admin/courses/c1/lessons/reorder",
-        json={"items": [{"lessonId": "l1", "order": 1}, {"lessonId": "l2", "order": 1}]},
+        json={
+            "items": [{"lessonId": "l1", "order": 1}, {"lessonId": "l2", "order": 1}]
+        },
     )
 
     assert response.status_code == 400
@@ -369,7 +456,15 @@ def test_admin_reorder_lessons_rejects_missing_lesson_id(monkeypatch):
     now = datetime.now(timezone.utc)
     lessons_store = {
         "c1": {
-            "l1": {"title": "One", "type": "video", "content": "A", "order": 0, "isActive": True, "createdAt": now, "updatedAt": now},
+            "l1": {
+                "title": "One",
+                "type": "video",
+                "content": "A",
+                "order": 0,
+                "isActive": True,
+                "createdAt": now,
+                "updatedAt": now,
+            },
         }
     }
     fake_db = FakeFirestore(

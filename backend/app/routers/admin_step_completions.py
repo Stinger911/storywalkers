@@ -1,8 +1,8 @@
-import time
-from typing import Any
 import base64
 import json
+import time
 from datetime import datetime
+from typing import Any
 
 from fastapi import APIRouter, Depends, Query
 from google.cloud import firestore
@@ -17,7 +17,9 @@ router = APIRouter(prefix="/api/admin", tags=["Admin - Students"])
 logger = get_logger("app.db")
 
 
-def _doc_or_404(doc_ref: firestore.DocumentReference) -> tuple[firestore.DocumentSnapshot, dict[str, Any]]:
+def _doc_or_404(
+    doc_ref: firestore.DocumentReference,
+) -> tuple[firestore.DocumentSnapshot, dict[str, Any]]:
     snap = doc_ref.get()
     if not snap.exists:
         raise AppError(code="not_found", message="Resource not found", status_code=404)

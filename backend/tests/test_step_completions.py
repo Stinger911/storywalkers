@@ -1,6 +1,7 @@
+from datetime import datetime, timezone
+
 from fastapi.testclient import TestClient
 from google.cloud import firestore
-from datetime import datetime, timezone
 
 from app.auth.deps import get_current_user, require_staff
 from app.main import app
@@ -93,7 +94,9 @@ class FakeQuery:
 
         for field, desc in reversed(self._order_fields):
             docs.sort(
-                key=lambda s: s.id if field == "__name__" else (s.to_dict() or {}).get(field),
+                key=lambda s: s.id
+                if field == "__name__"
+                else (s.to_dict() or {}).get(field),
                 reverse=desc,
             )
 
@@ -165,7 +168,9 @@ class FakeTransaction:
 
 
 class FakeFirestore:
-    def __init__(self, plans=None, steps=None, goals=None, completions=None, users=None):
+    def __init__(
+        self, plans=None, steps=None, goals=None, completions=None, users=None
+    ):
         self._plans = plans or {}
         self._steps = steps or {}
         self._goals = goals or {}
@@ -304,10 +309,14 @@ def test_student_complete_step_writes_step_and_feed(monkeypatch):
     assert completion["revokedBy"] is None
     assert len(telegram_messages) == 1
     assert "📚 Lesson completed" in telegram_messages[0]
-    assert "step_id: s1" in telegram_messages[0]
+    assert "name: User One" in telegram_messages[0]
+    assert "email: u1@example.com" in telegram_messages[0]
     assert "step_title: Step One" in telegram_messages[0]
-    assert "course_id: c1" in telegram_messages[0]
-    assert "lesson_id: l1" in telegram_messages[0]
+    assert "goal_title: Goal One" in telegram_messages[0]
+    assert "lesson_title: -" in telegram_messages[0]
+    assert "comment: Done" in telegram_messages[0]
+    assert "uid:" not in telegram_messages[0]
+    assert "step_id:" not in telegram_messages[0]
 
     app.dependency_overrides.clear()
 
@@ -338,9 +347,7 @@ def test_admin_patch_and_revoke_updates_feed_and_step(monkeypatch):
         },
         users={"u1": {"stepsDone": 1, "stepsTotal": 1}},
     )
-    monkeypatch.setattr(
-        admin_step_completions, "get_firestore_client", lambda: fake_db
-    )
+    monkeypatch.setattr(admin_step_completions, "get_firestore_client", lambda: fake_db)
     app.dependency_overrides[require_staff] = _override_staff
     client = TestClient(app)
 
@@ -401,9 +408,7 @@ def test_revoked_step_can_be_completed_again_and_listed_in_admin(monkeypatch):
         users={"u1": {"stepsDone": 1, "stepsTotal": 1}},
     )
     monkeypatch.setattr(auth, "get_firestore_client", lambda: fake_db)
-    monkeypatch.setattr(
-        admin_step_completions, "get_firestore_client", lambda: fake_db
-    )
+    monkeypatch.setattr(admin_step_completions, "get_firestore_client", lambda: fake_db)
     client = TestClient(app)
 
     app.dependency_overrides[require_staff] = _override_staff
@@ -429,7 +434,10 @@ def test_revoked_step_can_be_completed_again_and_listed_in_admin(monkeypatch):
     listed_ids = {item["id"] for item in listed}
     assert "c1" in listed_ids
     assert new_completion_id in listed_ids
-    assert any(item["id"] == new_completion_id and item["status"] == "completed" for item in listed)
+    assert any(
+        item["id"] == new_completion_id and item["status"] == "completed"
+        for item in listed
+    )
 
     app.dependency_overrides.clear()
 
@@ -445,9 +453,7 @@ def test_admin_list_step_completions_default_completed_with_cursor(monkeypatch):
             "c3": {"status": "revoked", "completedAt": t3},
         }
     )
-    monkeypatch.setattr(
-        admin_step_completions, "get_firestore_client", lambda: fake_db
-    )
+    monkeypatch.setattr(admin_step_completions, "get_firestore_client", lambda: fake_db)
     app.dependency_overrides[require_staff] = _override_staff
     client = TestClient(app)
 
@@ -476,9 +482,7 @@ def test_admin_list_step_completions_all_status(monkeypatch):
             "c2": {"status": "revoked", "completedAt": t2},
         }
     )
-    monkeypatch.setattr(
-        admin_step_completions, "get_firestore_client", lambda: fake_db
-    )
+    monkeypatch.setattr(admin_step_completions, "get_firestore_client", lambda: fake_db)
     app.dependency_overrides[require_staff] = _override_staff
     client = TestClient(app)
 
@@ -492,9 +496,7 @@ def test_admin_list_step_completions_all_status(monkeypatch):
 
 def test_admin_list_step_completions_invalid_cursor(monkeypatch):
     fake_db = FakeFirestore(completions={})
-    monkeypatch.setattr(
-        admin_step_completions, "get_firestore_client", lambda: fake_db
-    )
+    monkeypatch.setattr(admin_step_completions, "get_firestore_client", lambda: fake_db)
     app.dependency_overrides[require_staff] = _override_staff
     client = TestClient(app)
 
@@ -533,9 +535,7 @@ def test_admin_patch_partial_keeps_other_step_fields(monkeypatch):
             }
         },
     )
-    monkeypatch.setattr(
-        admin_step_completions, "get_firestore_client", lambda: fake_db
-    )
+    monkeypatch.setattr(admin_step_completions, "get_firestore_client", lambda: fake_db)
     app.dependency_overrides[require_staff] = _override_staff
     client = TestClient(app)
 
@@ -576,9 +576,7 @@ def test_admin_patch_skips_step_sync_when_not_done(monkeypatch):
             }
         },
     )
-    monkeypatch.setattr(
-        admin_step_completions, "get_firestore_client", lambda: fake_db
-    )
+    monkeypatch.setattr(admin_step_completions, "get_firestore_client", lambda: fake_db)
     app.dependency_overrides[require_staff] = _override_staff
     client = TestClient(app)
 

@@ -282,7 +282,10 @@ def _onboarding_step(data: dict[str, Any]) -> str:
     if not _is_profile_complete(data):
         return "questionnaire"
     selected_courses = data.get("selectedCourses")
-    if not isinstance(selected_courses, list) or len(_sanitize_selected_courses(selected_courses)) == 0:
+    if (
+        not isinstance(selected_courses, list)
+        or len(_sanitize_selected_courses(selected_courses)) == 0
+    ):
         return "course_selection"
     return "checkout"
 
@@ -374,7 +377,9 @@ async def patch_me(
     me_response = {
         "uid": user["uid"],
         "email": user.get("email") or current.get("email") or "",
-        "displayName": response_data.get("displayName") or user.get("displayName") or "",
+        "displayName": response_data.get("displayName")
+        or user.get("displayName")
+        or "",
         "role": role,
         "status": current_status,
         "roleRaw": role_raw,
@@ -613,10 +618,10 @@ async def complete_my_step(
         await send_admin_message(
             fmt_lesson_completed(
                 user,
-                stepId=step_id,
                 stepTitle=(step.get("title") or "").strip() or "-",
-                courseId=step.get("courseId"),
-                lessonId=step.get("lessonId"),
+                goalTitle=(goal_title or "").strip() or "-",
+                lessonTitle=(step.get("lessonTitle") or "").strip() or "-",
+                comment=comment,
             )
         )
     except Exception:

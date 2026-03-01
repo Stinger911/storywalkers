@@ -90,7 +90,9 @@ class FakeCollectionWithSubcollections(FakeCollection):
 
 
 class FakeFirestore:
-    def __init__(self, courses_data=None, lesson_data=None, fx_data=None, config_data=None):
+    def __init__(
+        self, courses_data=None, lesson_data=None, fx_data=None, config_data=None
+    ):
         self._courses = courses_data or {}
         self._lessons = lesson_data or {}
         self._fx = fx_data or {}
@@ -100,7 +102,10 @@ class FakeFirestore:
         if name == "courses":
             return FakeCollectionWithSubcollections(
                 self._courses,
-                {course_id: {"lessons": lessons} for course_id, lessons in self._lessons.items()},
+                {
+                    course_id: {"lessons": lessons}
+                    for course_id, lessons in self._lessons.items()
+                },
             )
         if name == "fx_rates":
             return FakeCollection(self._fx)
@@ -233,7 +238,9 @@ def test_fx_rates_bootstraps_missing_doc(monkeypatch):
 def test_lessons_content_requires_active_status(monkeypatch):
     fake_db = FakeFirestore(
         courses_data={"c1": {"title": "Course A"}},
-        lesson_data={"c1": {"l1": {"title": "Lesson 1", "content": "Text", "order": 1}}},
+        lesson_data={
+            "c1": {"l1": {"title": "Lesson 1", "content": "Text", "order": 1}}
+        },
     )
     monkeypatch.setattr(courses, "get_firestore_client", lambda: fake_db)
     app.dependency_overrides[auth_deps.get_current_user] = lambda: _student("disabled")
@@ -250,7 +257,9 @@ def test_lessons_content_requires_active_status(monkeypatch):
 def test_lessons_content_denies_expired_status(monkeypatch):
     fake_db = FakeFirestore(
         courses_data={"c1": {"title": "Course A"}},
-        lesson_data={"c1": {"l1": {"title": "Lesson 1", "content": "Text", "order": 1}}},
+        lesson_data={
+            "c1": {"l1": {"title": "Lesson 1", "content": "Text", "order": 1}}
+        },
     )
     monkeypatch.setattr(courses, "get_firestore_client", lambda: fake_db)
     app.dependency_overrides[auth_deps.get_current_user] = lambda: _student("expired")
@@ -267,10 +276,14 @@ def test_lessons_content_denies_expired_status(monkeypatch):
 def test_lessons_content_denies_community_only_status(monkeypatch):
     fake_db = FakeFirestore(
         courses_data={"c1": {"title": "Course A"}},
-        lesson_data={"c1": {"l1": {"title": "Lesson 1", "content": "Text", "order": 1}}},
+        lesson_data={
+            "c1": {"l1": {"title": "Lesson 1", "content": "Text", "order": 1}}
+        },
     )
     monkeypatch.setattr(courses, "get_firestore_client", lambda: fake_db)
-    app.dependency_overrides[auth_deps.get_current_user] = lambda: _student("community_only")
+    app.dependency_overrides[auth_deps.get_current_user] = lambda: _student(
+        "community_only"
+    )
     client = TestClient(app)
 
     response = client.get("/api/courses/c1/lessons")
@@ -286,8 +299,18 @@ def test_active_student_can_read_active_lessons(monkeypatch):
         courses_data={"c1": {"title": "Course A"}},
         lesson_data={
             "c1": {
-                "l1": {"title": "Lesson 1", "content": "Text 1", "order": 2, "isActive": True},
-                "l2": {"title": "Lesson 2", "content": "Text 2", "order": 1, "isActive": False},
+                "l1": {
+                    "title": "Lesson 1",
+                    "content": "Text 1",
+                    "order": 2,
+                    "isActive": True,
+                },
+                "l2": {
+                    "title": "Lesson 2",
+                    "content": "Text 2",
+                    "order": 1,
+                    "isActive": False,
+                },
             }
         },
     )
@@ -308,7 +331,14 @@ def test_staff_can_read_inactive_lesson_detail(monkeypatch):
     fake_db = FakeFirestore(
         courses_data={"c1": {"title": "Course A"}},
         lesson_data={
-            "c1": {"l1": {"title": "Lesson 1", "content": "Text 1", "order": 1, "isActive": False}}
+            "c1": {
+                "l1": {
+                    "title": "Lesson 1",
+                    "content": "Text 1",
+                    "order": 1,
+                    "isActive": False,
+                }
+            }
         },
     )
     monkeypatch.setattr(courses, "get_firestore_client", lambda: fake_db)
@@ -327,7 +357,14 @@ def test_active_user_get_lesson_by_id(monkeypatch):
     fake_db = FakeFirestore(
         courses_data={"c1": {"title": "Course A"}},
         lesson_data={
-            "c1": {"l1": {"title": "Lesson 1", "content": "Text 1", "order": 1, "isActive": True}}
+            "c1": {
+                "l1": {
+                    "title": "Lesson 1",
+                    "content": "Text 1",
+                    "order": 1,
+                    "isActive": True,
+                }
+            }
         },
     )
     monkeypatch.setattr(courses, "get_firestore_client", lambda: fake_db)

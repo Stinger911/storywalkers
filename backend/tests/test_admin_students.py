@@ -323,9 +323,7 @@ def test_patch_student_status_updates_with_new_enum(monkeypatch):
     app.dependency_overrides[get_current_user] = _override_staff
     client = TestClient(app)
 
-    response = client.patch(
-        "/api/admin/students/s1", json={"status": "community_only"}
-    )
+    response = client.patch("/api/admin/students/s1", json={"status": "community_only"})
     assert response.status_code == 200
     assert response.json()["status"] == "community_only"
     assert users["s1"]["status"] == "community_only"
@@ -450,9 +448,7 @@ def test_patch_student_requires_staff(monkeypatch):
     app.dependency_overrides[get_current_user] = _student_user
     client = TestClient(app)
 
-    response = client.patch(
-        "/api/admin/students/s1", json={"displayName": "New Name"}
-    )
+    response = client.patch("/api/admin/students/s1", json={"displayName": "New Name"})
     assert response.status_code == 403
 
     app.dependency_overrides.clear()
@@ -492,9 +488,7 @@ def test_patch_student_validates_display_name(monkeypatch):
     response = client.patch("/api/admin/students/s1", json={"displayName": "   "})
     assert response.status_code == 400
 
-    response = client.patch(
-        "/api/admin/students/s1", json={"displayName": "x" * 61}
-    )
+    response = client.patch("/api/admin/students/s1", json={"displayName": "x" * 61})
     assert response.status_code == 400
 
     app.dependency_overrides.clear()
@@ -517,17 +511,13 @@ def test_get_student_migrates_missing_status(monkeypatch):
 
 
 def test_patch_student_updates_display_name_and_timestamp(monkeypatch):
-    users = {
-        "s1": {"role": "student", "status": "active", "email": "s1@x.com"}
-    }
+    users = {"s1": {"role": "student", "status": "active", "email": "s1@x.com"}}
     fake_db = FakeFirestore(users)
     monkeypatch.setattr(admin_students, "get_firestore_client", lambda: fake_db)
     app.dependency_overrides[get_current_user] = _override_staff
     client = TestClient(app)
 
-    response = client.patch(
-        "/api/admin/students/s1", json={"displayName": "  Alex  "}
-    )
+    response = client.patch("/api/admin/students/s1", json={"displayName": "  Alex  "})
     assert response.status_code == 200
     payload = response.json()
     assert payload["displayName"] == "Alex"
