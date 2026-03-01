@@ -37,18 +37,22 @@ def _normalize_selected_courses(values: list[str]) -> list[str]:
 
 class PaymentStatus(str, Enum):
     created = "created"
+    email_detected = "email_detected"
     pending = "pending"
     paid = "paid"
     activated = "activated"
+    rejected = "rejected"
     failed = "failed"
     cancelled = "cancelled"
 
 
 PAYMENT_STATUSES: tuple[PaymentStatus, ...] = (
     PaymentStatus.created,
+    PaymentStatus.email_detected,
     PaymentStatus.pending,
     PaymentStatus.paid,
     PaymentStatus.activated,
+    PaymentStatus.rejected,
     PaymentStatus.failed,
     PaymentStatus.cancelled,
 )

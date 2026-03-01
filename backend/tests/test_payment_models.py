@@ -63,9 +63,11 @@ def test_payment_model_rejects_negative_amount():
 def test_payment_model_has_expected_status_constants():
     assert PAYMENT_STATUSES == (
         PaymentStatus.created,
+        PaymentStatus.email_detected,
         PaymentStatus.pending,
         PaymentStatus.paid,
         PaymentStatus.activated,
+        PaymentStatus.rejected,
         PaymentStatus.failed,
         PaymentStatus.cancelled,
     )

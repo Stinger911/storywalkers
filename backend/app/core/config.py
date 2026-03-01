@@ -28,6 +28,8 @@ class Settings(BaseSettings):
     BOOSTY_EMAIL_FILTER: str = "Boosty"
     GMAIL_WEBHOOK_MAX_MESSAGES: int = 20
     JOB_TOKEN: str | None = None
+    PAYMENT_REJECT_NOTIFY: bool = True
+    PAYMENT_AUTO_ACTIVATE_NOTIFY: bool = True
 
 
 @lru_cache(maxsize=1)
