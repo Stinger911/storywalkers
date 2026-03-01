@@ -24,6 +24,9 @@ class Settings(BaseSettings):
     GMAIL_CLIENT_ID: str | None = None
     GMAIL_CLIENT_SECRET: str | None = None
     GMAIL_PUBSUB_TOPIC: str | None = None
+    GMAIL_WEBHOOK_SECRET: str | None = None
+    BOOSTY_EMAIL_FILTER: str = "Boosty"
+    GMAIL_WEBHOOK_MAX_MESSAGES: int = 20
     JOB_TOKEN: str | None = None
 
 
