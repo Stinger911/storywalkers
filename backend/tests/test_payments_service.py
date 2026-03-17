@@ -141,12 +141,19 @@ def test_activate_by_code_is_idempotent_when_already_activated(monkeypatch):
         users={"u1": {"status": "disabled"}},
     )
     monkeypatch.setattr(payments_service, "get_settings", lambda: _Settings())
+    sent_messages: list[str] = []
+    monkeypatch.setattr(payments_service, "_notify_admin_async", sent_messages.append)
 
     result = payments_service.activate_by_code(fake_db, "SW-AAAA1111", "ev-1")
 
     assert result is True
     assert fake_db._payments["p1"]["status"] == "activated"
     assert len(fake_db._transactions) == 0
+    assert len(sent_messages) == 1
+    assert "ℹ️ Email activation noop" in sent_messages[0]
+    assert "reason: already_activated" in sent_messages[0]
+    assert "activation_code: SW-AAAA1111" in sent_messages[0]
+    assert "evidence: ev-1" in sent_messages[0]
 
 
 def test_activate_by_code_rejects_payment_with_invalid_status(monkeypatch):

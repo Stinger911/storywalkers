@@ -313,3 +313,39 @@ def test_gmail_webhook_direct_payload_logs_processed_event(monkeypatch):
             },
         )
     ]
+
+
+def test_gmail_webhook_notifies_when_processed_email_has_no_activation_code(monkeypatch):
+    fake_db = _FakeFirestore()
+    monkeypatch.setattr(gmail_webhook, "get_settings", lambda: _Settings())
+    monkeypatch.setattr(gmail_webhook, "get_firestore_client", lambda: fake_db)
+
+    sent_messages: list[str] = []
+
+    def _fake_notify(text: str) -> None:
+        sent_messages.append(text)
+
+    monkeypatch.setattr(gmail_webhook, "_notify_admin_async", _fake_notify)
+    client = TestClient(app)
+
+    response = client.post(
+        "/webhooks/gmail",
+        headers={"X-Webhook-Secret": "whsec-1"},
+        json={
+            "from": "Boosty <payments@boosty.to>",
+            "subject": "Boosty payment confirmation",
+            "text": "Thanks for your payment",
+            "messageId": "n8n-msg-3",
+            "emailAddress": "user@example.com",
+            "historyId": "888",
+        },
+    )
+
+    assert response.status_code == 200
+    assert len(sent_messages) == 1
+    assert "ℹ️ Email processed without activation" in sent_messages[0]
+    assert "reason: activation_code_not_found_in_message" in sent_messages[0]
+    assert "delivery_mode: direct" in sent_messages[0]
+    assert "message_id: n8n-msg-3" in sent_messages[0]
+    assert "email_address: user@example.com" in sent_messages[0]
+    assert "history_id: 888" in sent_messages[0]

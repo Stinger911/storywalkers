@@ -130,3 +130,45 @@ def fmt_email_activation_failed(
         f"user_status: {(user_status or '-').strip() or '-'}\n"
         f"evidence: {(evidence or '-').strip() or '-'}"
     )
+
+
+def fmt_email_activation_noop(
+    *,
+    reason: str,
+    payment_id: str | None = None,
+    activation_code: str,
+    user_uid: str | None = None,
+    evidence: str | None = None,
+) -> str:
+    timestamp = _iso_now()
+    return (
+        "ℹ️ Email activation noop\n"
+        f"time: {timestamp}\n"
+        f"reason: {(reason or '-').strip() or '-'}\n"
+        f"payment_id: {(payment_id or '-').strip() or '-'}\n"
+        f"activation_code: {(activation_code or '-').strip() or '-'}\n"
+        f"user_uid: {(user_uid or '-').strip() or '-'}\n"
+        f"evidence: {(evidence or '-').strip() or '-'}"
+    )
+
+
+def fmt_email_processing_result(
+    *,
+    reason: str,
+    delivery_mode: str,
+    message_id: str | None = None,
+    email_address: str | None = None,
+    history_id: str | None = None,
+    subject: str | None = None,
+) -> str:
+    timestamp = _iso_now()
+    return (
+        "ℹ️ Email processed without activation\n"
+        f"time: {timestamp}\n"
+        f"reason: {(reason or '-').strip() or '-'}\n"
+        f"delivery_mode: {(delivery_mode or '-').strip() or '-'}\n"
+        f"message_id: {(message_id or '-').strip() or '-'}\n"
+        f"email_address: {(email_address or '-').strip() or '-'}\n"
+        f"history_id: {(history_id or '-').strip() or '-'}\n"
+        f"subject: {(subject or '-').strip() or '-'}"
+    )
