@@ -1,6 +1,8 @@
 import re
 
 from app.services.telegram_events import (
+    fmt_email_activation_failed,
+    fmt_email_activation_succeeded,
     fmt_lesson_completed,
     fmt_questionnaire_completed,
     fmt_registration,
@@ -77,3 +79,41 @@ def test_fmt_lesson_completed_defaults_optional_titles_and_omits_empty_comment()
     assert "goal_title: -" in message
     assert "lesson_title: -" in message
     assert "comment:" not in message
+
+
+def test_fmt_email_activation_succeeded_contains_expected_fields():
+    message = fmt_email_activation_succeeded(
+        payment_id="p1",
+        activation_code="SW-ABCD1234",
+        user_uid="u1",
+        evidence="gmail_message_id=m1",
+    )
+
+    assert "✅ Email activation succeeded" in message
+    assert re.search(rf"time: {ISO_8601_UTC_OFFSET_RE}", message)
+    assert "payment_id: p1" in message
+    assert "activation_code: SW-ABCD1234" in message
+    assert "user_uid: u1" in message
+    assert "evidence: gmail_message_id=m1" in message
+
+
+def test_fmt_email_activation_failed_contains_expected_fields():
+    message = fmt_email_activation_failed(
+        reason="user_not_disabled",
+        payment_id="p1",
+        activation_code="SW-ABCD1234",
+        user_uid="u1",
+        payment_status="created",
+        user_status="active",
+        evidence="gmail_message_id=m1",
+    )
+
+    assert "❌ Email activation failed" in message
+    assert re.search(rf"time: {ISO_8601_UTC_OFFSET_RE}", message)
+    assert "reason: user_not_disabled" in message
+    assert "payment_id: p1" in message
+    assert "activation_code: SW-ABCD1234" in message
+    assert "user_uid: u1" in message
+    assert "payment_status: created" in message
+    assert "user_status: active" in message
+    assert "evidence: gmail_message_id=m1" in message

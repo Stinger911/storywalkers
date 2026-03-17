@@ -7,6 +7,10 @@ from app.core.config import get_settings
 from app.core.logging import get_logger
 from app.schemas.payments import PaymentStatus
 from app.services.telegram import send_admin_message
+from app.services.telegram_events import (
+    fmt_email_activation_failed,
+    fmt_email_activation_succeeded,
+)
 
 logger = get_logger("app.payments")
 
@@ -65,7 +69,13 @@ def activate_by_code(
                 "activationCode": activation_code,
             },
         )
-        _notify_admin_async(f"Activation code not found: {activation_code}")
+        _notify_admin_async(
+            fmt_email_activation_failed(
+                reason="activation_code_not_found",
+                activation_code=activation_code,
+                evidence=evidence,
+            )
+        )
         return False
 
     snap = snaps[0]
@@ -106,9 +116,14 @@ def activate_by_code(
         )
         if settings.PAYMENT_REJECT_NOTIFY:
             _notify_admin_async(
-                "Payment activation rejected: "
-                f"paymentId={payment_id} activationCode={activation_code} "
-                f"status={payment_status}"
+                fmt_email_activation_failed(
+                    reason="invalid_payment_status",
+                    payment_id=payment_id,
+                    activation_code=activation_code,
+                    user_uid=str(user_uid or ""),
+                    payment_status=str(payment_status or ""),
+                    evidence=evidence,
+                )
             )
         return False
 
@@ -131,8 +146,12 @@ def activate_by_code(
         )
         if settings.PAYMENT_REJECT_NOTIFY:
             _notify_admin_async(
-                "Payment activation rejected: "
-                f"paymentId={payment_id} activationCode={activation_code} missing userUid"
+                fmt_email_activation_failed(
+                    reason="missing_user_uid",
+                    payment_id=payment_id,
+                    activation_code=activation_code,
+                    evidence=evidence,
+                )
             )
         return False
 
@@ -160,8 +179,15 @@ def activate_by_code(
         )
         if settings.PAYMENT_REJECT_NOTIFY:
             _notify_admin_async(
-                "Payment activation rejected: "
-                f"paymentId={payment_id} uid={user_uid} userStatus={user_status}"
+                fmt_email_activation_failed(
+                    reason="user_not_disabled",
+                    payment_id=payment_id,
+                    activation_code=activation_code,
+                    user_uid=user_uid,
+                    payment_status=str(payment_status or ""),
+                    user_status=str(user_status or ""),
+                    evidence=evidence,
+                )
             )
         return False
 
@@ -195,7 +221,11 @@ def activate_by_code(
     )
     if settings.PAYMENT_AUTO_ACTIVATE_NOTIFY:
         _notify_admin_async(
-            "Auto-activated payment "
-            f"paymentId={payment_id} uid={user_uid} activationCode={activation_code}"
+            fmt_email_activation_succeeded(
+                payment_id=payment_id,
+                user_uid=user_uid,
+                activation_code=activation_code,
+                evidence=evidence,
+            )
         )
     return True

@@ -195,3 +195,77 @@ def test_gmail_webhook_triggers_activation_for_boosty_codes(monkeypatch):
     assert activated[0][0] == "SW-ABCD2345"
     assert "gmail_message_id=m1" in (activated[0][1] or "")
     assert fake_db._settings["gmail"]["lastHistoryId"] == "202"
+
+
+def test_gmail_webhook_accepts_direct_n8n_payload_without_gmail_settings(monkeypatch):
+    fake_db = _FakeFirestore()
+    monkeypatch.setattr(gmail_webhook, "get_settings", lambda: _Settings())
+    monkeypatch.setattr(gmail_webhook, "get_firestore_client", lambda: fake_db)
+
+    activated: list[tuple[str, str | None]] = []
+
+    def _fake_activate(_db, code: str, evidence: str | None = None):
+        activated.append((code, evidence))
+        return True
+
+    monkeypatch.setattr(gmail_webhook, "activate_by_code", _fake_activate)
+    client = TestClient(app)
+
+    response = client.post(
+        "/webhooks/gmail",
+        headers={"X-Webhook-Secret": "whsec-1"},
+        json={
+            "from": "Boosty <payments@boosty.to>",
+            "subject": "Boosty payment confirmation",
+            "text": "Activation code: SW-ZYXW9876",
+            "messageId": "n8n-msg-1",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"ok": True}
+    assert activated == [
+        (
+            "SW-ZYXW9876",
+            "gmail_message_id=n8n-msg-1;email_address=-;history_id=-;subject=Boosty payment confirmation",
+        )
+    ]
+
+
+def test_gmail_webhook_accepts_direct_n8n_payload_and_persists_history(monkeypatch):
+    fake_db = _FakeFirestore()
+    monkeypatch.setattr(gmail_webhook, "get_settings", lambda: _Settings())
+    monkeypatch.setattr(gmail_webhook, "get_firestore_client", lambda: fake_db)
+
+    activated: list[tuple[str, str | None]] = []
+
+    def _fake_activate(_db, code: str, evidence: str | None = None):
+        activated.append((code, evidence))
+        return True
+
+    monkeypatch.setattr(gmail_webhook, "activate_by_code", _fake_activate)
+    client = TestClient(app)
+
+    response = client.post(
+        "/webhooks/gmail",
+        headers={"X-Webhook-Secret": "whsec-1"},
+        json={
+            "message": {
+                "headers": [
+                    {"name": "From", "value": "Boosty <payments@boosty.to>"},
+                    {"name": "Subject", "value": "Boosty payment confirmation"},
+                ],
+                "bodyText": "Activation code: SW-ASDF1234",
+                "emailAddress": "user@example.com",
+                "historyId": "501",
+                "id": "n8n-msg-2",
+            }
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"ok": True}
+    assert activated
+    assert activated[0][0] == "SW-ASDF1234"
+    assert "gmail_message_id=n8n-msg-2" in (activated[0][1] or "")
+    assert fake_db._settings["gmail"]["lastHistoryId"] == "501"
