@@ -269,3 +269,47 @@ def test_gmail_webhook_accepts_direct_n8n_payload_and_persists_history(monkeypat
     assert activated[0][0] == "SW-ASDF1234"
     assert "gmail_message_id=n8n-msg-2" in (activated[0][1] or "")
     assert fake_db._settings["gmail"]["lastHistoryId"] == "501"
+
+
+def test_gmail_webhook_direct_payload_logs_processed_event(monkeypatch):
+    fake_db = _FakeFirestore()
+    monkeypatch.setattr(gmail_webhook, "get_settings", lambda: _Settings())
+    monkeypatch.setattr(gmail_webhook, "get_firestore_client", lambda: fake_db)
+    monkeypatch.setattr(gmail_webhook, "activate_by_code", lambda *_args, **_kwargs: True)
+
+    log_calls: list[tuple[str, dict]] = []
+
+    class _Logger:
+        def info(self, message: str, *, extra: dict | None = None):
+            log_calls.append((message, extra or {}))
+
+    monkeypatch.setattr(gmail_webhook, "logger", _Logger())
+    client = TestClient(app)
+
+    response = client.post(
+        "/webhooks/gmail",
+        headers={"X-Webhook-Secret": "whsec-1"},
+        json={
+            "from": "Boosty <payments@boosty.to>",
+            "subject": "Boosty payment confirmation",
+            "text": "Activation code: SW-ZYXW9876",
+            "messageId": "n8n-msg-1",
+            "historyId": "777",
+        },
+    )
+
+    assert response.status_code == 200
+    assert log_calls == [
+        (
+            "gmail_webhook_processed",
+            {
+                "event": "gmail_webhook_processed",
+                "incomingHistoryId": "777",
+                "activationCodes": 1,
+                "messagesSeen": 1,
+                "messagesProcessed": 1,
+                "maxMessages": 1,
+                "deliveryMode": "direct",
+            },
+        )
+    ]
