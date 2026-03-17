@@ -1,6 +1,8 @@
 import re
 
 from app.services.telegram_events import (
+    fmt_email_activation_noop,
+    fmt_email_processing_result,
     fmt_email_activation_failed,
     fmt_email_activation_succeeded,
     fmt_lesson_completed,
@@ -117,3 +119,41 @@ def test_fmt_email_activation_failed_contains_expected_fields():
     assert "payment_status: created" in message
     assert "user_status: active" in message
     assert "evidence: gmail_message_id=m1" in message
+
+
+def test_fmt_email_activation_noop_contains_expected_fields():
+    message = fmt_email_activation_noop(
+        reason="already_activated",
+        payment_id="p1",
+        activation_code="SW-ABCD1234",
+        user_uid="u1",
+        evidence="gmail_message_id=m1",
+    )
+
+    assert "ℹ️ Email activation noop" in message
+    assert re.search(rf"time: {ISO_8601_UTC_OFFSET_RE}", message)
+    assert "reason: already_activated" in message
+    assert "payment_id: p1" in message
+    assert "activation_code: SW-ABCD1234" in message
+    assert "user_uid: u1" in message
+    assert "evidence: gmail_message_id=m1" in message
+
+
+def test_fmt_email_processing_result_contains_expected_fields():
+    message = fmt_email_processing_result(
+        reason="activation_code_not_found_in_message",
+        delivery_mode="direct",
+        message_id="m1",
+        email_address="user@example.com",
+        history_id="777",
+        subject="Boosty payment confirmation",
+    )
+
+    assert "ℹ️ Email processed without activation" in message
+    assert re.search(rf"time: {ISO_8601_UTC_OFFSET_RE}", message)
+    assert "reason: activation_code_not_found_in_message" in message
+    assert "delivery_mode: direct" in message
+    assert "message_id: m1" in message
+    assert "email_address: user@example.com" in message
+    assert "history_id: 777" in message
+    assert "subject: Boosty payment confirmation" in message

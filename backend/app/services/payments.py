@@ -9,6 +9,7 @@ from app.schemas.payments import PaymentStatus
 from app.services.telegram import send_admin_message
 from app.services.telegram_events import (
     fmt_email_activation_failed,
+    fmt_email_activation_noop,
     fmt_email_activation_succeeded,
 )
 
@@ -93,6 +94,15 @@ def activate_by_code(
                 "paymentId": payment_id,
                 "activationCode": activation_code,
             },
+        )
+        _notify_admin_async(
+            fmt_email_activation_noop(
+                reason="already_activated",
+                payment_id=payment_id,
+                activation_code=activation_code,
+                user_uid=str(user_uid or ""),
+                evidence=evidence,
+            )
         )
         return True
 

@@ -13,6 +13,8 @@ from app.repositories.settings import get_gmail_settings, set_gmail_settings
 from app.schemas.settings import GmailSettings
 from app.services.gmail_client import GmailClient
 from app.services.payments import activate_by_code
+from app.services.telegram import send_admin_message
+from app.services.telegram_events import fmt_email_processing_result
 
 router = APIRouter(tags=["Webhooks"])
 logger = get_logger("app.webhooks.gmail")
@@ -130,27 +132,58 @@ def _apply_activation_codes(
     message: dict[str, Any],
     email_address: str | None,
     history_id: str | None,
+    delivery_mode: str,
     message_id_fallback: str | None = None,
 ) -> int:
     settings = get_settings()
-    filter_text = (settings.BOOSTY_EMAIL_FILTER or "Boosty").strip() or "Boosty"
-    if not _contains_filter(message, filter_text):
-        return 0
-
-    body_text = message.get("bodyText")
-    if not isinstance(body_text, str) or not body_text:
-        return 0
-
-    found_codes = set(_ACTIVATION_CODE_RE.findall(body_text.upper()))
-    if not found_codes:
-        return 0
-
     headers = message.get("headers")
     subject = headers.get("Subject") if isinstance(headers, dict) else None
     message_id = message.get("id")
     if not isinstance(message_id, str) or not message_id:
         message_id = message_id_fallback
     message_id_text = message_id if isinstance(message_id, str) and message_id else "-"
+    filter_text = (settings.BOOSTY_EMAIL_FILTER or "Boosty").strip() or "Boosty"
+    if not _contains_filter(message, filter_text):
+        _notify_admin_async(
+            fmt_email_processing_result(
+                reason="filter_mismatch",
+                delivery_mode=delivery_mode,
+                message_id=message_id_text,
+                email_address=email_address,
+                history_id=history_id,
+                subject=subject,
+            )
+        )
+        return 0
+
+    body_text = message.get("bodyText")
+    if not isinstance(body_text, str) or not body_text:
+        _notify_admin_async(
+            fmt_email_processing_result(
+                reason="missing_body_text",
+                delivery_mode=delivery_mode,
+                message_id=message_id_text,
+                email_address=email_address,
+                history_id=history_id,
+                subject=subject,
+            )
+        )
+        return 0
+
+    found_codes = set(_ACTIVATION_CODE_RE.findall(body_text.upper()))
+    if not found_codes:
+        _notify_admin_async(
+            fmt_email_processing_result(
+                reason="activation_code_not_found_in_message",
+                delivery_mode=delivery_mode,
+                message_id=message_id_text,
+                email_address=email_address,
+                history_id=history_id,
+                subject=subject,
+            )
+        )
+        return 0
+
     evidence = (
         f"gmail_message_id={message_id_text};"
         f"email_address={email_address or '-'};"
@@ -180,6 +213,58 @@ def _persist_history_checkpoint(
         watchExpiration=gmail_settings.watchExpiration,
     )
     set_gmail_settings(db, updated_settings)
+
+
+def _notify_admin_async(text: str) -> None:
+    import asyncio
+
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        try:
+            asyncio.run(send_admin_message(text))
+        except Exception:
+            logger.warning(
+                "gmail_webhook_telegram_notify_failed",
+                extra={"event": "gmail_webhook_telegram_notify_failed", "text": text[:200]},
+                exc_info=True,
+            )
+        return
+
+    async def _send() -> None:
+        try:
+            await send_admin_message(text)
+        except Exception:
+            logger.warning(
+                "gmail_webhook_telegram_notify_failed",
+                extra={"event": "gmail_webhook_telegram_notify_failed", "text": text[:200]},
+                exc_info=True,
+            )
+
+    loop.create_task(_send())
+
+
+def _log_processing(
+    *,
+    history_id: str | None,
+    activation_codes: int,
+    messages_seen: int,
+    messages_processed: int,
+    max_messages: int,
+    delivery_mode: str,
+) -> None:
+    logger.info(
+        "gmail_webhook_processed",
+        extra={
+            "event": "gmail_webhook_processed",
+            "incomingHistoryId": history_id,
+            "activationCodes": activation_codes,
+            "messagesSeen": messages_seen,
+            "messagesProcessed": messages_processed,
+            "maxMessages": max_messages,
+            "deliveryMode": delivery_mode,
+        },
+    )
 
 
 @router.post("/webhooks/gmail", include_in_schema=False)
@@ -215,19 +300,20 @@ async def gmail_webhook(request: Request) -> dict[str, bool]:
             message=direct_message,
             email_address=direct_message.get("emailAddress"),
             history_id=history_id_str,
+            delivery_mode="direct",
         )
         _persist_history_checkpoint(
             db,
             history_id=history_id_str,
             gmail_settings=gmail_settings,
         )
-        logger.info(
-            "gmail_webhook_processed_direct",
-            extra={
-                "event": "gmail_webhook_processed_direct",
-                "incomingHistoryId": history_id_str,
-                "activationCodes": activated_count,
-            },
+        _log_processing(
+            history_id=history_id_str,
+            activation_codes=activated_count,
+            messages_seen=1,
+            messages_processed=1,
+            max_messages=1,
+            delivery_mode="direct",
         )
         return {"ok": True}
 
@@ -274,14 +360,16 @@ async def gmail_webhook(request: Request) -> dict[str, bool]:
     max_messages = max(1, int(settings.GMAIL_WEBHOOK_MAX_MESSAGES))
 
     processed = 0
+    activated_count = 0
     for message_id in message_ids[:max_messages]:
         processed += 1
         message = gmail.get_message(message_id, format="full")
-        _apply_activation_codes(
+        activated_count += _apply_activation_codes(
             db,
             message=message,
             email_address=email_address if isinstance(email_address, str) else None,
             history_id=history_id_str,
+            delivery_mode="gmail_history",
             message_id_fallback=message_id,
         )
 
@@ -291,14 +379,12 @@ async def gmail_webhook(request: Request) -> dict[str, bool]:
         gmail_settings=gmail_settings,
     )
 
-    logger.info(
-        "gmail_webhook_processed",
-        extra={
-            "event": "gmail_webhook_processed",
-            "incomingHistoryId": history_id_str,
-            "messagesSeen": len(message_ids),
-            "messagesProcessed": processed,
-            "maxMessages": max_messages,
-        },
+    _log_processing(
+        history_id=history_id_str,
+        activation_codes=activated_count,
+        messages_seen=len(message_ids),
+        messages_processed=processed,
+        max_messages=max_messages,
+        delivery_mode="gmail_history",
     )
     return {"ok": True}
