@@ -87,3 +87,46 @@ def fmt_lesson_completed(
         f"step_title: {step_title}\n"
         f"{comment_line}".rstrip()
     )
+
+
+def fmt_email_activation_succeeded(
+    *,
+    payment_id: str,
+    activation_code: str,
+    user_uid: str,
+    evidence: str | None = None,
+) -> str:
+    timestamp = _iso_now()
+    evidence_text = (evidence or "-").strip() or "-"
+    return (
+        "✅ Email activation succeeded\n"
+        f"time: {timestamp}\n"
+        f"payment_id: {(payment_id or '-').strip() or '-'}\n"
+        f"activation_code: {(activation_code or '-').strip() or '-'}\n"
+        f"user_uid: {(user_uid or '-').strip() or '-'}\n"
+        f"evidence: {evidence_text}"
+    )
+
+
+def fmt_email_activation_failed(
+    *,
+    reason: str,
+    activation_code: str,
+    payment_id: str | None = None,
+    user_uid: str | None = None,
+    payment_status: str | None = None,
+    user_status: str | None = None,
+    evidence: str | None = None,
+) -> str:
+    timestamp = _iso_now()
+    return (
+        "❌ Email activation failed\n"
+        f"time: {timestamp}\n"
+        f"reason: {(reason or '-').strip() or '-'}\n"
+        f"payment_id: {(payment_id or '-').strip() or '-'}\n"
+        f"activation_code: {(activation_code or '-').strip() or '-'}\n"
+        f"user_uid: {(user_uid or '-').strip() or '-'}\n"
+        f"payment_status: {(payment_status or '-').strip() or '-'}\n"
+        f"user_status: {(user_status or '-').strip() or '-'}\n"
+        f"evidence: {(evidence or '-').strip() or '-'}"
+    )

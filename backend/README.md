@@ -80,3 +80,16 @@ python scripts/gmail_oauth_bootstrap.py
    Add header `X-Webhook-Secret: <GMAIL_WEBHOOK_SECRET>` on the push subscription.
 7. Create a Cloud Scheduler job to renew Gmail watch daily.
    Target endpoint (current backend route): `/jobs/gmail/renew-watch`.
+
+The same `/webhooks/gmail` route also accepts direct email payloads from n8n when you do not want the backend to fetch message details from Gmail itself. Send the webhook secret in `X-Webhook-Secret` and include the email data directly, for example:
+
+```json
+{
+  "from": "Boosty <payments@boosty.to>",
+  "subject": "Boosty payment confirmation",
+  "text": "Activation code: SW-ABCD2345",
+  "messageId": "18f...."
+}
+```
+
+Optional direct fields supported by the webhook include `headers`, `bodyText`, `text`, `plainText`, `html`, `emailAddress`, and `historyId`. If `historyId` is present, the backend stores it as the latest Gmail checkpoint.

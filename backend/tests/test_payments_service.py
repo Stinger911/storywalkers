@@ -5,7 +5,7 @@ from app.services import payments as payments_service
 
 class _Settings:
     PAYMENT_REJECT_NOTIFY = True
-    PAYMENT_AUTO_ACTIVATE_NOTIFY = False
+    PAYMENT_AUTO_ACTIVATE_NOTIFY = True
 
 
 class _FakeSnap:
@@ -161,6 +161,8 @@ def test_activate_by_code_rejects_payment_with_invalid_status(monkeypatch):
         users={"u2": {"status": "disabled"}},
     )
     monkeypatch.setattr(payments_service, "get_settings", lambda: _Settings())
+    sent_messages: list[str] = []
+    monkeypatch.setattr(payments_service, "_notify_admin_async", sent_messages.append)
 
     result = payments_service.activate_by_code(fake_db, "SW-BBBB2222", "ev-2")
 
@@ -168,6 +170,12 @@ def test_activate_by_code_rejects_payment_with_invalid_status(monkeypatch):
     assert fake_db._payments["p2"]["status"] == "rejected"
     assert fake_db._payments["p2"]["emailEvidence"] == "ev-2"
     assert len(fake_db._transactions) == 0
+    assert len(sent_messages) == 1
+    assert "❌ Email activation failed" in sent_messages[0]
+    assert "reason: invalid_payment_status" in sent_messages[0]
+    assert "activation_code: SW-BBBB2222" in sent_messages[0]
+    assert "payment_status: paid" in sent_messages[0]
+    assert "evidence: ev-2" in sent_messages[0]
 
 
 def test_activate_by_code_rejects_when_user_not_disabled(monkeypatch):
@@ -182,12 +190,20 @@ def test_activate_by_code_rejects_when_user_not_disabled(monkeypatch):
         users={"u3": {"status": "active"}},
     )
     monkeypatch.setattr(payments_service, "get_settings", lambda: _Settings())
+    sent_messages: list[str] = []
+    monkeypatch.setattr(payments_service, "_notify_admin_async", sent_messages.append)
 
     result = payments_service.activate_by_code(fake_db, "SW-CCCC3333", "ev-3")
 
     assert result is False
     assert fake_db._payments["p3"]["status"] == "rejected"
     assert len(fake_db._transactions) == 0
+    assert len(sent_messages) == 1
+    assert "❌ Email activation failed" in sent_messages[0]
+    assert "reason: user_not_disabled" in sent_messages[0]
+    assert "user_uid: u3" in sent_messages[0]
+    assert "user_status: active" in sent_messages[0]
+    assert "evidence: ev-3" in sent_messages[0]
 
 
 def test_activate_by_code_transaction_activates_user_and_payment(monkeypatch):
@@ -202,6 +218,8 @@ def test_activate_by_code_transaction_activates_user_and_payment(monkeypatch):
         users={"u4": {"status": "disabled"}},
     )
     monkeypatch.setattr(payments_service, "get_settings", lambda: _Settings())
+    sent_messages: list[str] = []
+    monkeypatch.setattr(payments_service, "_notify_admin_async", sent_messages.append)
 
     result = payments_service.activate_by_code(fake_db, "SW-DDDD4444", "ev-4")
 
@@ -213,3 +231,25 @@ def test_activate_by_code_transaction_activates_user_and_payment(monkeypatch):
     assert fake_db._payments["p4"]["status"] == "activated"
     assert fake_db._payments["p4"]["activatedAt"] == "SERVER_TIMESTAMP"
     assert fake_db._payments["p4"]["emailEvidence"] == "ev-4"
+    assert len(sent_messages) == 1
+    assert "✅ Email activation succeeded" in sent_messages[0]
+    assert "payment_id: p4" in sent_messages[0]
+    assert "activation_code: SW-DDDD4444" in sent_messages[0]
+    assert "user_uid: u4" in sent_messages[0]
+    assert "evidence: ev-4" in sent_messages[0]
+
+
+def test_activate_by_code_not_found_sends_failure_notification(monkeypatch):
+    fake_db = _FakeFirestore()
+    monkeypatch.setattr(payments_service, "get_settings", lambda: _Settings())
+    sent_messages: list[str] = []
+    monkeypatch.setattr(payments_service, "_notify_admin_async", sent_messages.append)
+
+    result = payments_service.activate_by_code(fake_db, "SW-MISSING1", "ev-404")
+
+    assert result is False
+    assert len(sent_messages) == 1
+    assert "❌ Email activation failed" in sent_messages[0]
+    assert "reason: activation_code_not_found" in sent_messages[0]
+    assert "activation_code: SW-MISSING1" in sent_messages[0]
+    assert "evidence: ev-404" in sent_messages[0]

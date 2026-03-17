@@ -46,6 +46,142 @@ def _contains_filter(message: dict[str, Any], needle: str) -> bool:
     return needle.lower() in source.lower()
 
 
+def _normalize_headers(value: Any) -> dict[str, str]:
+    if isinstance(value, dict):
+        return {str(key): item for key, item in value.items() if isinstance(item, str)}
+    if not isinstance(value, list):
+        return {}
+    headers: dict[str, str] = {}
+    for item in value:
+        if not isinstance(item, dict):
+            continue
+        name = item.get("name")
+        header_value = item.get("value")
+        if isinstance(name, str) and name and isinstance(header_value, str):
+            headers[name] = header_value
+    return headers
+
+
+def _pick_first_string(source: dict[str, Any], keys: tuple[str, ...]) -> str | None:
+    for key in keys:
+        value = source.get(key)
+        if isinstance(value, str):
+            trimmed = value.strip()
+            if trimmed:
+                return trimmed
+    return None
+
+
+def _extract_direct_message(payload: dict[str, Any]) -> dict[str, Any] | None:
+    candidates: list[dict[str, Any]] = [payload]
+    for key in ("message", "gmail", "email", "data"):
+        value = payload.get(key)
+        if isinstance(value, dict):
+            candidates.append(value)
+
+    for candidate in candidates:
+        headers = _normalize_headers(candidate.get("headers"))
+        from_value = _pick_first_string(candidate, ("from", "fromEmail", "sender"))
+        subject_value = _pick_first_string(candidate, ("subject",))
+        body_text = _pick_first_string(
+            candidate,
+            (
+                "bodyText",
+                "text",
+                "plainText",
+                "body",
+                "bodyPlain",
+                "content",
+                "snippet",
+                "html",
+            ),
+        )
+        message_id = _pick_first_string(
+            candidate,
+            ("id", "messageId", "gmailMessageId", "message_id"),
+        )
+        email_address = _pick_first_string(
+            candidate,
+            ("emailAddress", "email", "gmailAddress", "recipient"),
+        )
+        history_id = _pick_first_string(candidate, ("historyId", "history_id"))
+
+        if from_value and "From" not in headers:
+            headers["From"] = from_value
+        if subject_value and "Subject" not in headers:
+            headers["Subject"] = subject_value
+
+        if not headers and not body_text:
+            continue
+
+        return {
+            "id": message_id,
+            "headers": headers,
+            "bodyText": body_text or "",
+            "emailAddress": email_address,
+            "historyId": history_id,
+        }
+    return None
+
+
+def _apply_activation_codes(
+    db: Any,
+    *,
+    message: dict[str, Any],
+    email_address: str | None,
+    history_id: str | None,
+    message_id_fallback: str | None = None,
+) -> int:
+    settings = get_settings()
+    filter_text = (settings.BOOSTY_EMAIL_FILTER or "Boosty").strip() or "Boosty"
+    if not _contains_filter(message, filter_text):
+        return 0
+
+    body_text = message.get("bodyText")
+    if not isinstance(body_text, str) or not body_text:
+        return 0
+
+    found_codes = set(_ACTIVATION_CODE_RE.findall(body_text.upper()))
+    if not found_codes:
+        return 0
+
+    headers = message.get("headers")
+    subject = headers.get("Subject") if isinstance(headers, dict) else None
+    message_id = message.get("id")
+    if not isinstance(message_id, str) or not message_id:
+        message_id = message_id_fallback
+    message_id_text = message_id if isinstance(message_id, str) and message_id else "-"
+    evidence = (
+        f"gmail_message_id={message_id_text};"
+        f"email_address={email_address or '-'};"
+        f"history_id={history_id or '-'};"
+        f"subject={(subject or '-')}"
+    )
+    for code in found_codes:
+        activate_by_code(db, code, evidence)
+    return len(found_codes)
+
+
+def _persist_history_checkpoint(
+    db: Any,
+    *,
+    history_id: str | None,
+    gmail_settings: GmailSettings | None,
+) -> None:
+    if not history_id:
+        return
+    if gmail_settings is None:
+        set_gmail_settings(db, GmailSettings(lastHistoryId=history_id))
+        return
+    updated_settings = GmailSettings(
+        enabled=gmail_settings.enabled,
+        watchTopic=gmail_settings.watchTopic,
+        lastHistoryId=history_id,
+        watchExpiration=gmail_settings.watchExpiration,
+    )
+    set_gmail_settings(db, updated_settings)
+
+
 @router.post("/webhooks/gmail", include_in_schema=False)
 async def gmail_webhook(request: Request) -> dict[str, bool]:
     settings = get_settings()
@@ -63,8 +199,37 @@ async def gmail_webhook(request: Request) -> dict[str, bool]:
         raw = await request.json()
         if isinstance(raw, dict):
             payload = raw
+        elif isinstance(raw, list) and len(raw) == 1 and isinstance(raw[0], dict):
+            payload = raw[0]
     except Exception:
         payload = {}
+
+    db = get_firestore_client()
+    gmail_settings = get_gmail_settings(db)
+    direct_message = _extract_direct_message(payload)
+    if direct_message is not None:
+        history_id = direct_message.get("historyId")
+        history_id_str = history_id if isinstance(history_id, str) else None
+        activated_count = _apply_activation_codes(
+            db,
+            message=direct_message,
+            email_address=direct_message.get("emailAddress"),
+            history_id=history_id_str,
+        )
+        _persist_history_checkpoint(
+            db,
+            history_id=history_id_str,
+            gmail_settings=gmail_settings,
+        )
+        logger.info(
+            "gmail_webhook_processed_direct",
+            extra={
+                "event": "gmail_webhook_processed_direct",
+                "incomingHistoryId": history_id_str,
+                "activationCodes": activated_count,
+            },
+        )
+        return {"ok": True}
 
     message_obj = payload.get("message")
     if not isinstance(message_obj, dict):
@@ -93,8 +258,6 @@ async def gmail_webhook(request: Request) -> dict[str, bool]:
         )
         return {"ok": True}
 
-    db = get_firestore_client()
-    gmail_settings = get_gmail_settings(db)
     if not gmail_settings or not gmail_settings.lastHistoryId:
         logger.info(
             "gmail_webhook_skipped",
@@ -109,39 +272,24 @@ async def gmail_webhook(request: Request) -> dict[str, bool]:
     gmail = GmailClient()
     message_ids = gmail.list_history(gmail_settings.lastHistoryId)
     max_messages = max(1, int(settings.GMAIL_WEBHOOK_MAX_MESSAGES))
-    filter_text = (settings.BOOSTY_EMAIL_FILTER or "Boosty").strip() or "Boosty"
 
     processed = 0
     for message_id in message_ids[:max_messages]:
         processed += 1
         message = gmail.get_message(message_id, format="full")
-        if not _contains_filter(message, filter_text):
-            continue
-        body_text = message.get("bodyText")
-        if not isinstance(body_text, str) or not body_text:
-            continue
-        found_codes = set(_ACTIVATION_CODE_RE.findall(body_text.upper()))
-        if not found_codes:
-            continue
-
-        headers = message.get("headers")
-        subject = headers.get("Subject") if isinstance(headers, dict) else None
-        evidence = (
-            f"gmail_message_id={message_id};"
-            f"email_address={email_address or '-'};"
-            f"history_id={history_id_str};"
-            f"subject={(subject or '-')}"
+        _apply_activation_codes(
+            db,
+            message=message,
+            email_address=email_address if isinstance(email_address, str) else None,
+            history_id=history_id_str,
+            message_id_fallback=message_id,
         )
-        for code in found_codes:
-            activate_by_code(db, code, evidence)
 
-    updated_settings = GmailSettings(
-        enabled=gmail_settings.enabled,
-        watchTopic=gmail_settings.watchTopic,
-        lastHistoryId=history_id_str,
-        watchExpiration=gmail_settings.watchExpiration,
+    _persist_history_checkpoint(
+        db,
+        history_id=history_id_str,
+        gmail_settings=gmail_settings,
     )
-    set_gmail_settings(db, updated_settings)
 
     logger.info(
         "gmail_webhook_processed",
