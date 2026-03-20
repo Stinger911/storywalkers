@@ -405,7 +405,142 @@ def test_gmail_webhook_parses_n8n_donation_and_saves_boosty_user_id(monkeypatch)
     assert "boosty_name: Мария П." in sent_messages[0]
     assert "boosty_user_id: 43061401" in sent_messages[0]
     assert "boosty_email: maria16392@gmail.com" in sent_messages[0]
-    assert "amount: + 300 ₽" in sent_messages[0]
+    assert "amount: 300 ₽" in sent_messages[0]
     assert "service_fee_compensated: yes" in sent_messages[0]
     assert "time: 2026-03-20T09:30:00+00:00" in sent_messages[0]
     assert "message_id: n8n-msg-4" in sent_messages[0]
+
+
+def test_gmail_webhook_parses_subscription_without_link_noise(monkeypatch):
+    fake_db = _FakeFirestore()
+    monkeypatch.setattr(gmail_webhook, "get_settings", lambda: _Settings())
+    monkeypatch.setattr(gmail_webhook, "get_firestore_client", lambda: fake_db)
+
+    sent_messages: list[str] = []
+    monkeypatch.setattr(gmail_webhook, "_notify_admin_async", sent_messages.append)
+
+    client = TestClient(app)
+
+    response = client.post(
+        "/webhooks/gmail",
+        headers={"X-Webhook-Secret": "whsec-1"},
+        json={
+            "emailId": "n8n-sub-1",
+            "from": "Boosty <noreply@boosty.to>",
+            "subject": "У вас появился новый подписчик",
+            "text": (
+                "Boosty.\n"
+                "У вас появился новый подписчик\n"
+                "[https://images.boosty.to/user/21985241/avatar?change_time=1693386646&croped=1&mh=120&mw=120]\n"
+                "Вадим Тип подписки Мотиватор 300 ₽ в месяц\n"
+                "Написать сообщение"
+            ),
+            "html": (
+                '<a href="https://boosty.to/app/messages?userId=21985241&from=email">'
+                "Написать сообщение</a>"
+            ),
+            "date": "2026-03-16T00:36:02.000Z",
+        },
+    )
+
+    assert response.status_code == 200
+    assert len(sent_messages) == 1
+    assert "⭐ Boosty subscription" in sent_messages[0]
+    assert "time: 2026-03-16T00:36:02.000Z" in sent_messages[0]
+    assert "boosty_name: Вадим" in sent_messages[0]
+    assert "boosty_user_id: 21985241" in sent_messages[0]
+    assert "subscription_tier: Мотиватор" in sent_messages[0]
+    assert "amount: 300 ₽ в месяц" in sent_messages[0]
+    assert "https://images.boosty.to" not in sent_messages[0]
+    assert "boosty_email:" not in sent_messages[0]
+    assert "comment:" not in sent_messages[0]
+
+
+def test_gmail_webhook_parses_donation_with_merged_name_email_without_comment(monkeypatch):
+    fake_db = _FakeFirestore()
+    fake_db._users["u1"] = {
+        "email": "maria16392@gmail.com",
+        "displayName": "Maria App",
+        "role": "student",
+        "status": "active",
+    }
+    monkeypatch.setattr(gmail_webhook, "get_settings", lambda: _Settings())
+    monkeypatch.setattr(gmail_webhook, "get_firestore_client", lambda: fake_db)
+
+    sent_messages: list[str] = []
+    monkeypatch.setattr(gmail_webhook, "_notify_admin_async", sent_messages.append)
+
+    client = TestClient(app)
+
+    response = client.post(
+        "/webhooks/gmail",
+        headers={"X-Webhook-Secret": "whsec-1"},
+        json={
+            "emailId": "n8n-don-merged-1",
+            "from": "Boosty <noreply@boosty.to>",
+            "subject": "У вас новый донат",
+            "text": (
+                "Boosty.\n"
+                "У вас новый донат\n"
+                "Мария\n"
+                "П.maria16392@gmail.com  + 300 ₽\n"
+                "Написать сообщение"
+            ),
+            "html": (
+                '<a href="https://boosty.to/app/messages?userId=43061401&from=email">'
+                "Написать сообщение</a>"
+            ),
+        },
+    )
+
+    assert response.status_code == 200
+    assert fake_db._users["u1"]["boostyUserId"] == "43061401"
+    assert "boosty_name: Мария П." in sent_messages[0]
+    assert "boosty_email: maria16392@gmail.com" in sent_messages[0]
+    assert "amount: 300 ₽" in sent_messages[0]
+    assert "comment:" not in sent_messages[0]
+
+
+def test_gmail_webhook_parses_donation_with_merged_name_email_and_comment(monkeypatch):
+    fake_db = _FakeFirestore()
+    fake_db._users["u1"] = {
+        "email": "olesj9515727136@gmail.com",
+        "displayName": "Olesya App",
+        "role": "student",
+        "status": "active",
+    }
+    monkeypatch.setattr(gmail_webhook, "get_settings", lambda: _Settings())
+    monkeypatch.setattr(gmail_webhook, "get_firestore_client", lambda: fake_db)
+
+    sent_messages: list[str] = []
+    monkeypatch.setattr(gmail_webhook, "_notify_admin_async", sent_messages.append)
+
+    client = TestClient(app)
+
+    response = client.post(
+        "/webhooks/gmail",
+        headers={"X-Webhook-Secret": "whsec-1"},
+        json={
+            "emailId": "n8n-don-merged-2",
+            "from": "Boosty <noreply@boosty.to>",
+            "subject": "У вас новый донат",
+            "text": (
+                "Boosty.\n"
+                "У вас новый донат\n"
+                "Олеся\n"
+                "Фрешерolesj9515727136@gmail.com Круто + 300 ₽\n"
+                "Написать сообщение"
+            ),
+            "html": (
+                '<a href="https://boosty.to/app/messages?userId=40705654&from=email">'
+                "Написать сообщение</a>"
+            ),
+        },
+    )
+
+    assert response.status_code == 200
+    assert fake_db._users["u1"]["boostyUserId"] == "40705654"
+    assert "boosty_name: Олеся Фрешер" in sent_messages[0]
+    assert "boosty_email: olesj9515727136@gmail.com" in sent_messages[0]
+    assert "comment: Круто" in sent_messages[0]
+    assert "amount: 300 ₽" in sent_messages[0]

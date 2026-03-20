@@ -31,6 +31,13 @@ _BOOSTY_AMOUNT_RE = re.compile(
     r"^[+＋]?\s*\d[\d\s.,]*\s*(?:₽|RUB|USD|EUR|€|\$)(?:\s+в\s+месяц)?$",
     re.IGNORECASE,
 )
+_BOOSTY_AMOUNT_INLINE_RE = re.compile(
+    r"[+＋]?\s*\d[\d\s.,]*\s*(?:₽|RUB|USD|EUR|€|\$)(?:\s+в\s+месяц)?",
+    re.IGNORECASE,
+)
+_EMAIL_RE = re.compile(
+    r"([A-Za-z0-9][A-Za-z0-9._%+-]*@[A-Za-z0-9.-]+\.[A-Za-z]{2,})"
+)
 _BOOSTY_NOISE_LINES = {
     "boosty.",
     "написать сообщение",
@@ -201,6 +208,23 @@ def _message_body_lines(message: dict[str, Any]) -> list[str]:
     return [line.strip() for line in normalized.splitlines() if line.strip()]
 
 
+def _remove_urls(text: str) -> str:
+    without_bracketed_urls = re.sub(r"\[\s*https?://[^\]]+\]", " ", text)
+    without_urls = re.sub(r"https?://\S+", " ", without_bracketed_urls)
+    return html.unescape(without_urls)
+
+
+def _clean_text_fragment(text: str) -> str:
+    normalized = _remove_urls(text).replace("\xa0", " ")
+    normalized = re.sub(r"\s+", " ", normalized)
+    normalized = normalized.strip(" []")
+    return normalized.strip()
+
+
+def _compact_boosty_text(message: dict[str, Any]) -> str:
+    return _clean_text_fragment(_message_body_text(message))
+
+
 def _message_received_at(message: dict[str, Any]) -> str | None:
     received_at = message.get("receivedAt")
     if isinstance(received_at, str) and received_at.strip():
@@ -236,90 +260,181 @@ def _is_boosty_amount_line(value: str) -> bool:
     return bool(_BOOSTY_AMOUNT_RE.match(value.strip()))
 
 
+def _extract_amount(value: str) -> str | None:
+    match = _BOOSTY_AMOUNT_INLINE_RE.search(value)
+    if not match:
+        return None
+    amount = match.group(0).strip()
+    amount = re.sub(r"^[+＋]\s*", "", amount)
+    return re.sub(r"\s+", " ", amount).strip()
+
+
 def _is_noise_line(value: str) -> bool:
-    normalized = value.strip().lower()
+    normalized = _clean_text_fragment(value).lower()
     return normalized in _BOOSTY_NOISE_LINES
+
+
+def _split_email_line(value: str) -> tuple[str | None, str | None, str | None]:
+    cleaned = _clean_text_fragment(value)
+    match = _EMAIL_RE.search(cleaned)
+    if not match:
+        return None, None, cleaned or None
+    prefix = cleaned[: match.start()].strip()
+    suffix = cleaned[match.end() :].strip()
+    return prefix or None, match.group(1), suffix or None
+
+
+def _slice_relevant_lines(
+    lines: list[str],
+    *,
+    start_markers: tuple[str, ...],
+) -> list[str]:
+    cleaned_lines = [_clean_text_fragment(line) for line in lines]
+    title_index = next(
+        (
+            index
+            for index, line in enumerate(cleaned_lines)
+            if any(marker in line.lower() for marker in start_markers)
+        ),
+        -1,
+    )
+    relevant = cleaned_lines[title_index + 1 :] if title_index >= 0 else cleaned_lines
+    return [line for line in relevant if line and not _is_noise_line(line)]
+
+
+def _parse_subscription_event(message: dict[str, Any]) -> _BoostyEmailEvent | None:
+    compact_text = _compact_boosty_text(message)
+    compact_match = re.search(
+        r"У вас появился новый подписчик\s+"
+        r"(?P<name>.*?)\s+"
+        r"Тип(?:\s+подписки)?\s+"
+        r"(?P<tier>.*?)\s+"
+        r"(?P<amount>[+＋]?\s*\d[\d\s.,]*\s*(?:₽|RUB|USD|EUR|€|\$)(?:\s+в\s+месяц)?)",
+        compact_text,
+        re.IGNORECASE,
+    )
+    if compact_match:
+        return _BoostyEmailEvent(
+            event_type="subscription",
+            boosty_name=_clean_text_fragment(compact_match.group("name")) or None,
+            boosty_user_id=_extract_boosty_user_id(message),
+            amount=_extract_amount(compact_match.group("amount")),
+            subscription_tier=_clean_text_fragment(compact_match.group("tier")) or None,
+        )
+
+    relevant_lines = _slice_relevant_lines(
+        _message_body_lines(message),
+        start_markers=("подписчик",),
+    )
+    if not relevant_lines:
+        return None
+
+    tier_index = next(
+        (
+            index
+            for index, line in enumerate(relevant_lines)
+            if line.lower().startswith("тип")
+        ),
+        -1,
+    )
+    boosty_name = relevant_lines[0] if relevant_lines else None
+    if boosty_name and boosty_name.endswith(" Тип"):
+        boosty_name = boosty_name[: -len(" Тип")].strip()
+        if tier_index < 0:
+            tier_index = 0
+    subscription_tier = (
+        relevant_lines[tier_index + 1]
+        if tier_index >= 0 and tier_index + 1 < len(relevant_lines)
+        else None
+    )
+    amount = next((line for line in relevant_lines if _is_boosty_amount_line(line)), None)
+    return _BoostyEmailEvent(
+        event_type="subscription",
+        boosty_name=boosty_name or None,
+        boosty_user_id=_extract_boosty_user_id(message),
+        amount=_extract_amount(amount or ""),
+        subscription_tier=subscription_tier,
+    )
+
+
+def _parse_donation_event(message: dict[str, Any]) -> _BoostyEmailEvent | None:
+    relevant_lines = _slice_relevant_lines(
+        _message_body_lines(message),
+        start_markers=("донат",),
+    )
+    if not relevant_lines:
+        return None
+
+    boosty_user_id = _extract_boosty_user_id(message)
+    name_parts: list[str] = []
+    boosty_email: str | None = None
+    amount: str | None = None
+    comment_parts: list[str] = []
+    service_fee_compensated = False
+
+    for index, line in enumerate(relevant_lines):
+        lower_line = line.lower()
+        if "компенсировал вам комиссию сервиса" in lower_line:
+            service_fee_compensated = True
+            continue
+        if _is_boosty_amount_line(line):
+            amount = _extract_amount(line)
+            continue
+
+        prefix, found_email, suffix = _split_email_line(line)
+        if found_email:
+            if index == 0 and prefix:
+                name_parts.append(prefix)
+            elif prefix:
+                name_parts.append(prefix)
+            boosty_email = found_email
+            suffix_text = _clean_text_fragment(suffix or "")
+            suffix_amount = _extract_amount(suffix_text)
+            if suffix_amount:
+                amount = suffix_amount
+                suffix_text = _BOOSTY_AMOUNT_INLINE_RE.sub("", suffix_text, count=1).strip()
+            if suffix_text:
+                comment_parts.append(suffix_text)
+            continue
+
+        if amount is None and _extract_amount(line):
+            amount = _extract_amount(line)
+            line = _BOOSTY_AMOUNT_INLINE_RE.sub("", line, count=1).strip()
+            if not line:
+                continue
+
+        if boosty_email is None and not name_parts:
+            name_parts.append(line)
+            continue
+
+        comment_parts.append(line)
+
+    boosty_name = _clean_text_fragment(" ".join(name_parts)) or None
+    comment = _clean_text_fragment(" ".join(comment_parts)) or None
+    return _BoostyEmailEvent(
+        event_type="donation",
+        boosty_name=boosty_name,
+        boosty_user_id=boosty_user_id,
+        boosty_email=boosty_email,
+        amount=amount,
+        comment=comment,
+        service_fee_compensated=service_fee_compensated,
+    )
 
 
 def _parse_boosty_email_event(message: dict[str, Any]) -> _BoostyEmailEvent | None:
     headers = message.get("headers")
     subject = headers.get("Subject") if isinstance(headers, dict) else None
     subject_text = subject.strip().lower() if isinstance(subject, str) else ""
-    lines = [
-        line
-        for line in _message_body_lines(message)
-        if not _is_noise_line(line)
-    ]
-    if not lines:
+    compact_text = _compact_boosty_text(message)
+    if not compact_text:
         return None
 
-    boosty_user_id = _extract_boosty_user_id(message)
-    title_index = next(
-        (
-            index
-            for index, line in enumerate(lines)
-            if "донат" in line.lower() or "подписчик" in line.lower()
-        ),
-        -1,
-    )
-    relevant_lines = lines[title_index + 1 :] if title_index >= 0 else lines
+    if "донат" in subject_text or "донат" in compact_text.lower():
+        return _parse_donation_event(message)
 
-    if "донат" in subject_text or any("донат" in line.lower() for line in lines):
-        amount = next(
-            (line for line in relevant_lines if _is_boosty_amount_line(line)),
-            None,
-        )
-        amount_index = relevant_lines.index(amount) if amount in relevant_lines else -1
-        pre_amount_lines = (
-            relevant_lines[:amount_index] if amount_index >= 0 else relevant_lines
-        )
-        boosty_name = pre_amount_lines[0] if pre_amount_lines else None
-        boosty_email = next((line for line in pre_amount_lines if "@" in line), None)
-        comment_lines = [
-            line
-            for line in pre_amount_lines[1:]
-            if line != boosty_email
-        ]
-        service_fee_compensated = any(
-            "компенсировал вам комиссию сервиса" in line.lower()
-            for line in relevant_lines
-        )
-        return _BoostyEmailEvent(
-            event_type="donation",
-            boosty_name=boosty_name,
-            boosty_user_id=boosty_user_id,
-            boosty_email=boosty_email,
-            amount=amount,
-            comment="\n".join(comment_lines).strip() or None,
-            service_fee_compensated=service_fee_compensated,
-        )
-
-    if "подпис" in subject_text or any("подписчик" in line.lower() for line in lines):
-        boosty_name = relevant_lines[0] if relevant_lines else None
-        tier_index = next(
-            (
-                index
-                for index, line in enumerate(relevant_lines)
-                if line.lower() == "тип подписки"
-            ),
-            -1,
-        )
-        subscription_tier = (
-            relevant_lines[tier_index + 1]
-            if tier_index >= 0 and tier_index + 1 < len(relevant_lines)
-            else None
-        )
-        amount = next(
-            (line for line in relevant_lines if _is_boosty_amount_line(line)),
-            None,
-        )
-        return _BoostyEmailEvent(
-            event_type="subscription",
-            boosty_name=boosty_name,
-            boosty_user_id=boosty_user_id,
-            amount=amount,
-            subscription_tier=subscription_tier,
-        )
+    if "подпис" in subject_text or "подписчик" in compact_text.lower():
+        return _parse_subscription_event(message)
 
     return None
 
