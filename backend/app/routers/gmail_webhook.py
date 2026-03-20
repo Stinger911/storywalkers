@@ -1,9 +1,13 @@
 import base64
+import html
 import json
 import re
+from dataclasses import dataclass
 from typing import Any
+from urllib.parse import parse_qs, urlparse
 
 from fastapi import APIRouter, Request
+from google.cloud import firestore
 
 from app.core.config import get_settings
 from app.core.errors import AppError
@@ -14,12 +18,40 @@ from app.schemas.settings import GmailSettings
 from app.services.gmail_client import GmailClient
 from app.services.payments import activate_by_code
 from app.services.telegram import send_admin_message
-from app.services.telegram_events import fmt_email_processing_result
+from app.services.telegram_events import (
+    fmt_boosty_email_event,
+    fmt_email_processing_result,
+)
 
 router = APIRouter(tags=["Webhooks"])
 logger = get_logger("app.webhooks.gmail")
 
 _ACTIVATION_CODE_RE = re.compile(r"SW-[A-Z0-9]{6,10}")
+_BOOSTY_AMOUNT_RE = re.compile(
+    r"^[+＋]?\s*\d[\d\s.,]*\s*(?:₽|RUB|USD|EUR|€|\$)(?:\s+в\s+месяц)?$",
+    re.IGNORECASE,
+)
+_BOOSTY_NOISE_LINES = {
+    "boosty.",
+    "написать сообщение",
+    "посмотреть моих подписчиков",
+    "статистика донатов",
+    "служба поддержки",
+    "о boosty",
+    "отписаться",
+}
+
+
+@dataclass(frozen=True, slots=True)
+class _BoostyEmailEvent:
+    event_type: str
+    boosty_name: str | None = None
+    boosty_user_id: str | None = None
+    boosty_email: str | None = None
+    amount: str | None = None
+    subscription_tier: str | None = None
+    comment: str | None = None
+    service_fee_compensated: bool = False
 
 
 def _decode_pubsub_data(value: str) -> dict[str, Any] | None:
@@ -95,35 +127,233 @@ def _extract_direct_message(payload: dict[str, Any]) -> dict[str, Any] | None:
                 "bodyPlain",
                 "content",
                 "snippet",
-                "html",
             ),
         )
+        body_html = _pick_first_string(candidate, ("bodyHtml", "html", "htmlBody"))
         message_id = _pick_first_string(
             candidate,
-            ("id", "messageId", "gmailMessageId", "message_id"),
+            ("id", "messageId", "gmailMessageId", "message_id", "emailId"),
         )
         email_address = _pick_first_string(
             candidate,
             ("emailAddress", "email", "gmailAddress", "recipient"),
         )
         history_id = _pick_first_string(candidate, ("historyId", "history_id"))
+        received_at = _pick_first_string(
+            candidate,
+            ("date", "receivedAt", "received_at"),
+        )
 
         if from_value and "From" not in headers:
             headers["From"] = from_value
         if subject_value and "Subject" not in headers:
             headers["Subject"] = subject_value
+        if received_at and "Date" not in headers:
+            headers["Date"] = received_at
 
-        if not headers and not body_text:
+        if not body_text and body_html:
+            body_text = _html_to_text(body_html)
+
+        if not headers and not body_text and not body_html:
             continue
 
         return {
             "id": message_id,
             "headers": headers,
             "bodyText": body_text or "",
+            "bodyHtml": body_html or "",
             "emailAddress": email_address,
             "historyId": history_id,
+            "receivedAt": received_at,
         }
     return None
+
+
+def _html_to_text(raw_html: str) -> str:
+    block_breaks = re.sub(r"<br\s*/?>", "\n", raw_html, flags=re.IGNORECASE)
+    block_breaks = re.sub(
+        r"</(p|div|tr|td|li|table|h\d)>",
+        "\n",
+        block_breaks,
+        flags=re.IGNORECASE,
+    )
+    no_tags = re.sub(r"<[^>]+>", " ", block_breaks)
+    unescaped = html.unescape(no_tags).replace("\xa0", " ")
+    compact = re.sub(r"[ \t]+", " ", unescaped)
+    compact = re.sub(r"\n\s*\n+", "\n", compact)
+    return compact.strip()
+
+
+def _message_body_text(message: dict[str, Any]) -> str:
+    body_text = message.get("bodyText")
+    if isinstance(body_text, str) and body_text.strip():
+        return body_text.strip()
+    body_html = message.get("bodyHtml")
+    if isinstance(body_html, str) and body_html.strip():
+        return _html_to_text(body_html)
+    return ""
+
+
+def _message_body_lines(message: dict[str, Any]) -> list[str]:
+    normalized = _message_body_text(message)
+    if not normalized:
+        return []
+    return [line.strip() for line in normalized.splitlines() if line.strip()]
+
+
+def _message_received_at(message: dict[str, Any]) -> str | None:
+    received_at = message.get("receivedAt")
+    if isinstance(received_at, str) and received_at.strip():
+        return received_at.strip()
+    headers = message.get("headers")
+    if isinstance(headers, dict):
+        header_date = headers.get("Date")
+        if isinstance(header_date, str) and header_date.strip():
+            return header_date.strip()
+    return None
+
+
+def _extract_boosty_user_id(message: dict[str, Any]) -> str | None:
+    candidates: list[str] = []
+    for key in ("bodyHtml", "bodyText"):
+        value = message.get(key)
+        if isinstance(value, str) and value.strip():
+            candidates.append(value)
+
+    for candidate in candidates:
+        user_id_match = re.search(r"(?:userId=|/user/)(\d+)", candidate)
+        if user_id_match:
+            return user_id_match.group(1)
+        for url in re.findall(r"https?://[^\s\"'<>]+", candidate):
+            parsed = urlparse(html.unescape(url))
+            query_user_id = parse_qs(parsed.query).get("userId")
+            if query_user_id:
+                return query_user_id[0].strip() or None
+    return None
+
+
+def _is_boosty_amount_line(value: str) -> bool:
+    return bool(_BOOSTY_AMOUNT_RE.match(value.strip()))
+
+
+def _is_noise_line(value: str) -> bool:
+    normalized = value.strip().lower()
+    return normalized in _BOOSTY_NOISE_LINES
+
+
+def _parse_boosty_email_event(message: dict[str, Any]) -> _BoostyEmailEvent | None:
+    headers = message.get("headers")
+    subject = headers.get("Subject") if isinstance(headers, dict) else None
+    subject_text = subject.strip().lower() if isinstance(subject, str) else ""
+    lines = [
+        line
+        for line in _message_body_lines(message)
+        if not _is_noise_line(line)
+    ]
+    if not lines:
+        return None
+
+    boosty_user_id = _extract_boosty_user_id(message)
+    title_index = next(
+        (
+            index
+            for index, line in enumerate(lines)
+            if "донат" in line.lower() or "подписчик" in line.lower()
+        ),
+        -1,
+    )
+    relevant_lines = lines[title_index + 1 :] if title_index >= 0 else lines
+
+    if "донат" in subject_text or any("донат" in line.lower() for line in lines):
+        amount = next(
+            (line for line in relevant_lines if _is_boosty_amount_line(line)),
+            None,
+        )
+        amount_index = relevant_lines.index(amount) if amount in relevant_lines else -1
+        pre_amount_lines = (
+            relevant_lines[:amount_index] if amount_index >= 0 else relevant_lines
+        )
+        boosty_name = pre_amount_lines[0] if pre_amount_lines else None
+        boosty_email = next((line for line in pre_amount_lines if "@" in line), None)
+        comment_lines = [
+            line
+            for line in pre_amount_lines[1:]
+            if line != boosty_email
+        ]
+        service_fee_compensated = any(
+            "компенсировал вам комиссию сервиса" in line.lower()
+            for line in relevant_lines
+        )
+        return _BoostyEmailEvent(
+            event_type="donation",
+            boosty_name=boosty_name,
+            boosty_user_id=boosty_user_id,
+            boosty_email=boosty_email,
+            amount=amount,
+            comment="\n".join(comment_lines).strip() or None,
+            service_fee_compensated=service_fee_compensated,
+        )
+
+    if "подпис" in subject_text or any("подписчик" in line.lower() for line in lines):
+        boosty_name = relevant_lines[0] if relevant_lines else None
+        tier_index = next(
+            (
+                index
+                for index, line in enumerate(relevant_lines)
+                if line.lower() == "тип подписки"
+            ),
+            -1,
+        )
+        subscription_tier = (
+            relevant_lines[tier_index + 1]
+            if tier_index >= 0 and tier_index + 1 < len(relevant_lines)
+            else None
+        )
+        amount = next(
+            (line for line in relevant_lines if _is_boosty_amount_line(line)),
+            None,
+        )
+        return _BoostyEmailEvent(
+            event_type="subscription",
+            boosty_name=boosty_name,
+            boosty_user_id=boosty_user_id,
+            amount=amount,
+            subscription_tier=subscription_tier,
+        )
+
+    return None
+
+
+def _save_boosty_user_id_for_email(
+    db: Any,
+    *,
+    email_address: str,
+    boosty_user_id: str,
+) -> dict[str, Any] | None:
+    normalized_email = email_address.strip().lower()
+    if not normalized_email or not boosty_user_id.strip():
+        return None
+
+    query = db.collection("users").where("email", "==", normalized_email).limit(1)
+    snaps = list(query.stream())
+    if not snaps:
+        return None
+
+    snap = snaps[0]
+    user_data: dict[str, Any] = snap.to_dict() or {}
+    snap.reference.set(
+        {
+            "boostyUserId": boosty_user_id.strip(),
+            "updatedAt": firestore.SERVER_TIMESTAMP,
+        },
+        merge=True,
+    )
+    return {
+        **user_data,
+        "uid": snap.id,
+        "email": user_data.get("email") or normalized_email,
+        "boostyUserId": boosty_user_id.strip(),
+    }
 
 
 def _apply_activation_codes(
@@ -156,8 +386,8 @@ def _apply_activation_codes(
         )
         return 0
 
-    body_text = message.get("bodyText")
-    if not isinstance(body_text, str) or not body_text:
+    body_text = _message_body_text(message)
+    if not body_text:
         _notify_admin_async(
             fmt_email_processing_result(
                 reason="missing_body_text",
@@ -170,8 +400,46 @@ def _apply_activation_codes(
         )
         return 0
 
+    boosty_event = _parse_boosty_email_event(message)
+    matched_user: dict[str, Any] | None = None
+    if (
+        boosty_event is not None
+        and boosty_event.event_type == "donation"
+        and isinstance(boosty_event.boosty_email, str)
+        and boosty_event.boosty_email
+        and isinstance(boosty_event.boosty_user_id, str)
+        and boosty_event.boosty_user_id
+    ):
+        matched_user = _save_boosty_user_id_for_email(
+            db,
+            email_address=boosty_event.boosty_email,
+            boosty_user_id=boosty_event.boosty_user_id,
+        )
+
+    if boosty_event is not None:
+        _notify_admin_async(
+            fmt_boosty_email_event(
+                event_type=boosty_event.event_type,
+                delivery_mode=delivery_mode,
+                email_received_at=_message_received_at(message),
+                boosty_name=boosty_event.boosty_name,
+                boosty_user_id=boosty_event.boosty_user_id,
+                boosty_email=boosty_event.boosty_email,
+                amount=boosty_event.amount,
+                subscription_tier=boosty_event.subscription_tier,
+                comment=boosty_event.comment,
+                service_fee_compensated=boosty_event.service_fee_compensated,
+                user=matched_user,
+                message_id=message_id_text,
+                history_id=history_id,
+                subject=subject,
+            )
+        )
+
     found_codes = set(_ACTIVATION_CODE_RE.findall(body_text.upper()))
     if not found_codes:
+        if boosty_event is not None:
+            return 0
         _notify_admin_async(
             fmt_email_processing_result(
                 reason="activation_code_not_found_in_message",

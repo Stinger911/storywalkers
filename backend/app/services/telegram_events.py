@@ -172,3 +172,48 @@ def fmt_email_processing_result(
         f"history_id: {(history_id or '-').strip() or '-'}\n"
         f"subject: {(subject or '-').strip() or '-'}"
     )
+
+
+def fmt_boosty_email_event(
+    *,
+    event_type: str,
+    delivery_mode: str,
+    email_received_at: str | None = None,
+    boosty_name: str | None = None,
+    boosty_user_id: str | None = None,
+    boosty_email: str | None = None,
+    amount: str | None = None,
+    subscription_tier: str | None = None,
+    comment: str | None = None,
+    service_fee_compensated: bool = False,
+    user: Mapping[str, Any] | None = None,
+    message_id: str | None = None,
+    history_id: str | None = None,
+    subject: str | None = None,
+) -> str:
+    timestamp = (email_received_at or "").strip() or _iso_now()
+    user_data = user or {}
+    title = (
+        "💸 Boosty donation"
+        if (event_type or "").strip().lower() == "donation"
+        else "⭐ Boosty subscription"
+    )
+    return (
+        f"{title}\n"
+        f"time: {timestamp}\n"
+        f"event_type: {(event_type or '-').strip() or '-'}\n"
+        f"user_uid: {_user_value(user_data, 'uid')}\n"
+        f"user_name: {_user_value(user_data, 'displayName')}\n"
+        f"user_email: {_user_value(user_data, 'email')}\n"
+        f"boosty_name: {(boosty_name or '-').strip() or '-'}\n"
+        f"boosty_user_id: {(boosty_user_id or '-').strip() or '-'}\n"
+        f"boosty_email: {(boosty_email or '-').strip() or '-'}\n"
+        f"amount: {(amount or '-').strip() or '-'}\n"
+        f"subscription_tier: {(subscription_tier or '-').strip() or '-'}\n"
+        f"comment: {(comment or '-').strip() or '-'}\n"
+        f"service_fee_compensated: {'yes' if service_fee_compensated else 'no'}\n"
+        f"delivery_mode: {(delivery_mode or '-').strip() or '-'}\n"
+        f"message_id: {(message_id or '-').strip() or '-'}\n"
+        f"history_id: {(history_id or '-').strip() or '-'}\n"
+        f"subject: {(subject or '-').strip() or '-'}"
+    )

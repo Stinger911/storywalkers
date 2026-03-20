@@ -91,12 +91,15 @@ class _FakeFirestore:
     def __init__(self):
         self._settings: dict[str, dict] = {}
         self._payments: dict[str, dict] = {}
+        self._users: dict[str, dict] = {}
 
     def collection(self, name):
         if name == "settings":
             return _FakeCollection(self._settings)
         if name == "payments":
             return _FakeCollection(self._payments)
+        if name == "users":
+            return _FakeCollection(self._users)
         raise ValueError(f"unsupported collection {name}")
 
 
@@ -349,3 +352,60 @@ def test_gmail_webhook_notifies_when_processed_email_has_no_activation_code(monk
     assert "message_id: n8n-msg-3" in sent_messages[0]
     assert "email_address: user@example.com" in sent_messages[0]
     assert "history_id: 888" in sent_messages[0]
+
+
+def test_gmail_webhook_parses_n8n_donation_and_saves_boosty_user_id(monkeypatch):
+    fake_db = _FakeFirestore()
+    fake_db._users["u1"] = {
+        "email": "maria16392@gmail.com",
+        "displayName": "Maria App",
+        "role": "student",
+        "status": "active",
+    }
+    monkeypatch.setattr(gmail_webhook, "get_settings", lambda: _Settings())
+    monkeypatch.setattr(gmail_webhook, "get_firestore_client", lambda: fake_db)
+
+    sent_messages: list[str] = []
+    monkeypatch.setattr(gmail_webhook, "_notify_admin_async", sent_messages.append)
+
+    client = TestClient(app)
+
+    response = client.post(
+        "/webhooks/gmail",
+        headers={"X-Webhook-Secret": "whsec-1"},
+        json={
+            "emailId": "n8n-msg-4",
+            "from": "Boosty <noreply@boosty.to>",
+            "subject": "У вас новый донат",
+            "text": (
+                "Boosty.\n"
+                "У вас новый донат\n"
+                "Мария П.\n"
+                "maria16392@gmail.com\n"
+                "+ 300 ₽\n"
+                "Плательщик компенсировал вам комиссию сервиса\n"
+                "Написать сообщение"
+            ),
+            "html": (
+                '<a href="https://boosty.to/app/messages?userId=43061401&from=email">'
+                "Написать сообщение</a>"
+            ),
+            "date": "2026-03-20T09:30:00+00:00",
+            "historyId": "901",
+        },
+    )
+
+    assert response.status_code == 200
+    assert fake_db._users["u1"]["boostyUserId"] == "43061401"
+    assert len(sent_messages) == 1
+    assert "💸 Boosty donation" in sent_messages[0]
+    assert "event_type: donation" in sent_messages[0]
+    assert "user_name: Maria App" in sent_messages[0]
+    assert "user_email: maria16392@gmail.com" in sent_messages[0]
+    assert "boosty_name: Мария П." in sent_messages[0]
+    assert "boosty_user_id: 43061401" in sent_messages[0]
+    assert "boosty_email: maria16392@gmail.com" in sent_messages[0]
+    assert "amount: + 300 ₽" in sent_messages[0]
+    assert "service_fee_compensated: yes" in sent_messages[0]
+    assert "time: 2026-03-20T09:30:00+00:00" in sent_messages[0]
+    assert "message_id: n8n-msg-4" in sent_messages[0]
