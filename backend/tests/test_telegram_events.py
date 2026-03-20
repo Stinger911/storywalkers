@@ -1,6 +1,7 @@
 import re
 
 from app.services.telegram_events import (
+    fmt_boosty_email_event,
     fmt_email_activation_noop,
     fmt_email_processing_result,
     fmt_email_activation_failed,
@@ -157,3 +158,37 @@ def test_fmt_email_processing_result_contains_expected_fields():
     assert "email_address: user@example.com" in message
     assert "history_id: 777" in message
     assert "subject: Boosty payment confirmation" in message
+
+
+def test_fmt_boosty_email_event_contains_expected_fields():
+    message = fmt_boosty_email_event(
+        event_type="donation",
+        delivery_mode="direct",
+        email_received_at="2026-03-20T09:30:00+00:00",
+        boosty_name="Мария П.",
+        boosty_user_id="43061401",
+        boosty_email="maria16392@gmail.com",
+        amount="+ 300 ₽",
+        subscription_tier=None,
+        comment="Круто",
+        service_fee_compensated=True,
+        user=USER,
+        message_id="n8n-msg-4",
+        history_id="999",
+        subject="У вас новый донат",
+    )
+
+    assert "💸 Boosty donation" in message
+    assert "time: 2026-03-20T09:30:00+00:00" in message
+    assert "event_type: donation" in message
+    assert "user_uid: u1" in message
+    assert "user_name: User One" in message
+    assert "user_email: u1@example.com" in message
+    assert "boosty_name: Мария П." in message
+    assert "boosty_user_id: 43061401" in message
+    assert "boosty_email: maria16392@gmail.com" in message
+    assert "amount: + 300 ₽" in message
+    assert "comment: Круто" in message
+    assert "service_fee_compensated: yes" in message
+    assert "delivery_mode: direct" in message
+    assert "message_id: n8n-msg-4" in message

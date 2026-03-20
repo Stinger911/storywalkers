@@ -1,0 +1,649 @@
+{
+  "name": "Boosty Email Monitor",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes"
+            }
+          ]
+        }
+      },
+      "id": "3ffe3a54-6ddb-4434-8585-58c43464b6fd",
+      "name": "Every 5 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        160,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "returnAll": true,
+        "filters": {
+          "q": "={{ [\n  'from:boosty.to',\n  '(subject:оплат OR subject:платеж OR subject:payment OR subject:paid OR subject:receipt)',\n  $('Get last ID').item.json.updated\n    ? 'after:' + DateTime.fromISO($('Get last ID').item.json.updated).toFormat('yyyy/MM/dd')\n    : ''\n].filter(Boolean).join(' ') }}",
+          "readStatus": "both"
+        }
+      },
+      "id": "0c8057d7-72ab-4efb-8fd3-40254a646484",
+      "name": "Fetch Boosty Emails",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        832,
+        560
+      ],
+      "webhookId": "c6a4eb42-d287-490a-b482-e0bbf813dfbe",
+      "alwaysOutputData": false,
+      "retryOnFail": true,
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "Tg6a5Pd2hG5J1zQ6",
+          "name": "Gmail account SW"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Setup').item.json.web_hook_url }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"emailId\": $json.id, \"messageId\": $json.id, \"subject\": $json.subject, \"from\": $json.from.text, \"date\": $json.date, \"snippet\": $('Loop Over Emails').item.json.snippet, \"text\": $json.text, \"html\": $json.html } }}",
+        "options": {}
+      },
+      "id": "ea734990-445c-4332-b388-45642172e685",
+      "name": "Call HTTPS Endpoint",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1504,
+        432
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "5SmYQhQFsffVfbBM",
+          "name": "Header Auth account"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Setup').item.json.tg_admin_group_id }}",
+        "text": "=🚨 Error processing Boosty email\n\nEmail ID: {{ $(\"Fetch Boosty Emails\").item.json.id }}\nSubject: {{ $(\"Fetch Boosty Emails\").item.json.Subject }}\nError: {{ $json.error.message }}",
+        "additionalFields": {
+          "parse_mode": "MarkdownV2"
+        }
+      },
+      "id": "f7f426c2-52e2-466a-8ded-76e2e0de8e94",
+      "name": "Log Error to Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1952,
+        528
+      ],
+      "webhookId": "303003cd-57cf-42f7-b713-3651b367e997",
+      "credentials": {
+        "telegramApi": {
+          "id": "SHYvsPbit15MbdDb",
+          "name": "Telegram dev test"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "5cd59bd3-78e6-49e6-8b58-13de10159021",
+      "name": "Wait 5 Seconds",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1728,
+        336
+      ],
+      "webhookId": "057e9377-418e-417c-b29e-173765b60c06"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "501d7d37-00b0-41e1-abe8-3d8f7c081a30",
+      "name": "Loop Over Emails",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        1056,
+        432
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "19ec6745-6701-48fc-a3d5-3b10dca2c27c",
+              "name": "tg_admin_group_id",
+              "value": "-1003782734852",
+              "type": "string"
+            },
+            {
+              "id": "9f8d5957-faa0-46b0-9611-f88d611d8204",
+              "name": "web_hook_url",
+              "value": "https://storywalkers-b4fdf--dev-8rn9qkkj.web.app/webhooks/gmail",
+              "type": "string"
+            },
+            {
+              "id": "264eb99d-43da-4dde-be87-920a4652e075",
+              "name": "SW_API_KEY",
+              "value": "jl2629lfahnfuj4s7bmtg8r0q9o3bcqc",
+              "type": "string"
+            },
+            {
+              "id": "a24c5ad5-1853-4a43-9945-00a61be5202c",
+              "name": "database",
+              "value": "testing",
+              "type": "string"
+            },
+            {
+              "id": "9467c7b6-8c98-40c9-890a-82456c217dcb",
+              "name": "mail_id_key",
+              "value": "last_gmail_id",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        384,
+        560
+      ],
+      "id": "f016bbf2-1ae4-4a97-95d3-d457bae227d6",
+      "name": "Setup"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Loop over input items and add a new field called 'myNewField' to the JSON of each one\nfor (const item of $input.all()) {\n  const data = item.json.error;\n  let text = data.name + \" \" + data.message;\n  text = text.replaceAll(\"_\", \"\\\\_\");\n  text = text.replaceAll(\"*\", \"\\\\*\");\n  text = text.replaceAll(\"[\", \"\\\\[\");\n  text = text.replaceAll(\"]\", \"\\\\]\");\n  text = text.replaceAll(\"(\", \"\\\\(\");\n  text = text.replaceAll(\")\", \"\\\\)\");\n  text = text.replaceAll(\"~\", \"\\\\~\");\n  text = text.replaceAll(\"`\", \"\\\\`\");\n  text = text.replaceAll(\">\", \"\\\\>\");\n  text = text.replaceAll(\"#\", \"\\\\#\");\n  text = text.replaceAll(\"+\", \"\\\\+\");\n  text = text.replaceAll(\"-\", \"\\\\-\");\n  text = text.replaceAll(\"=\", \"\\\\=\");\n  text = text.replaceAll(\"|\", \"\\\\|\");\n  text = text.replaceAll(\"{\", \"\\\\{\");\n  text = text.replaceAll(\"}\", \"\\\\}\");\n  text = text.replaceAll(\".\", \"\\\\.\");\n  text = text.replaceAll(\"!\", \"\\\\!\");\n  item.json.error.message = text;\n}\n\nreturn $input.all();\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1728,
+        528
+      ],
+      "id": "fdf228ed-f56d-4d89-a389-b65d343e8e5b",
+      "name": "Map Error Message"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "messageId": "={{ $json.id }}",
+        "simple": false,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1280,
+        432
+      ],
+      "id": "e6cef448-872a-452a-85b2-c589fc8109a1",
+      "name": "Get a message",
+      "webhookId": "fc6107f0-96a0-452b-b1eb-d15cde2b9469",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "Tg6a5Pd2hG5J1zQ6",
+          "name": "Gmail account SW"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "last-read-id",
+              "name": "gmail_id",
+              "value": "={{ $('Get a message').item.json.id }}",
+              "type": "string"
+            },
+            {
+              "id": "updated-timestamp",
+              "name": "updated",
+              "value": "={{ $('Get a message').item.json.date > $('Get last ID').item.json.updated ? $('Get a message').item.json.date : $('Get last ID').item.json.updated }}",
+              "type": "string"
+            },
+            {
+              "id": "0752eeb2-93de-4bc1-a500-f1459ea35028",
+              "name": "updateKey",
+              "value": "={{ $('Setup').item.json.mail_id_key }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "494a4809-1dfb-43ee-a302-3684b8e66cc9",
+      "name": "Store Last Read ID",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1952,
+        336
+      ]
+    },
+    {
+      "parameters": {
+        "projectId": "storywalkers-b4fdf",
+        "database": "={{ $json.database }}",
+        "collection": "config",
+        "documentId": "={{ $json.mail_id_key }}"
+      },
+      "type": "n8n-nodes-base.googleFirebaseCloudFirestore",
+      "typeVersion": 1.1,
+      "position": [
+        608,
+        560
+      ],
+      "id": "dbfcfc6f-4bdd-476f-b0d9-53aed2b8d862",
+      "name": "Get last ID",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleFirebaseCloudFirestoreOAuth2Api": {
+          "id": "wBd3vVLjHUcvf8sV",
+          "name": "Google Firebase Cloud Firestore account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Setup').item.json.tg_admin_group_id }}",
+        "text": "={{ $('Fetch Boosty Emails').all().length }} message(s) processed",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1280,
+        240
+      ],
+      "id": "11212ec5-55ca-4e0c-b158-e6890b34b58f",
+      "name": "Send the final message",
+      "webhookId": "c57a3b4a-fc60-40c4-bafd-e0dd3f39ed7c",
+      "executeOnce": true,
+      "credentials": {
+        "telegramApi": {
+          "id": "SHYvsPbit15MbdDb",
+          "name": "Telegram dev test"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "projectId": "storywalkers-b4fdf",
+        "database": "={{ $('Setup').item.json.database }}",
+        "collection": "config",
+        "updateKey": "updateKey",
+        "columns": "gmail_id,updated"
+      },
+      "type": "n8n-nodes-base.googleFirebaseCloudFirestore",
+      "typeVersion": 1.1,
+      "position": [
+        2176,
+        480
+      ],
+      "id": "6641ce64-bbe2-49a2-bbef-ec6829538822",
+      "name": "Update a lastRead marker",
+      "credentials": {
+        "googleFirebaseCloudFirestoreOAuth2Api": {
+          "id": "wBd3vVLjHUcvf8sV",
+          "name": "Google Firebase Cloud Firestore account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "projectId": "storywalkers-b4fdf",
+        "database": "={{ $('Setup').item.json.database }}",
+        "collection": "gmail_dedupe",
+        "documentId": "={{ $('Get a message').item.json.id }}"
+      },
+      "type": "n8n-nodes-base.googleFirebaseCloudFirestore",
+      "typeVersion": 1.1,
+      "position": [
+        1504,
+        336
+      ],
+      "id": "7d8e9f10-1111-2222-3333-444455556666",
+      "name": "Lookup Processed Message",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleFirebaseCloudFirestoreOAuth2Api": {
+          "id": "wBd3vVLjHUcvf8sV",
+          "name": "Google Firebase Cloud Firestore account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "is-new-message",
+              "leftValue": "={{ !$json.id }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1728,
+        336
+      ],
+      "id": "8a9b0c1d-2222-3333-4444-555566667777",
+      "name": "Is New Message?"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "dedupe-message-id",
+              "name": "messageId",
+              "value": "={{ $('Get a message').item.json.id }}",
+              "type": "string"
+            },
+            {
+              "id": "dedupe-subject",
+              "name": "subject",
+              "value": "={{ $('Get a message').item.json.subject }}",
+              "type": "string"
+            },
+            {
+              "id": "dedupe-date",
+              "name": "date",
+              "value": "={{ $('Get a message').item.json.date }}",
+              "type": "string"
+            },
+            {
+              "id": "dedupe-processed-at",
+              "name": "processedAt",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1728,
+        240
+      ],
+      "id": "0c1d2e3f-4444-5555-6666-777788889999",
+      "name": "Prepare Dedupe Record"
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "projectId": "storywalkers-b4fdf",
+        "database": "={{ $('Setup').item.json.database }}",
+        "collection": "gmail_dedupe",
+        "documentId": "={{ $json.messageId }}",
+        "columns": "messageId,subject,date,processedAt"
+      },
+      "type": "n8n-nodes-base.googleFirebaseCloudFirestore",
+      "typeVersion": 1.1,
+      "position": [
+        1952,
+        240
+      ],
+      "id": "9b0c1d2e-3333-4444-5555-666677778888",
+      "name": "Mark Message Processed",
+      "credentials": {
+        "googleFirebaseCloudFirestoreOAuth2Api": {
+          "id": "wBd3vVLjHUcvf8sV",
+          "name": "Google Firebase Cloud Firestore account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Every 5 Minutes": {
+      "main": [
+        [
+          {
+            "node": "Setup",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Boosty Emails": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Emails",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Map Error Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call HTTPS Endpoint": {
+      "main": [
+        [
+          {
+            "node": "Prepare Dedupe Record",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Map Error Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 5 Seconds": {
+      "main": [
+        [
+          {
+            "node": "Store Last Read ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Emails": {
+      "main": [
+        [
+          {
+            "node": "Send the final message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Setup": {
+      "main": [
+        [
+          {
+            "node": "Get last ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Map Error Message": {
+      "main": [
+        [
+          {
+            "node": "Log Error to Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get a message": {
+      "main": [
+        [
+          {
+            "node": "Lookup Processed Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Store Last Read ID": {
+      "main": [
+        [
+          {
+            "node": "Update a lastRead marker",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get last ID": {
+      "main": [
+        [
+          {
+            "node": "Fetch Boosty Emails",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update a lastRead marker": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Emails",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lookup Processed Message": {
+      "main": [
+        [
+          {
+            "node": "Is New Message?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is New Message?": {
+      "main": [
+        [
+          {
+            "node": "Call HTTPS Endpoint",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Loop Over Emails",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Dedupe Record": {
+      "main": [
+        [
+          {
+            "node": "Mark Message Processed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark Message Processed": {
+      "main": [
+        [
+          {
+            "node": "Wait 5 Seconds",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "5f87f7ff-3867-45fa-983b-beff7bac0feb",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "899d4ada7c2a91af1ad45b3d93cbd7a60489e825ced40cd449109d52bd341227"
+  },
+  "id": "G7aOvPsmze8twcOC",
+  "tags": []
+}
