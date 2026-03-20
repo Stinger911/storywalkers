@@ -198,22 +198,26 @@ def fmt_boosty_email_event(
         if (event_type or "").strip().lower() == "donation"
         else "⭐ Boosty subscription"
     )
-    return (
-        f"{title}\n"
-        f"time: {timestamp}\n"
-        f"event_type: {(event_type or '-').strip() or '-'}\n"
-        f"user_uid: {_user_value(user_data, 'uid')}\n"
-        f"user_name: {_user_value(user_data, 'displayName')}\n"
-        f"user_email: {_user_value(user_data, 'email')}\n"
-        f"boosty_name: {(boosty_name or '-').strip() or '-'}\n"
-        f"boosty_user_id: {(boosty_user_id or '-').strip() or '-'}\n"
-        f"boosty_email: {(boosty_email or '-').strip() or '-'}\n"
-        f"amount: {(amount or '-').strip() or '-'}\n"
-        f"subscription_tier: {(subscription_tier or '-').strip() or '-'}\n"
-        f"comment: {(comment or '-').strip() or '-'}\n"
-        f"service_fee_compensated: {'yes' if service_fee_compensated else 'no'}\n"
-        f"delivery_mode: {(delivery_mode or '-').strip() or '-'}\n"
-        f"message_id: {(message_id or '-').strip() or '-'}\n"
-        f"history_id: {(history_id or '-').strip() or '-'}\n"
-        f"subject: {(subject or '-').strip() or '-'}"
-    )
+    lines: list[str] = [title, f"time: {timestamp}", f"event_type: {event_type.strip()}"]
+
+    def _append(label: str, value: str | None) -> None:
+        text = (value or "").strip()
+        if text:
+            lines.append(f"{label}: {text}")
+
+    _append("user_uid", _user_value(user_data, "uid", ""))
+    _append("user_name", _user_value(user_data, "displayName", ""))
+    _append("user_email", _user_value(user_data, "email", ""))
+    _append("boosty_name", boosty_name)
+    _append("boosty_user_id", boosty_user_id)
+    _append("boosty_email", boosty_email)
+    _append("amount", amount)
+    _append("subscription_tier", subscription_tier)
+    _append("comment", comment)
+    if service_fee_compensated:
+        lines.append("service_fee_compensated: yes")
+    _append("delivery_mode", delivery_mode)
+    _append("message_id", message_id)
+    _append("history_id", history_id)
+    _append("subject", subject)
+    return "\n".join(lines)

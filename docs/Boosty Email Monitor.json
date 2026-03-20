@@ -11,13 +11,13 @@
           ]
         }
       },
-      "id": "3ffe3a54-6ddb-4434-8585-58c43464b6fd",
+      "id": "5df0eace-64d5-418b-899b-a657ee80e7da",
       "name": "Every 5 Minutes",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.3,
       "position": [
-        160,
-        560
+        944,
+        48
       ]
     },
     {
@@ -25,17 +25,17 @@
         "operation": "getAll",
         "returnAll": true,
         "filters": {
-          "q": "={{ [\n  'from:boosty.to',\n  '(subject:оплат OR subject:платеж OR subject:payment OR subject:paid OR subject:receipt)',\n  $('Get last ID').item.json.updated\n    ? 'after:' + DateTime.fromISO($('Get last ID').item.json.updated).toFormat('yyyy/MM/dd')\n    : ''\n].filter(Boolean).join(' ') }}",
+          "q": "={{ [\n  'from:boosty.to',\n  '(subject:\"новый подписчик\" OR subject:\"новый донат\")',\n  $('Get last ID').item.json.updated\n    ? 'after:' + DateTime.fromISO($('Get last ID').item.json.updated).toFormat('yyyy/MM/dd')\n    : ''\n].filter(Boolean).join(' ') }}",
           "readStatus": "both"
         }
       },
-      "id": "0c8057d7-72ab-4efb-8fd3-40254a646484",
+      "id": "cd387a49-1c60-4e55-94b3-5d01fa3d8a54",
       "name": "Fetch Boosty Emails",
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.2,
       "position": [
-        832,
-        560
+        1616,
+        48
       ],
       "webhookId": "c6a4eb42-d287-490a-b482-e0bbf813dfbe",
       "alwaysOutputData": false,
@@ -56,16 +56,16 @@
         "genericAuthType": "httpHeaderAuth",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ { \"emailId\": $json.id, \"messageId\": $json.id, \"subject\": $json.subject, \"from\": $json.from.text, \"date\": $json.date, \"snippet\": $('Loop Over Emails').item.json.snippet, \"text\": $json.text, \"html\": $json.html } }}",
+        "jsonBody": "={{ { \"emailId\": $('Get a message').item.json.id, \"messageId\": $('Get a message').item.json.id, \"subject\": $('Get a message').item.json.subject, \"from\": $('Get a message').item.json.from.text, \"date\": $('Get a message').item.json.date, \"snippet\": $('Loop Over Emails').item.json.snippet, \"text\": $('Get a message').item.json.text, \"html\": $('Get a message').item.json.html } }}",
         "options": {}
       },
-      "id": "ea734990-445c-4332-b388-45642172e685",
+      "id": "40629aca-134e-4210-b37b-16d2e0783514",
       "name": "Call HTTPS Endpoint",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
       "position": [
-        1504,
-        432
+        2736,
+        -112
       ],
       "credentials": {
         "httpHeaderAuth": {
@@ -83,13 +83,13 @@
           "parse_mode": "MarkdownV2"
         }
       },
-      "id": "f7f426c2-52e2-466a-8ded-76e2e0de8e94",
+      "id": "8159682b-7f0d-4c07-b31d-c941fd1a016a",
       "name": "Log Error to Telegram",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        1952,
-        528
+        3184,
+        16
       ],
       "webhookId": "303003cd-57cf-42f7-b713-3651b367e997",
       "credentials": {
@@ -101,13 +101,13 @@
     },
     {
       "parameters": {},
-      "id": "5cd59bd3-78e6-49e6-8b58-13de10159021",
+      "id": "511e4986-abef-4bb3-9070-36bde5fb4789",
       "name": "Wait 5 Seconds",
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
       "position": [
-        1728,
-        336
+        3408,
+        -176
       ],
       "webhookId": "057e9377-418e-417c-b29e-173765b60c06"
     },
@@ -115,13 +115,13 @@
       "parameters": {
         "options": {}
       },
-      "id": "501d7d37-00b0-41e1-abe8-3d8f7c081a30",
+      "id": "e67dc29a-b92f-4a61-8438-6d08a965e31d",
       "name": "Loop Over Emails",
       "type": "n8n-nodes-base.splitInBatches",
       "typeVersion": 3,
       "position": [
-        1056,
-        432
+        1840,
+        -80
       ]
     },
     {
@@ -165,10 +165,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        384,
-        560
+        1168,
+        48
       ],
-      "id": "f016bbf2-1ae4-4a97-95d3-d457bae227d6",
+      "id": "ac11eb1a-5533-4ab9-93df-da5720568d31",
       "name": "Setup"
     },
     {
@@ -178,10 +178,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1728,
-        528
+        2960,
+        16
       ],
-      "id": "fdf228ed-f56d-4d89-a389-b65d343e8e5b",
+      "id": "f1acbe7a-f7e2-41af-aa91-a9ccc6f2ae44",
       "name": "Map Error Message"
     },
     {
@@ -194,10 +194,10 @@
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.2,
       "position": [
-        1280,
-        432
+        2064,
+        -176
       ],
-      "id": "e6cef448-872a-452a-85b2-c589fc8109a1",
+      "id": "7cd5d4a5-84e2-4077-be30-879c4c8a8ee7",
       "name": "Get a message",
       "webhookId": "fc6107f0-96a0-452b-b1eb-d15cde2b9469",
       "credentials": {
@@ -233,13 +233,13 @@
         },
         "options": {}
       },
-      "id": "494a4809-1dfb-43ee-a302-3684b8e66cc9",
+      "id": "2f2be4fc-088c-4329-bf87-71d404eb0fc1",
       "name": "Store Last Read ID",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        1952,
-        336
+        3632,
+        -176
       ]
     },
     {
@@ -252,10 +252,10 @@
       "type": "n8n-nodes-base.googleFirebaseCloudFirestore",
       "typeVersion": 1.1,
       "position": [
-        608,
-        560
+        1392,
+        48
       ],
-      "id": "dbfcfc6f-4bdd-476f-b0d9-53aed2b8d862",
+      "id": "eded880a-f17f-476e-b601-7af8d57acf9a",
       "name": "Get last ID",
       "alwaysOutputData": true,
       "credentials": {
@@ -275,10 +275,10 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        1280,
-        240
+        2064,
+        -368
       ],
-      "id": "11212ec5-55ca-4e0c-b158-e6890b34b58f",
+      "id": "a7cc848f-ff03-4d7e-8240-0801ad3f9699",
       "name": "Send the final message",
       "webhookId": "c57a3b4a-fc60-40c4-bafd-e0dd3f39ed7c",
       "executeOnce": true,
@@ -301,10 +301,10 @@
       "type": "n8n-nodes-base.googleFirebaseCloudFirestore",
       "typeVersion": 1.1,
       "position": [
-        2176,
-        480
+        3856,
+        -32
       ],
-      "id": "6641ce64-bbe2-49a2-bbef-ec6829538822",
+      "id": "6b5f76d1-6edf-480b-acb1-15b623ca7901",
       "name": "Update a lastRead marker",
       "credentials": {
         "googleFirebaseCloudFirestoreOAuth2Api": {
@@ -323,10 +323,10 @@
       "type": "n8n-nodes-base.googleFirebaseCloudFirestore",
       "typeVersion": 1.1,
       "position": [
-        1504,
-        336
+        2288,
+        -176
       ],
-      "id": "7d8e9f10-1111-2222-3333-444455556666",
+      "id": "1bb54ff6-e015-4f45-98e7-3a76360dcc40",
       "name": "Lookup Processed Message",
       "alwaysOutputData": true,
       "credentials": {
@@ -365,10 +365,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        1728,
-        336
+        2512,
+        -112
       ],
-      "id": "8a9b0c1d-2222-3333-4444-555566667777",
+      "id": "938d9f03-e804-467e-b96e-c6657957dd8e",
       "name": "Is New Message?"
     },
     {
@@ -406,28 +406,27 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        1728,
-        240
+        2960,
+        -176
       ],
-      "id": "0c1d2e3f-4444-5555-6666-777788889999",
+      "id": "5310b39a-31e5-4ae9-bc31-d0aa8b79e86c",
       "name": "Prepare Dedupe Record"
     },
     {
       "parameters": {
-        "operation": "create",
+        "operation": "upsert",
         "projectId": "storywalkers-b4fdf",
         "database": "={{ $('Setup').item.json.database }}",
         "collection": "gmail_dedupe",
-        "documentId": "={{ $json.messageId }}",
         "columns": "messageId,subject,date,processedAt"
       },
       "type": "n8n-nodes-base.googleFirebaseCloudFirestore",
       "typeVersion": 1.1,
       "position": [
-        1952,
-        240
+        3184,
+        -176
       ],
-      "id": "9b0c1d2e-3333-4444-5555-666677778888",
+      "id": "a4fa5798-4827-43a4-80f2-d25e89279d64",
       "name": "Mark Message Processed",
       "credentials": {
         "googleFirebaseCloudFirestoreOAuth2Api": {
@@ -637,9 +636,12 @@
   "settings": {
     "executionOrder": "v1",
     "binaryMode": "separate",
-    "availableInMCP": false
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "DlW9onTw8HgCl3iS"
   },
-  "versionId": "5f87f7ff-3867-45fa-983b-beff7bac0feb",
+  "versionId": "23cbd8f0-381a-4359-9a77-2b8489512c5c",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "899d4ada7c2a91af1ad45b3d93cbd7a60489e825ced40cd449109d52bd341227"

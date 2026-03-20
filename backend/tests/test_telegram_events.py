@@ -168,7 +168,7 @@ def test_fmt_boosty_email_event_contains_expected_fields():
         boosty_name="Мария П.",
         boosty_user_id="43061401",
         boosty_email="maria16392@gmail.com",
-        amount="+ 300 ₽",
+        amount="300 ₽",
         subscription_tier=None,
         comment="Круто",
         service_fee_compensated=True,
@@ -187,8 +187,30 @@ def test_fmt_boosty_email_event_contains_expected_fields():
     assert "boosty_name: Мария П." in message
     assert "boosty_user_id: 43061401" in message
     assert "boosty_email: maria16392@gmail.com" in message
-    assert "amount: + 300 ₽" in message
+    assert "amount: 300 ₽" in message
     assert "comment: Круто" in message
     assert "service_fee_compensated: yes" in message
     assert "delivery_mode: direct" in message
     assert "message_id: n8n-msg-4" in message
+    assert "subscription_tier:" not in message
+    assert "history_id: 999" in message
+
+
+def test_fmt_boosty_email_event_omits_empty_fields():
+    message = fmt_boosty_email_event(
+        event_type="subscription",
+        delivery_mode="direct",
+        email_received_at="2026-03-20T09:30:00+00:00",
+        boosty_name="Вадим",
+        boosty_user_id="21985241",
+        subject="У вас появился новый подписчик",
+    )
+
+    assert "user_uid:" not in message
+    assert "user_name:" not in message
+    assert "user_email:" not in message
+    assert "boosty_email:" not in message
+    assert "amount:" not in message
+    assert "comment:" not in message
+    assert "history_id:" not in message
+    assert "service_fee_compensated:" not in message
