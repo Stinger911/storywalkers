@@ -310,7 +310,7 @@ export function AdminCourses() {
                             Lessons
                           </Button>
                           <Button variant="outline" size="sm" onClick={() => selectItem(item)}>
-                            Edit
+                            Manage
                           </Button>
                           <Button
                             variant="outline"

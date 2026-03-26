@@ -59,6 +59,7 @@ describe("AdminCourses", () => {
       "href",
       "/admin/courses/course-1/lessons?title=Course%20One",
     );
+    expect(screen.getByRole("button", { name: "Manage" })).toBeInTheDocument();
     await waitFor(() => {
       expect(listAdminCourses).toHaveBeenCalledWith({ q: undefined, limit: 200 });
     });

@@ -175,7 +175,7 @@ export function AdminLibrary() {
                     href={`/admin/library/${entry.id}`}
                     class="text-sm font-medium text-primary underline"
                   >
-                    Edit
+                    Manage
                   </A>
                 </div>
               </div>
