@@ -60,6 +60,7 @@ type StudentProfile = {
   email?: string;
   role?: string;
   status?: string;
+  boostyUserId?: string | null;
   selectedGoalId?: string | null;
   onboardingStep?: string | null;
   profileForm?: {
@@ -120,6 +121,7 @@ export function AdminStudentProfile() {
   const [nameError, setNameError] = createSignal<string | null>(null);
   const [roleDraft, setRoleDraft] = createSignal("student");
   const [statusDraft, setStatusDraft] = createSignal("active");
+  const [boostyUserIdDraft, setBoostyUserIdDraft] = createSignal("");
   const [previewOpen, setPreviewOpen] = createSignal(false);
   const [previewLoading, setPreviewLoading] = createSignal(false);
   const [previewData, setPreviewData] = createSignal<{
@@ -185,6 +187,11 @@ export function AdminStudentProfile() {
   createEffect(() => {
     const currentStatus = student()?.status || "active";
     setStatusDraft(currentStatus);
+  });
+
+  createEffect(() => {
+    const currentBoostyUserId = student()?.boostyUserId || "";
+    setBoostyUserIdDraft(currentBoostyUserId);
   });
 
   createEffect(() => {
@@ -377,7 +384,11 @@ export function AdminStudentProfile() {
     setSavingProfile(true);
     setError(null);
     try {
-      await updateStudent(uid(), { role: roleDraft(), status: statusDraft() });
+      await updateStudent(uid(), {
+        role: roleDraft(),
+        status: statusDraft(),
+        boostyUserId: boostyUserIdDraft().trim() || null,
+      });
       await load();
     } catch (err) {
       setError((err as Error).message);
@@ -654,6 +665,25 @@ export function AdminStudentProfile() {
                     </SelectTrigger>
                     <SelectContent />
                   </Select>
+                </div>
+              </div>
+              <div class="grid gap-2 md:max-w-sm">
+                <TextField>
+                  <TextFieldLabel for="boosty-user-id-input">
+                    Boosty User ID
+                  </TextFieldLabel>
+                  <TextFieldInput
+                    id="boosty-user-id-input"
+                    value={boostyUserIdDraft()}
+                    inputMode="numeric"
+                    placeholder="21985241"
+                    onInput={(event) =>
+                      setBoostyUserIdDraft(event.currentTarget.value)
+                    }
+                  />
+                </TextField>
+                <div class="text-xs text-muted-foreground">
+                  Leave empty to clear the saved Boosty user id.
                 </div>
               </div>
               <Button

@@ -3,7 +3,8 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, Query, Request, status
 from google.cloud import firestore
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
+from pydantic_core import PydanticCustomError
 
 from app.auth.deps import get_current_user, require_staff
 from app.auth.firebase import get_or_create_user
@@ -35,8 +36,34 @@ class PatchStudentRequest(BaseModel):
     displayName: str | None = None
     status: UserStatus | None = None
     role: str | None = None
+    boostyUserId: str | None = None
 
     model_config = {"extra": "forbid"}
+
+    @field_validator("boostyUserId", mode="before")
+    @classmethod
+    def _trim_boosty_user_id(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        trimmed = str(value).strip()
+        return trimmed or None
+
+    @field_validator("boostyUserId")
+    @classmethod
+    def _validate_boosty_user_id(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        if not value.isdigit():
+            raise PydanticCustomError(
+                "boosty_user_id_digits",
+                "boostyUserId must contain digits only",
+            )
+        if len(value) > 32:
+            raise PydanticCustomError(
+                "boosty_user_id_too_long",
+                "boostyUserId must be 32 characters or fewer",
+            )
+        return value
 
 
 class AssignPlanRequest(BaseModel):

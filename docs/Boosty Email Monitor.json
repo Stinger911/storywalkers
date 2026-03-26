@@ -17,7 +17,7 @@
       "typeVersion": 1.3,
       "position": [
         944,
-        48
+        -16
       ]
     },
     {
@@ -35,7 +35,7 @@
       "typeVersion": 2.2,
       "position": [
         1616,
-        48
+        -16
       ],
       "webhookId": "c6a4eb42-d287-490a-b482-e0bbf813dfbe",
       "alwaysOutputData": false,
@@ -65,7 +65,7 @@
       "typeVersion": 4.4,
       "position": [
         2736,
-        -112
+        -176
       ],
       "credentials": {
         "httpHeaderAuth": {
@@ -89,13 +89,13 @@
       "typeVersion": 1.2,
       "position": [
         3184,
-        16
+        -80
       ],
       "webhookId": "303003cd-57cf-42f7-b713-3651b367e997",
       "credentials": {
         "telegramApi": {
-          "id": "SHYvsPbit15MbdDb",
-          "name": "Telegram dev test"
+          "id": "XnsaD7H3IKuW6PvA",
+          "name": "Telegram account SW"
         }
       }
     },
@@ -107,7 +107,7 @@
       "typeVersion": 1.1,
       "position": [
         3408,
-        -176
+        -272
       ],
       "webhookId": "057e9377-418e-417c-b29e-173765b60c06"
     },
@@ -121,7 +121,7 @@
       "typeVersion": 3,
       "position": [
         1840,
-        -80
+        -112
       ]
     },
     {
@@ -166,7 +166,7 @@
       "typeVersion": 3.4,
       "position": [
         1168,
-        48
+        -16
       ],
       "id": "ac11eb1a-5533-4ab9-93df-da5720568d31",
       "name": "Setup"
@@ -179,7 +179,7 @@
       "typeVersion": 2,
       "position": [
         2960,
-        16
+        -80
       ],
       "id": "f1acbe7a-f7e2-41af-aa91-a9ccc6f2ae44",
       "name": "Map Error Message"
@@ -239,7 +239,7 @@
       "typeVersion": 3.4,
       "position": [
         3632,
-        -176
+        -272
       ]
     },
     {
@@ -253,7 +253,7 @@
       "typeVersion": 1.1,
       "position": [
         1392,
-        48
+        -16
       ],
       "id": "eded880a-f17f-476e-b601-7af8d57acf9a",
       "name": "Get last ID",
@@ -268,14 +268,14 @@
     },
     {
       "parameters": {
-        "chatId": "={{ $('Setup').item.json.tg_admin_group_id }}",
-        "text": "={{ $('Fetch Boosty Emails').all().length }} message(s) processed",
+        "chatId": "={{ $(\"Setup\").item.json.tg_admin_group_id }}",
+        "text": "={{ $json.processedCount }} message(s) processed",
         "additionalFields": {}
       },
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        2064,
+        2512,
         -368
       ],
       "id": "a7cc848f-ff03-4d7e-8240-0801ad3f9699",
@@ -284,8 +284,8 @@
       "executeOnce": true,
       "credentials": {
         "telegramApi": {
-          "id": "SHYvsPbit15MbdDb",
-          "name": "Telegram dev test"
+          "id": "XnsaD7H3IKuW6PvA",
+          "name": "Telegram account SW"
         }
       }
     },
@@ -302,7 +302,7 @@
       "typeVersion": 1.1,
       "position": [
         3856,
-        -32
+        -128
       ],
       "id": "6b5f76d1-6edf-480b-acb1-15b623ca7901",
       "name": "Update a lastRead marker",
@@ -349,7 +349,7 @@
           "conditions": [
             {
               "id": "is-new-message",
-              "leftValue": "={{ !$json.id }}",
+              "leftValue": "={{ !$json.messageId }}",
               "rightValue": true,
               "operator": {
                 "type": "boolean",
@@ -366,7 +366,7 @@
       "typeVersion": 2.2,
       "position": [
         2512,
-        -112
+        -176
       ],
       "id": "938d9f03-e804-467e-b96e-c6657957dd8e",
       "name": "Is New Message?"
@@ -407,7 +407,7 @@
       "typeVersion": 3.4,
       "position": [
         2960,
-        -176
+        -272
       ],
       "id": "5310b39a-31e5-4ae9-bc31-d0aa8b79e86c",
       "name": "Prepare Dedupe Record"
@@ -418,13 +418,14 @@
         "projectId": "storywalkers-b4fdf",
         "database": "={{ $('Setup').item.json.database }}",
         "collection": "gmail_dedupe",
+        "updateKey": "messageId",
         "columns": "messageId,subject,date,processedAt"
       },
       "type": "n8n-nodes-base.googleFirebaseCloudFirestore",
       "typeVersion": 1.1,
       "position": [
         3184,
-        -176
+        -272
       ],
       "id": "a4fa5798-4827-43a4-80f2-d25e89279d64",
       "name": "Mark Message Processed",
@@ -434,6 +435,52 @@
           "name": "Google Firebase Cloud Firestore account"
         }
       }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "has-processed",
+              "leftValue": "={{ $json.processedCount }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "888764b9-f578-4559-b6de-66e518e42130",
+      "name": "Check If Any Processed",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2288,
+        -368
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const executionId = $execution.id;\nconst storageKey = `processed_count_${executionId}`;\nconst processedCount = $getWorkflowStaticData(\"global\")[storageKey] || 0;\n\ndelete $getWorkflowStaticData(\"global\")[storageKey];\n\nreturn [{ json: { processedCount } }];"
+      },
+      "id": "860e7804-5ac5-4bc8-a78c-64195a60cd70",
+      "name": "Get Final Count",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2064,
+        -368
+      ]
     }
   ],
   "pinData": {},
@@ -500,7 +547,7 @@
       "main": [
         [
           {
-            "node": "Send the final message",
+            "node": "Get Final Count",
             "type": "main",
             "index": 0
           }
@@ -630,6 +677,28 @@
           }
         ]
       ]
+    },
+    "Check If Any Processed": {
+      "main": [
+        [
+          {
+            "node": "Send the final message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Final Count": {
+      "main": [
+        [
+          {
+            "node": "Check If Any Processed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": true,
@@ -641,7 +710,7 @@
     "callerPolicy": "workflowsFromSameOwner",
     "errorWorkflow": "DlW9onTw8HgCl3iS"
   },
-  "versionId": "23cbd8f0-381a-4359-9a77-2b8489512c5c",
+  "versionId": "682803c8-b88c-4642-92a6-4bc6605d0fee",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "899d4ada7c2a91af1ad45b3d93cbd7a60489e825ced40cd449109d52bd341227"
