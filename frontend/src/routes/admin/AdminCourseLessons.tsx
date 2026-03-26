@@ -2,6 +2,7 @@ import { A, useParams, useSearchParams } from "@solidjs/router";
 import { createMemo, createSignal, createEffect, For, Show } from "solid-js";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
+import { DestructiveConfirmDialog } from "../../components/ui/destructive-confirm-dialog";
 import {
   Dialog,
   DialogContent,
@@ -77,6 +78,7 @@ export function AdminCourseLessons() {
   const [saving, setSaving] = createSignal(false);
   const [error, setError] = createSignal<string | null>(null);
   const [items, setItems] = createSignal<LessonDraft[]>([]);
+  const [deleteTarget, setDeleteTarget] = createSignal<LessonDraft | null>(null);
   const [pointerDraggingId, setPointerDraggingId] = createSignal<string | null>(null);
   const [pointerTargetId, setPointerTargetId] = createSignal<string | null>(null);
   const [pointerDragX, setPointerDragX] = createSignal(0);
@@ -176,14 +178,16 @@ export function AdminCourseLessons() {
     }
   };
 
-  const deactivateLesson = async (lessonId: string) => {
-    if (!confirm("Deactivate this lesson?")) return;
+  const deactivateLesson = async () => {
+    const lesson = deleteTarget();
+    if (!lesson) return;
     setSaving(true);
     setError(null);
     try {
-      await deleteAdminCourseLesson(courseId(), lessonId);
+      await deleteAdminCourseLesson(courseId(), lesson.id);
       showToast({ title: "Lesson deactivated", variant: "success" });
       await load();
+      setDeleteTarget(null);
     } catch (err) {
       const message = (err as Error).message;
       setError(message);
@@ -608,7 +612,7 @@ export function AdminCourseLessons() {
                         <Button
                           variant="destructive"
                           size="sm"
-                          onClick={() => void deactivateLesson(lesson.id)}
+                          onClick={() => setDeleteTarget(lesson)}
                           disabled={saving() || !lesson.isActive}
                         >
                           Deactivate
@@ -659,6 +663,21 @@ export function AdminCourseLessons() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <DestructiveConfirmDialog
+        open={deleteTarget() !== null}
+        onOpenChange={(open) => {
+          if (!saving() && !open) setDeleteTarget(null);
+        }}
+        title="Deactivate lesson?"
+        description={`This hides "${deleteTarget()?.title || "this lesson"}" from the student course view.`}
+        acknowledgeLabel="I understand this lesson will no longer appear to students."
+        confirmKeyword="DELETE"
+        confirmLabel="Confirm deactivate"
+        loading={saving()}
+        onConfirm={deactivateLesson}
+        testIdPrefix="delete-lesson"
+      />
     </Page>
   );
 }
