@@ -103,6 +103,7 @@ type RawDictionary = {
       contactAdmin: string;
       dashboardTitle: string;
       progressComplete: string;
+      progressCounter: string;
       goalLabel: string;
       goalFallbackTitle: string;
       goalFallbackDescription: string;
@@ -288,6 +289,7 @@ type RawDictionary = {
         loadError: string;
         saveError: string;
         currencySaveError: string;
+        lessonCount: string;
         empty: string;
       };
       checkout: {
@@ -418,6 +420,7 @@ const dictionaries: Record<Locale, RawDictionary> = {
         contactAdmin: "Contact admin",
         dashboardTitle: "Student Dashboard",
         progressComplete: "{{ percent }}% complete",
+        progressCounter: "{{ done }} / {{ total }} lessons done",
         goalLabel: "Goal",
         goalFallbackTitle: "Learning goal",
         goalFallbackDescription: "Your personalized learning path.",
@@ -606,6 +609,7 @@ const dictionaries: Record<Locale, RawDictionary> = {
           loadError: "Could not load courses.",
           saveError: "Could not save selected courses.",
           currencySaveError: "Could not save preferred currency.",
+          lessonCount: "{{ count }} lessons",
           empty: "No courses selected yet.",
         },
         checkout: {
@@ -734,6 +738,7 @@ const dictionaries: Record<Locale, RawDictionary> = {
         contactAdmin: "Связаться с админом",
         dashboardTitle: "Панель студента",
         progressComplete: "{{ percent }}% выполнено",
+        progressCounter: "{{ done }} из {{ total }} уроков выполнено",
         goalLabel: "Цель",
         goalFallbackTitle: "Учебная цель",
         goalFallbackDescription: "Ваш персональный путь обучения.",
@@ -924,6 +929,7 @@ const dictionaries: Record<Locale, RawDictionary> = {
           loadError: "Не удалось загрузить курсы.",
           saveError: "Не удалось сохранить выбранные курсы.",
           currencySaveError: "Не удалось сохранить предпочитаемую валюту.",
+          lessonCount: "{{ count }} уроков",
           empty: "Курсы пока не выбраны.",
         },
         checkout: {

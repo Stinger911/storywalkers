@@ -12,6 +12,7 @@ import {
 import { Illustration } from '../../components/ui/illustration'
 import { SectionCard } from '../../components/ui/section-card'
 import { SmallStatBadge } from '../../components/ui/small-stat-badge'
+import { ProgressBar } from '../../components/ui/progress-bar'
 import { TextField, TextFieldInput, TextFieldLabel, TextFieldTextArea } from '../../components/ui/text-field'
 import { showToast } from '../../components/ui/toast'
 import { EditableDisplayName } from '../../components/ui/editable-display-name'
@@ -134,9 +135,17 @@ export function StudentHome() {
         >
           <div class="flex items-center justify-between gap-4">
             <h2 class="text-lg font-semibold">{t('student.home.dashboardTitle')}</h2>
-            <SmallStatBadge>
-              {t('student.home.progressComplete', { percent: progress().percent })}
-            </SmallStatBadge>
+            <div class="flex flex-wrap items-center justify-end gap-2">
+              <SmallStatBadge>
+                {t('student.home.progressComplete', { percent: progress().percent })}
+              </SmallStatBadge>
+              <SmallStatBadge>
+                {t('student.home.progressCounter', {
+                  done: progress().done,
+                  total: progress().total,
+                })}
+              </SmallStatBadge>
+            </div>
           </div>
 
           <Card class="border border-border/70">
@@ -151,12 +160,7 @@ export function StudentHome() {
                 <p class="text-sm text-muted-foreground">
                   {goal()?.description ?? t('student.home.goalFallbackDescription')}
                 </p>
-                <div class="mt-4 h-2 w-full overflow-hidden rounded-full bg-muted">
-                  <div
-                    class="h-full rounded-full bg-primary transition-all"
-                    style={{ width: `${progress().percent}%` }}
-                  />
-                </div>
+                <ProgressBar class="mt-4" value={progress().percent} />
               </div>
               <div class="flex justify-start lg:justify-center">
                 <Illustration

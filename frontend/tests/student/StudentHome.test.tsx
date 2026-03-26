@@ -69,6 +69,8 @@ describe("StudentHome", () => {
     expect(screen.getByText("Student Dashboard")).toBeInTheDocument();
     expect(screen.getByText("Current lesson")).toBeInTheDocument();
     expect(screen.getByText("Lessons")).toBeInTheDocument();
+    expect(screen.getByText("0 / 1 lessons done")).toBeInTheDocument();
+    expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "0");
     expect(screen.getAllByText("Import footage").length).toBeGreaterThan(0);
   });
 

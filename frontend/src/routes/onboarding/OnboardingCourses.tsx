@@ -3,6 +3,7 @@ import { createMemo, createSignal, For, onMount, Show } from "solid-js";
 
 import { Button } from "../../components/ui/button";
 import { SectionCard } from "../../components/ui/section-card";
+import { SmallStatBadge } from "../../components/ui/small-stat-badge";
 import {
   Select,
   SelectContent,
@@ -287,6 +288,15 @@ export function OnboardingCourses() {
                               <div class="mt-1 text-sm text-muted-foreground">
                                 {course.shortDescription}
                               </div>
+                              <Show when={typeof course.lessonCount === "number"}>
+                                <div class="mt-2">
+                                  <SmallStatBadge class="bg-card">
+                                    {t("student.onboarding.courses.lessonCount", {
+                                      count: course.lessonCount ?? 0,
+                                    })}
+                                  </SmallStatBadge>
+                                </div>
+                              </Show>
                             </div>
                             <div class="text-sm font-semibold">
                               {formatPrice(course.priceUsdCents)}
@@ -318,6 +328,15 @@ export function OnboardingCourses() {
                               <div class="mt-1 text-sm text-muted-foreground">
                                 {course.shortDescription}
                               </div>
+                              <Show when={typeof course.lessonCount === "number"}>
+                                <div class="mt-2">
+                                  <SmallStatBadge class="bg-card">
+                                    {t("student.onboarding.courses.lessonCount", {
+                                      count: course.lessonCount ?? 0,
+                                    })}
+                                  </SmallStatBadge>
+                                </div>
+                              </Show>
                             </div>
                             <div class="text-sm font-semibold">
                               {formatPrice(course.priceUsdCents)}

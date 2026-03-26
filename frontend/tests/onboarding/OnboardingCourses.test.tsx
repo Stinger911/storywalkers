@@ -81,6 +81,7 @@ describe("OnboardingCourses", () => {
           priceUsdCents: 4000,
           isActive: true,
           goalIds: ["goal-1"],
+          lessonCount: 6,
         },
         {
           id: "course-2",
@@ -89,6 +90,7 @@ describe("OnboardingCourses", () => {
           priceUsdCents: 6000,
           isActive: true,
           goalIds: ["goal-1"],
+          lessonCount: 3,
         },
       ],
     });
@@ -101,6 +103,7 @@ describe("OnboardingCourses", () => {
     ));
 
     expect(await screen.findByText("Course One")).toBeInTheDocument();
+    expect(screen.getByText("6 lessons")).toBeInTheDocument();
     expect(listCourses).toHaveBeenCalledWith({ goalId: "goal-1" });
 
     fireEvent.click(screen.getByText("Course One"));
@@ -128,6 +131,7 @@ describe("OnboardingCourses", () => {
           priceUsdCents: 4000,
           isActive: true,
           goalIds: ["goal-1"],
+          lessonCount: 6,
         },
         {
           id: "course-2",
@@ -136,6 +140,7 @@ describe("OnboardingCourses", () => {
           priceUsdCents: 6000,
           isActive: false,
           goalIds: ["goal-1"],
+          lessonCount: 4,
         },
       ],
     });
@@ -151,6 +156,7 @@ describe("OnboardingCourses", () => {
     expect(listCourses).toHaveBeenCalledWith({ goalId: "goal-1" });
     expect(screen.getByText("Inactive")).toBeInTheDocument();
     expect(screen.getByText("Course Two")).toBeInTheDocument();
+    expect(screen.getByText("4 lessons")).toBeInTheDocument();
 
     fireEvent.click(screen.getByText("Course One"));
     fireEvent.click(screen.getByRole("button", { name: "Next" }));
