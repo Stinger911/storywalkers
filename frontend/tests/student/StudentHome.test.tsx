@@ -186,6 +186,40 @@ describe("StudentHome", () => {
     });
   });
 
+  it("renders locked lesson state and disables lesson actions", () => {
+    useMyPlanMock.mockReturnValue({
+      plan: () => ({ studentUid: "u1", goalId: "g1" }),
+      goal: () => ({ title: "Video Editing Basics", description: "Learn the workflow." }),
+      steps: () => [
+        {
+          id: "s1",
+          title: "Locked lesson",
+          description: "Finish previous work first",
+          isDone: false,
+          isLocked: true,
+          materialUrl: "https://example.com/lesson",
+        },
+      ],
+      loading: () => false,
+      error: () => null,
+      progress: () => ({ total: 1, done: 0, percent: 0 }),
+      markStepDone: markStepDoneMock,
+      completeStep: completeStepMock,
+      openMaterial: vi.fn(),
+    });
+
+    render(() => (
+      <I18nProvider>
+        <StudentHome />
+      </I18nProvider>
+    ));
+
+    expect(screen.getAllByText("Complete previous lessons first").length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("button", { name: "Open" }).every((button) => button.hasAttribute("disabled"))).toBe(true);
+    expect(screen.getByRole("button", { name: "Mark done" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Mark as done" })).toBeDisabled();
+  });
+
   it("renders done comment and link only when values exist", () => {
     useMyPlanMock.mockReturnValue({
       plan: () => ({ studentUid: "u1", goalId: "g1" }),

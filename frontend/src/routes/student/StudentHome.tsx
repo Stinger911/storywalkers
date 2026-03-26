@@ -185,22 +185,38 @@ export function StudentHome() {
               }
             >
               {(step) => (
-                <div class="rounded-[var(--radius-lg)] border border-border/70 bg-card p-5 shadow-rail">
+                <div
+                  class={cn(
+                    'rounded-[var(--radius-lg)] border border-border/70 bg-card p-5 shadow-rail',
+                    step().isLocked && 'opacity-60',
+                  )}
+                >
                   <div class="flex flex-wrap items-start justify-between gap-4">
                     <div class="min-w-0">
                       <div class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                         {t('student.home.currentStepLabel')}
                       </div>
-                      <div class="mt-2 text-lg font-semibold">
+                      <div
+                        class={cn(
+                          'mt-2 text-lg font-semibold',
+                          step().isLocked && 'text-muted-foreground',
+                        )}
+                      >
                         {step().title}
                       </div>
                       <div class="mt-2 text-sm text-muted-foreground">
                         {step().description}
                       </div>
+                      <Show when={step().isLocked}>
+                        <div class="mt-2 text-xs font-medium text-muted-foreground">
+                          {t('student.home.stepLocked')}
+                        </div>
+                      </Show>
                       <Show when={step().materialUrl}>
                         <button
                           class="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-primary"
                           onClick={() => openMaterial(step().materialUrl)}
+                          disabled={step().isLocked}
                         >
                           <span class="material-symbols-outlined text-[18px]">open_in_new</span>
                           {t('student.home.currentStepMaterial')}
@@ -212,6 +228,7 @@ export function StudentHome() {
                         <button
                           class={buttonVariants({ size: 'sm' })}
                           onClick={() => openMaterial(step().materialUrl)}
+                          disabled={step().isLocked}
                         >
                           {t('common.open')}
                         </button>
@@ -224,6 +241,7 @@ export function StudentHome() {
                         variant="outline"
                         size="sm"
                         onClick={() => openCompleteDialog(step().id)}
+                        disabled={step().isLocked}
                       >
                         {t('student.home.currentStepMarkDone')}
                       </Button>
@@ -256,22 +274,41 @@ export function StudentHome() {
             >
               <div class="grid gap-3">
                 {steps().map((step) => (
-                  <div class="rounded-[var(--radius-md)] border border-border/70 bg-card px-4 py-3 shadow-rail">
+                  <div
+                    class={cn(
+                      'rounded-[var(--radius-md)] border border-border/70 bg-card px-4 py-3 shadow-rail',
+                      step.isLocked && 'opacity-60',
+                    )}
+                  >
                     <div class="flex items-center justify-between gap-4">
                       <div class="flex items-center gap-3 min-w-0">
                         <span
                           class={cn(
                             "material-symbols-outlined text-[22px]",
-                            step.isDone ? "text-success-foreground" : "text-muted-foreground",
+                            step.isDone
+                              ? "text-success-foreground"
+                              : "text-muted-foreground",
                           )}
                         >
-                          {step.isDone ? "check_circle" : "schedule"}
+                          {step.isDone ? "check_circle" : step.isLocked ? "lock" : "schedule"}
                         </span>
                         <div class="min-w-0 max-w-[520px]">
-                          <div class="truncate text-sm font-semibold">{step.title}</div>
+                          <div
+                            class={cn(
+                              "truncate text-sm font-semibold",
+                              step.isLocked && "text-muted-foreground",
+                            )}
+                          >
+                            {step.title}
+                          </div>
                           <div class="line-clamp-2 text-xs text-muted-foreground">
                             {step.description}
                           </div>
+                          <Show when={step.isLocked}>
+                            <div class="mt-2 text-xs font-medium text-muted-foreground">
+                              {t('student.home.stepLocked')}
+                            </div>
+                          </Show>
                           <Show when={step.isDone && step.doneComment}>
                             <div class="mt-2 text-xs">
                               <span class="font-semibold">Комментарий: </span>
@@ -298,6 +335,7 @@ export function StudentHome() {
                           <button
                             class={buttonVariants({ size: "sm" })}
                             onClick={() => openMaterial(step.materialUrl)}
+                            disabled={step.isLocked}
                           >
                             {t('common.open')}
                           </button>
@@ -319,7 +357,9 @@ export function StudentHome() {
                               ? t('student.home.markNotDone')
                               : t('student.home.markDone')
                           }
+                          disabled={step.isLocked}
                           onClick={() => {
+                            if (step.isLocked) return
                             if (step.isDone) {
                               void markStepDone(step.id, false)
                               return

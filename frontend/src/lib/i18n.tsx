@@ -121,6 +121,7 @@ type RawDictionary = {
       currentStepMaterial: string;
       currentStepMarkDone: string;
       currentStepEmpty: string;
+      stepLocked: string;
       completeDialogTitle: string;
       completeDialogDescription: string;
       completeDialogCommentLabel: string;
@@ -438,6 +439,7 @@ const dictionaries: Record<Locale, RawDictionary> = {
         currentStepMaterial: "View material",
         currentStepMarkDone: "Mark done",
         currentStepEmpty: "You’ve completed every lesson. Nice work!",
+        stepLocked: "Complete previous lessons first",
         completeDialogTitle: "Complete step",
         completeDialogDescription: "Add a comment and link if needed.",
         completeDialogCommentLabel: "Comment (optional)",
@@ -756,6 +758,7 @@ const dictionaries: Record<Locale, RawDictionary> = {
         currentStepMaterial: "Открыть материалы",
         currentStepMarkDone: "Отметить выполненным",
         currentStepEmpty: "Все уроки выполнены. Отличная работа!",
+        stepLocked: "Сначала завершите предыдущие уроки",
         completeDialogTitle: "Завершить шаг",
         completeDialogDescription:
           "Добавьте комментарий и ссылку при необходимости.",
