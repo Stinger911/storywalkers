@@ -190,6 +190,202 @@ def test_list_students_rejects_invalid_status_filter(monkeypatch):
     app.dependency_overrides.clear()
 
 
+def test_list_students_rejects_invalid_sort_by(monkeypatch):
+    users = {"s1": {"role": "student", "status": "active", "email": "s1@x.com"}}
+    fake_db = FakeFirestore(users)
+    monkeypatch.setattr(admin_students, "get_firestore_client", lambda: fake_db)
+    app.dependency_overrides[require_staff] = _override_staff
+    client = TestClient(app)
+
+    response = client.get("/api/admin/students?sortBy=activity")
+
+    assert response.status_code == 400
+
+    app.dependency_overrides.clear()
+
+
+def test_list_students_sorts_by_created_at(monkeypatch):
+    users = {
+        "u1": {
+            "role": "student",
+            "status": "active",
+            "email": "u1@x.com",
+            "createdAt": "2026-01-02T00:00:00Z",
+        },
+        "u2": {
+            "role": "student",
+            "status": "active",
+            "email": "u2@x.com",
+            "createdAt": "2026-01-03T00:00:00Z",
+        },
+        "u3": {
+            "role": "student",
+            "status": "active",
+            "email": "u3@x.com",
+            "createdAt": "2026-01-01T00:00:00Z",
+        },
+    }
+    fake_db = FakeFirestore(users)
+    monkeypatch.setattr(admin_students, "get_firestore_client", lambda: fake_db)
+    app.dependency_overrides[require_staff] = _override_staff
+    client = TestClient(app)
+
+    desc_response = client.get("/api/admin/students?sortBy=createdAt&sortDir=desc")
+    asc_response = client.get("/api/admin/students?sortBy=createdAt&sortDir=asc")
+
+    assert desc_response.status_code == 200
+    assert [item["uid"] for item in desc_response.json()["items"]] == ["u2", "u1", "u3"]
+    assert asc_response.status_code == 200
+    assert [item["uid"] for item in asc_response.json()["items"]] == ["u3", "u1", "u2"]
+
+    app.dependency_overrides.clear()
+
+
+def test_list_students_sorts_by_progress_desc_with_uid_tie_breaker(monkeypatch):
+    users = {
+        "u2": {
+            "role": "student",
+            "status": "active",
+            "email": "u2@x.com",
+            "progressPercent": 50,
+            "stepsDone": 1,
+            "stepsTotal": 2,
+        },
+        "u1": {
+            "role": "student",
+            "status": "active",
+            "email": "u1@x.com",
+            "progressPercent": 50,
+            "stepsDone": 2,
+            "stepsTotal": 4,
+        },
+        "u3": {
+            "role": "student",
+            "status": "active",
+            "email": "u3@x.com",
+            "progressPercent": 10,
+            "stepsDone": 1,
+            "stepsTotal": 10,
+        },
+    }
+    fake_db = FakeFirestore(users)
+    monkeypatch.setattr(admin_students, "get_firestore_client", lambda: fake_db)
+    app.dependency_overrides[require_staff] = _override_staff
+    client = TestClient(app)
+
+    response = client.get("/api/admin/students?sortBy=progress&sortDir=desc")
+
+    assert response.status_code == 200
+    assert [item["uid"] for item in response.json()["items"]] == ["u1", "u2", "u3"]
+
+    app.dependency_overrides.clear()
+
+
+def test_list_students_applies_combined_filters_and_search(monkeypatch):
+    users = {
+        "u1": {
+            "role": "student",
+            "status": "active",
+            "email": "anna@example.com",
+            "displayName": "Anna",
+            "createdAt": "2026-01-01T00:00:00Z",
+        },
+        "u2": {
+            "role": "student",
+            "status": "disabled",
+            "email": "anna-disabled@example.com",
+            "displayName": "Anna Disabled",
+            "createdAt": "2026-01-02T00:00:00Z",
+        },
+        "u3": {
+            "role": "expert",
+            "status": "active",
+            "email": "anna-staff@example.com",
+            "displayName": "Anna Staff",
+            "createdAt": "2026-01-03T00:00:00Z",
+        },
+    }
+    fake_db = FakeFirestore(users)
+    monkeypatch.setattr(admin_students, "get_firestore_client", lambda: fake_db)
+    app.dependency_overrides[require_staff] = _override_staff
+    client = TestClient(app)
+
+    response = client.get(
+        "/api/admin/students?role=student&status=active&q=anna&sortBy=createdAt&sortDir=asc"
+    )
+
+    assert response.status_code == 200
+    assert [item["uid"] for item in response.json()["items"]] == ["u1"]
+
+    app.dependency_overrides.clear()
+
+
+def test_list_students_cursor_paginates_sorted_results(monkeypatch):
+    users = {
+        "u1": {
+            "role": "student",
+            "status": "active",
+            "email": "u1@x.com",
+            "createdAt": "2026-01-01T00:00:00Z",
+        },
+        "u2": {
+            "role": "student",
+            "status": "active",
+            "email": "u2@x.com",
+            "createdAt": "2026-01-02T00:00:00Z",
+        },
+        "u3": {
+            "role": "student",
+            "status": "active",
+            "email": "u3@x.com",
+            "createdAt": "2026-01-03T00:00:00Z",
+        },
+    }
+    fake_db = FakeFirestore(users)
+    monkeypatch.setattr(admin_students, "get_firestore_client", lambda: fake_db)
+    app.dependency_overrides[require_staff] = _override_staff
+    client = TestClient(app)
+
+    first_response = client.get(
+        "/api/admin/students?sortBy=createdAt&sortDir=asc&limit=2"
+    )
+    assert first_response.status_code == 200
+    first_payload = first_response.json()
+    assert [item["uid"] for item in first_payload["items"]] == ["u1", "u2"]
+    assert first_payload["nextCursor"] == "u2"
+
+    second_response = client.get(
+        f"/api/admin/students?sortBy=createdAt&sortDir=asc&limit=2&cursor={first_payload['nextCursor']}"
+    )
+    assert second_response.status_code == 200
+    second_payload = second_response.json()
+    assert [item["uid"] for item in second_payload["items"]] == ["u3"]
+    assert second_payload["nextCursor"] is None
+
+    app.dependency_overrides.clear()
+
+
+def test_list_students_rejects_unknown_cursor(monkeypatch):
+    users = {
+        "u1": {
+            "role": "student",
+            "status": "active",
+            "email": "u1@x.com",
+            "createdAt": "2026-01-01T00:00:00Z",
+        }
+    }
+    fake_db = FakeFirestore(users)
+    monkeypatch.setattr(admin_students, "get_firestore_client", lambda: fake_db)
+    app.dependency_overrides[require_staff] = _override_staff
+    client = TestClient(app)
+
+    response = client.get("/api/admin/students?cursor=missing-user")
+
+    assert response.status_code == 404
+
+    app.dependency_overrides.clear()
+
+
 def test_patch_student_role_validation(monkeypatch):
     users = {"s1": {"role": "student", "status": "active", "email": "s1@x.com"}}
     fake_db = FakeFirestore(users)

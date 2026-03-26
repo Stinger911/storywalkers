@@ -24,6 +24,8 @@ from app.services.telegram_events import fmt_registration, fmt_status_changed
 router = APIRouter(prefix="/api/admin", tags=["Admin - Students"])
 logger = get_logger("app.db")
 ALLOWED_USER_ROLES = {"student", "admin", "expert"}
+ALLOWED_STUDENT_SORT_BY = {"createdAt", "progress"}
+ALLOWED_SORT_DIR = {"asc", "desc"}
 
 
 class CreateStudentRequest(BaseModel):
@@ -116,6 +118,42 @@ def _progress_percent(done: int, total: int) -> int:
     if total <= 0:
         return 0
     return round((done / total) * 100)
+
+
+def _validate_student_sort_or_400(sort_by: str, sort_dir: str) -> None:
+    if sort_by not in ALLOWED_STUDENT_SORT_BY:
+        raise AppError(
+            code="validation_error",
+            message="sortBy must be one of: createdAt, progress",
+            status_code=400,
+        )
+    if sort_dir not in ALLOWED_SORT_DIR:
+        raise AppError(
+            code="validation_error",
+            message="sortDir must be one of: asc, desc",
+            status_code=400,
+        )
+
+
+def _sort_student_items(
+    items: list[dict[str, Any]],
+    *,
+    sort_by: str,
+    sort_dir: str,
+) -> list[dict[str, Any]]:
+    sorted_items = items[:]
+    sorted_items.sort(key=lambda item: str(item.get("uid") or ""))
+    if sort_by == "progress":
+        sorted_items.sort(
+            key=lambda item: int(item.get("progressPercent") or 0),
+            reverse=sort_dir == "desc",
+        )
+        return sorted_items
+    sorted_items.sort(
+        key=lambda item: item.get("createdAt") or "",
+        reverse=sort_dir == "desc",
+    )
+    return sorted_items
 
 
 def _sync_user_progress(
@@ -213,10 +251,13 @@ async def list_students(
     q: str | None = Query(None),
     limit: int = Query(50, ge=1, le=100),
     cursor: str | None = Query(None),
+    sort_by: str = Query("createdAt", alias="sortBy"),
+    sort_dir: str = Query("desc", alias="sortDir"),
 ):
     started = time.perf_counter()
     if status_filter:
         validate_user_status_or_400(status_filter)
+    _validate_student_sort_or_400(sort_by, sort_dir)
     db = get_firestore_client()
     query = db.collection("users")
     if role:
@@ -226,7 +267,7 @@ async def list_students(
             query = query.where("role", "==", role)
     if status_filter:
         query = query.where("status", "==", status_filter)
-    query = query.order_by("createdAt").limit(limit)
+    query = query.order_by("createdAt")
 
     items = []
     for snap in query.stream():
@@ -270,17 +311,36 @@ async def list_students(
             or q_lower in (item.get("displayName") or "").lower()
         ]
 
+    items = _sort_student_items(items, sort_by=sort_by, sort_dir=sort_dir)
+
+    if cursor:
+        cursor_index = next(
+            (index for index, item in enumerate(items) if item.get("uid") == cursor),
+            None,
+        )
+        if cursor_index is None:
+            raise AppError(
+                code="not_found",
+                message="Cursor not found",
+                status_code=404,
+            )
+        items = items[cursor_index + 1 :]
+
+    has_more = len(items) > limit
+    page_items = items[:limit]
+    next_cursor = page_items[-1]["uid"] if has_more and page_items else None
+
     logger.info(
         "students_list_db_timing",
         extra={
             "duration_ms": round((time.perf_counter() - started) * 1000, 2),
-            "returned": len(items),
+            "returned": len(page_items),
             "limit": limit,
             "db_reads_estimate": len(items),
             "db_writes_estimate": 0,
         },
     )
-    return {"items": items, "nextCursor": None}
+    return {"items": page_items, "nextCursor": next_cursor}
 
 
 @router.post("/students", status_code=status.HTTP_201_CREATED)
