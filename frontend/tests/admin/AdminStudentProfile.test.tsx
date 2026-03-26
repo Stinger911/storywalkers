@@ -169,6 +169,7 @@ describe("AdminStudentProfile", () => {
       expect(updateStudentMock).toHaveBeenCalledWith("u1", {
         role: "expert",
         status: "active",
+        boostyUserId: null,
       });
     });
   });
@@ -206,6 +207,50 @@ describe("AdminStudentProfile", () => {
       expect(updateStudentMock).toHaveBeenCalledWith("u1", {
         role: "student",
         status: "disabled",
+        boostyUserId: null,
+      });
+    });
+  });
+
+  it("updates boosty user id via access controls", async () => {
+    getStudentMock.mockResolvedValue({
+      uid: "u1",
+      displayName: "Student One",
+      email: "s1@x.com",
+      role: "student",
+      status: "active",
+      boostyUserId: "21985241",
+    });
+    getStudentPlanMock.mockRejectedValue(new Error("no plan"));
+    getStudentPlanStepsMock.mockResolvedValue({ items: [] });
+    listGoalsMock.mockResolvedValue({
+      items: [{ id: "goal-42", title: "Portrait Creator" }],
+    });
+    listAdminCoursesMock.mockResolvedValue({
+      items: [
+        { id: "course-a", title: "Light Basics" },
+        { id: "course-b", title: "Color Workflow" },
+      ],
+    });
+    updateStudentMock.mockResolvedValue({
+      role: "student",
+      status: "active",
+      boostyUserId: "43061401",
+    });
+
+    renderWithShell();
+
+    const boostyInput = await screen.findByLabelText("Boosty User ID");
+    fireEvent.input(boostyInput, { target: { value: "43061401" } });
+
+    const saveButton = screen.getByText("Save access");
+    fireEvent.click(saveButton);
+
+    await waitFor(() => {
+      expect(updateStudentMock).toHaveBeenCalledWith("u1", {
+        role: "student",
+        status: "active",
+        boostyUserId: "43061401",
       });
     });
   });

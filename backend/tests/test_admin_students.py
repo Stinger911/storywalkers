@@ -527,6 +527,70 @@ def test_patch_student_updates_display_name_and_timestamp(monkeypatch):
     app.dependency_overrides.clear()
 
 
+def test_patch_student_updates_boosty_user_id(monkeypatch):
+    users = {
+        "s1": {
+            "role": "student",
+            "status": "active",
+            "email": "s1@x.com",
+            "boostyUserId": None,
+        }
+    }
+    fake_db = FakeFirestore(users)
+    monkeypatch.setattr(admin_students, "get_firestore_client", lambda: fake_db)
+    app.dependency_overrides[get_current_user] = _override_staff
+    client = TestClient(app)
+
+    response = client.patch(
+        "/api/admin/students/s1",
+        json={"boostyUserId": " 21985241 "},
+    )
+    assert response.status_code == 200
+    assert response.json()["boostyUserId"] == "21985241"
+    assert users["s1"]["boostyUserId"] == "21985241"
+    assert users["s1"]["updatedAt"] == "SERVER_TIMESTAMP"
+
+    app.dependency_overrides.clear()
+
+
+def test_patch_student_clears_boosty_user_id(monkeypatch):
+    users = {
+        "s1": {
+            "role": "student",
+            "status": "active",
+            "email": "s1@x.com",
+            "boostyUserId": "21985241",
+        }
+    }
+    fake_db = FakeFirestore(users)
+    monkeypatch.setattr(admin_students, "get_firestore_client", lambda: fake_db)
+    app.dependency_overrides[get_current_user] = _override_staff
+    client = TestClient(app)
+
+    response = client.patch(
+        "/api/admin/students/s1",
+        json={"boostyUserId": "   "},
+    )
+    assert response.status_code == 200
+    assert response.json()["boostyUserId"] is None
+    assert users["s1"]["boostyUserId"] is None
+
+    app.dependency_overrides.clear()
+
+
+def test_patch_student_rejects_invalid_boosty_user_id(monkeypatch):
+    users = {"s1": {"role": "student", "status": "active", "email": "s1@x.com"}}
+    fake_db = FakeFirestore(users)
+    monkeypatch.setattr(admin_students, "get_firestore_client", lambda: fake_db)
+    app.dependency_overrides[get_current_user] = _override_staff
+    client = TestClient(app)
+
+    response = client.patch("/api/admin/students/s1", json={"boostyUserId": "abc123"})
+    assert response.status_code == 400
+
+    app.dependency_overrides.clear()
+
+
 def test_delete_student_removes_user_related_data(monkeypatch):
     users = {"s1": {"role": "student", "status": "active", "email": "s1@x.com"}}
     plans = {"s1": {"goalId": "g1"}}

@@ -101,6 +101,7 @@ type Student = {
   displayName?: string
   role?: string
   status?: string
+  boostyUserId?: string | null
   progressPercent?: number
   stepsDone?: number
   stepsTotal?: number
@@ -400,7 +401,12 @@ export async function listStudents(params?: {
 
 export async function updateStudent(
   uid: string,
-  payload: { displayName?: string; status?: string; role?: string },
+  payload: {
+    displayName?: string
+    status?: string
+    role?: string
+    boostyUserId?: string | null
+  },
 ) {
   const response = await apiFetch(`/api/admin/students/${uid}`, {
     method: 'PATCH',
