@@ -11,6 +11,7 @@ import {
 import { Button } from "../../components/ui/button";
 import { Page } from "../../components/ui/page";
 import { SectionCard } from "../../components/ui/section-card";
+import { Skeleton } from "../../components/ui/skeleton";
 import { SmallStatBadge } from "../../components/ui/small-stat-badge";
 import {
   TextField,
@@ -66,6 +67,7 @@ export function AdminStudents() {
   const [sortDir, setSortDir] = createSignal<SortDir>(
     normalizeSortDir(normalizeQueryParam(searchParams.sortDir)),
   );
+  const hasActiveFilters = () => Boolean(query().trim() || statusFilter());
 
   const syncSearchParams = (next: {
     q?: string;
@@ -245,15 +247,28 @@ export function AdminStudents() {
           </TextField>
         </div>
 
-        <Show when={!loading()} fallback={<div class="mt-4 text-sm">Loading…</div>}>
+        <Show
+          when={!loading()}
+          fallback={
+            <div class="mt-4 space-y-2">
+              <Skeleton class="h-12 w-full rounded-[var(--radius-md)]" animate />
+              <Skeleton class="h-12 w-full rounded-[var(--radius-md)]" animate />
+              <Skeleton class="h-12 w-full rounded-[var(--radius-md)]" animate />
+              <Skeleton class="h-12 w-full rounded-[var(--radius-md)]" animate />
+              <Skeleton class="h-12 w-full rounded-[var(--radius-md)]" animate />
+            </div>
+          }
+        >
           <div class="mt-4 grid gap-6 lg:grid-cols-2">
             <div class="space-y-3">
               <div class="text-sm font-semibold text-muted-foreground">Students</div>
               <Show
                 when={students().length > 0}
                 fallback={
-                  <div class="rounded-xl border border-border/70 p-4 text-sm text-muted-foreground">
-                    No students match current filters.
+                  <div class="py-8 text-center text-sm text-muted-foreground">
+                    {hasActiveFilters()
+                      ? "No students match current filters."
+                      : "No students found."}
                   </div>
                 }
               >
@@ -296,8 +311,10 @@ export function AdminStudents() {
               <Show
                 when={staff().length > 0}
                 fallback={
-                  <div class="rounded-xl border border-border/70 p-4 text-sm text-muted-foreground">
-                    No staff match current filters.
+                  <div class="py-8 text-center text-sm text-muted-foreground">
+                    {hasActiveFilters()
+                      ? "No staff match current filters."
+                      : "No staff found."}
                   </div>
                 }
               >

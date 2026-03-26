@@ -10,6 +10,7 @@ import {
   TextFieldTextArea,
 } from "../../components/ui/text-field";
 import { DestructiveConfirmDialog } from "../../components/ui/destructive-confirm-dialog";
+import { Skeleton } from "../../components/ui/skeleton";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -165,47 +166,62 @@ export function AdminGoals() {
         >
           <Show
             when={!loading()}
-            fallback={<div class="mt-4 text-sm">Loading…</div>}
+            fallback={
+              <div class="mt-4 space-y-2">
+                <Skeleton class="h-12 w-full rounded-[var(--radius-md)]" animate />
+                <Skeleton class="h-12 w-full rounded-[var(--radius-md)]" animate />
+                <Skeleton class="h-12 w-full rounded-[var(--radius-md)]" animate />
+              </div>
+            }
           >
-            <div class="mt-4 grid gap-3">
-              {items().map((item) => (
-                <div
-                  class="cursor-pointer rounded-xl border p-4 transition-colors hover:bg-muted/30"
-                  onClick={() => selectItem(item)}
-                >
-                  <div class="flex items-start justify-between gap-4">
-                    <div>
-                      <div class="text-base font-semibold">{item.title}</div>
-                      <div class="text-sm text-muted-foreground">
-                        {item.description || "No description"}
+            <Show
+              when={items().length > 0}
+              fallback={
+                <div class="py-8 text-center text-sm text-muted-foreground">
+                  No goals yet.
+                </div>
+              }
+            >
+              <div class="mt-4 grid gap-3">
+                {items().map((item) => (
+                  <div
+                    class="cursor-pointer rounded-xl border p-4 transition-colors hover:bg-muted/30"
+                    onClick={() => selectItem(item)}
+                  >
+                    <div class="flex items-start justify-between gap-4">
+                      <div>
+                        <div class="text-base font-semibold">{item.title}</div>
+                        <div class="text-sm text-muted-foreground">
+                          {item.description || "No description"}
+                        </div>
+                      </div>
+                      <div class="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            selectItem(item);
+                          }}
+                        >
+                          Edit
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeleteTarget(item);
+                          }}
+                        >
+                          Delete
+                        </Button>
                       </div>
                     </div>
-                    <div class="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          selectItem(item);
-                        }}
-                      >
-                        Edit
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setDeleteTarget(item);
-                        }}
-                      >
-                        Delete
-                      </Button>
-                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            </Show>
           </Show>
         </SectionCard>
 

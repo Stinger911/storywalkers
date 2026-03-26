@@ -11,6 +11,7 @@ import {
 } from "../../components/ui/text-field";
 import { Badge } from "../../components/ui/badge";
 import { DestructiveConfirmDialog } from "../../components/ui/destructive-confirm-dialog";
+import { Skeleton } from "../../components/ui/skeleton";
 import { showToast } from "../../components/ui/toast";
 import {
   Breadcrumb,
@@ -269,12 +270,22 @@ export function AdminCourses() {
             </div>
           }
         >
-          <Show when={!loading()} fallback={<div class="mt-4 text-sm">Loading…</div>}>
+          <Show
+            when={!loading()}
+            fallback={
+              <div class="mt-4 space-y-2">
+                <Skeleton class="h-12 w-full rounded-[var(--radius-md)]" animate />
+                <Skeleton class="h-12 w-full rounded-[var(--radius-md)]" animate />
+                <Skeleton class="h-12 w-full rounded-[var(--radius-md)]" animate />
+                <Skeleton class="h-12 w-full rounded-[var(--radius-md)]" animate />
+              </div>
+            }
+          >
             <Show
               when={items().length > 0}
               fallback={
-                <div class="mt-4 rounded-xl border border-border/70 p-4 text-sm text-muted-foreground">
-                  No courses yet.
+                <div class="py-8 text-center text-sm text-muted-foreground">
+                  No courses yet. Create one above.
                 </div>
               }
             >

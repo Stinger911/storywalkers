@@ -3,6 +3,7 @@ import { createMemo, createSignal, createEffect, For, Show } from "solid-js";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { DestructiveConfirmDialog } from "../../components/ui/destructive-confirm-dialog";
+import { Skeleton } from "../../components/ui/skeleton";
 import {
   Dialog,
   DialogContent,
@@ -478,12 +479,22 @@ export function AdminCourseLessons() {
           </Button>
         }
       >
-        <Show when={!loading()} fallback={<div class="mt-4 text-sm">Loading…</div>}>
+        <Show
+          when={!loading()}
+          fallback={
+            <div class="mt-4 space-y-2">
+              <Skeleton class="h-12 w-full rounded-[var(--radius-md)]" animate />
+              <Skeleton class="h-12 w-full rounded-[var(--radius-md)]" animate />
+              <Skeleton class="h-12 w-full rounded-[var(--radius-md)]" animate />
+              <Skeleton class="h-12 w-full rounded-[var(--radius-md)]" animate />
+            </div>
+          }
+        >
           <Show
             when={items().length > 0}
             fallback={
-              <div class="mt-4 rounded-xl border border-border/70 p-4 text-sm text-muted-foreground">
-                No lessons yet.
+              <div class="py-8 text-center text-sm text-muted-foreground">
+                No lessons yet. Add one above.
               </div>
             }
           >

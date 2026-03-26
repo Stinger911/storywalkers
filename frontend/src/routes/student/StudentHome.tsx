@@ -11,6 +11,7 @@ import {
 } from '../../components/ui/dialog'
 import { Illustration } from '../../components/ui/illustration'
 import { SectionCard } from '../../components/ui/section-card'
+import { Skeleton } from '../../components/ui/skeleton'
 import { SmallStatBadge } from '../../components/ui/small-stat-badge'
 import { ProgressBar } from '../../components/ui/progress-bar'
 import { TextField, TextFieldInput, TextFieldLabel, TextFieldTextArea } from '../../components/ui/text-field'
@@ -78,14 +79,14 @@ export function StudentHome() {
         fallback={
           <div class="space-y-4">
             <div class="flex items-center gap-4">
-              <div class="h-10 w-56 animate-pulse rounded-[var(--radius-md)] bg-muted" />
-              <div class="h-7 w-20 animate-pulse rounded-full bg-muted" />
+              <Skeleton class="h-10 w-56 rounded-[var(--radius-md)]" animate />
+              <Skeleton class="h-7 w-20 rounded-full" animate />
             </div>
-            <div class="h-24 animate-pulse rounded-[var(--radius-lg)] bg-muted" />
+            <Skeleton class="h-24 rounded-[var(--radius-lg)]" animate />
             <div class="space-y-3">
-              <div class="h-6 w-40 animate-pulse rounded-[var(--radius-md)] bg-muted" />
-              <div class="h-20 animate-pulse rounded-[var(--radius-lg)] bg-muted" />
-              <div class="h-16 animate-pulse rounded-[var(--radius-lg)] bg-muted" />
+              <Skeleton class="h-6 w-40 rounded-[var(--radius-md)]" animate />
+              <Skeleton class="h-20 rounded-[var(--radius-lg)]" animate />
+              <Skeleton class="h-16 rounded-[var(--radius-lg)]" animate />
             </div>
           </div>
         }
