@@ -1,0 +1,348 @@
+{
+  "name": "Boosty Email Monitor - Gmail Trigger",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {
+          "labelIds": [],
+          "q": "from:boosty.to (subject:\"новый подписчик\" OR subject:\"новый донат\") -label:boosty_processed",
+          "readStatus": "both"
+        },
+        "options": {}
+      },
+      "id": "9fcfa14a-8ee3-4215-9294-f6e895d0bf4d",
+      "name": "Gmail Trigger",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -176,
+        0
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "Tg6a5Pd2hG5J1zQ6",
+          "name": "Gmail account SW"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "setup-1",
+              "name": "tg_admin_group_id",
+              "value": "-1003782734852",
+              "type": "string"
+            },
+            {
+              "id": "setup-2",
+              "name": "web_hook_url",
+              "value": "https://storywalkers-b4fdf--dev-8rn9qkkj.web.app/webhooks/gmail",
+              "type": "string"
+            },
+            {
+              "id": "setup-3",
+              "name": "processed_label_name",
+              "value": "boosty_processed",
+              "type": "string"
+            },
+            {
+              "id": "ab29afc6-eab6-46dc-a20d-ade0a5bb62c2",
+              "name": "SW_API_KEY",
+              "value": "jl2629lfahnfuj4s7bmtg8r0q9o3bcqc",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a5156234-df2a-455b-b694-80f87ebd487c",
+      "name": "Setup",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        64,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "messageId": "={{ $('Gmail Trigger').item.json.id }}",
+        "simple": false,
+        "options": {}
+      },
+      "id": "2316a27b-8464-43f2-bdaf-7e4ce30423f0",
+      "name": "Get a message",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        304,
+        0
+      ],
+      "webhookId": "e40969d2-8653-4923-b9e0-6b36088de67b",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "Tg6a5Pd2hG5J1zQ6",
+          "name": "Gmail account SW"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Setup').item.json.web_hook_url }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"emailId\": $('Get a message').item.json.id, \"messageId\": $('Get a message').item.json.id, \"subject\": $('Get a message').item.json.subject, \"from\": $('Get a message').item.json.from?.text || '', \"date\": $('Get a message').item.json.date, \"snippet\": $('Get a message').item.json.snippet, \"text\": $('Get a message').item.json.text, \"html\": $('Get a message').item.json.html } }}",
+        "options": {}
+      },
+      "id": "9afefebc-704a-4a02-a839-8458422fb36a",
+      "name": "Call HTTPS Endpoint",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        544,
+        0
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "5SmYQhQFsffVfbBM",
+          "name": "Header Auth account"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "http-success-check",
+              "leftValue": "={{ !!$json.error }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "0cea00c6-301c-42ab-9476-b8eb4f368c1b",
+      "name": "HTTP Success?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        784,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "addLabels",
+        "messageId": "={{ $('Get a message').item.json.id }}",
+        "labelIds": [
+          "Label_7115967923167926258"
+        ]
+      },
+      "id": "1fd51252-3171-40d5-919d-19a42d79ca6c",
+      "name": "Add Processed Label",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1024,
+        -80
+      ],
+      "webhookId": "e880fddf-c9cb-4e0d-acab-a6e2545bf91a",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "Tg6a5Pd2hG5J1zQ6",
+          "name": "Gmail account SW"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "markAsRead",
+        "messageId": "={{ $('Get a message').item.json.id }}"
+      },
+      "id": "d225cd88-ceb2-4d42-a01f-29dd1abdbb11",
+      "name": "Mark as Read",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1264,
+        -80
+      ],
+      "webhookId": "ffd00a84-3d4a-4c1f-900a-3efaa49202c8",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "Tg6a5Pd2hG5J1zQ6",
+          "name": "Gmail account SW"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "for (const item of $input.all()) {\n  const data = item.json.error || { name: 'Error', message: 'Unknown error' };\n  let text = (data.name || 'Error') + ' ' + (data.message || 'Unknown error');\n  text = text.replaceAll('_', '\\\\_');\n  text = text.replaceAll('*', '\\\\*');\n  text = text.replaceAll('[', '\\\\[');\n  text = text.replaceAll(']', '\\\\]');\n  text = text.replaceAll('(', '\\\\(');\n  text = text.replaceAll(')', '\\\\)');\n  text = text.replaceAll('~', '\\\\~');\n  text = text.replaceAll('`', '\\\\`');\n  text = text.replaceAll('>', '\\\\>');\n  text = text.replaceAll('#', '\\\\#');\n  text = text.replaceAll('+', '\\\\+');\n  text = text.replaceAll('-', '\\\\-');\n  text = text.replaceAll('=', '\\\\=');\n  text = text.replaceAll('|', '\\\\|');\n  text = text.replaceAll('{', '\\\\{');\n  text = text.replaceAll('}', '\\\\}');\n  text = text.replaceAll('.', '\\\\.');\n  text = text.replaceAll('!', '\\\\!');\n  item.json.error = item.json.error || {};\n  item.json.error.message = text;\n}\nreturn $input.all();"
+      },
+      "id": "8468be79-ca84-4d53-a716-9d4dbdcd7e4b",
+      "name": "Map Error Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1024,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Setup').item.json.tg_admin_group_id }}",
+        "text": "=🚨 Error processing Boosty email\n\nEmail ID: {{ $('Get a message').item.json.id }}\nSubject: {{ $('Get a message').item.json.subject }}\nError: {{ $json.error.message }}",
+        "additionalFields": {
+          "parse_mode": "MarkdownV2"
+        }
+      },
+      "id": "6396c561-e27a-446c-9a82-da49f7e409ca",
+      "name": "Log Error to Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1264,
+        80
+      ],
+      "webhookId": "b5e74bff-c0c0-4d1c-aaa5-a7d4215bdda4",
+      "credentials": {
+        "telegramApi": {
+          "id": "SHYvsPbit15MbdDb",
+          "name": "Telegram dev test"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "Setup",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Setup": {
+      "main": [
+        [
+          {
+            "node": "Get a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get a message": {
+      "main": [
+        [
+          {
+            "node": "Call HTTPS Endpoint",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call HTTPS Endpoint": {
+      "main": [
+        [
+          {
+            "node": "HTTP Success?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Success?": {
+      "main": [
+        [
+          {
+            "node": "Add Processed Label",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Map Error Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add Processed Label": {
+      "main": [
+        [
+          {
+            "node": "Mark as Read",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Map Error Message": {
+      "main": [
+        [
+          {
+            "node": "Log Error to Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "errorWorkflow": "DlW9onTw8HgCl3iS",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false,
+    "timeSavedPerExecution": 5
+  },
+  "versionId": "20bf4875-7c44-4fa4-86e4-2dd7bbd4da63",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "899d4ada7c2a91af1ad45b3d93cbd7a60489e825ced40cd449109d52bd341227"
+  },
+  "id": "1FHfEKurlynckgw9",
+  "tags": []
+}
