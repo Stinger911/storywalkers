@@ -74,6 +74,72 @@ describe("StudentHome", () => {
     expect(screen.getAllByText("Import footage").length).toBeGreaterThan(0);
   });
 
+  it("embeds official youtube lesson links in the current lesson card", () => {
+    useMyPlanMock.mockReturnValue({
+      plan: () => ({ studentUid: "u1", goalId: "g1" }),
+      goal: () => ({ title: "Video Editing Basics", description: "Learn the workflow." }),
+      steps: () => [
+        {
+          id: "s1",
+          title: "Import footage",
+          description: "Bring clips into the editor",
+          isDone: false,
+          materialUrl: "https://youtu.be/dQw4w9WgXcQ",
+        },
+      ],
+      loading: () => false,
+      error: () => null,
+      progress: () => ({ total: 1, done: 0, percent: 0 }),
+      markStepDone: markStepDoneMock,
+      completeStep: completeStepMock,
+      openMaterial: vi.fn(),
+    });
+
+    render(() => (
+      <I18nProvider>
+        <StudentHome />
+      </I18nProvider>
+    ));
+
+    const frame = screen.getByTitle("Import footage");
+    expect(frame.tagName).toBe("IFRAME");
+    expect(frame).toHaveAttribute(
+      "src",
+      "https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?rel=0",
+    );
+  });
+
+  it("does not embed non-youtube lesson links", () => {
+    useMyPlanMock.mockReturnValue({
+      plan: () => ({ studentUid: "u1", goalId: "g1" }),
+      goal: () => ({ title: "Video Editing Basics", description: "Learn the workflow." }),
+      steps: () => [
+        {
+          id: "s1",
+          title: "Import footage",
+          description: "Bring clips into the editor",
+          isDone: false,
+          materialUrl: "https://example.com/lesson",
+        },
+      ],
+      loading: () => false,
+      error: () => null,
+      progress: () => ({ total: 1, done: 0, percent: 0 }),
+      markStepDone: markStepDoneMock,
+      completeStep: completeStepMock,
+      openMaterial: vi.fn(),
+    });
+
+    render(() => (
+      <I18nProvider>
+        <StudentHome />
+      </I18nProvider>
+    ));
+
+    expect(screen.queryByTitle("Import footage")).not.toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Open" }).length).toBeGreaterThan(0);
+  });
+
   it("shows empty goal state when no plan", () => {
     useMyPlanMock.mockReturnValue({
       plan: () => null,
@@ -154,7 +220,7 @@ describe("StudentHome", () => {
     fireEvent.input(screen.getByLabelText("Link (optional)"), {
       target: { value: "https://example.com" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Complete step" }));
+    fireEvent.click(screen.getByRole("button", { name: "Complete lesson" }));
 
     expect(completeStepMock).toHaveBeenCalledWith("s1", {
       comment: "comment",
@@ -174,7 +240,7 @@ describe("StudentHome", () => {
     ));
 
     fireEvent.click(screen.getByText("Mark done"));
-    fireEvent.click(screen.getByRole("button", { name: "Complete step" }));
+    fireEvent.click(screen.getByRole("button", { name: "Complete lesson" }));
 
     await waitFor(() => {
       expect(showToastMock).toHaveBeenCalledWith(

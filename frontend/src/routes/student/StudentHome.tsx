@@ -21,6 +21,7 @@ import { useMe } from '../../lib/useMe'
 import { useI18n } from '../../lib/i18n'
 import { useMyPlan } from './studentPlanContext'
 import { cn } from '../../lib/utils'
+import { getYouTubeEmbedUrl } from '../../lib/youtube'
 
 export function StudentHome() {
   const { me } = useMe()
@@ -36,6 +37,7 @@ export function StudentHome() {
     return raw.trim().split(' ')[0] || t('student.home.fallbackName')
   })
   const currentStep = createMemo(() => steps().find((step) => !step.isDone) ?? null)
+  const currentStepEmbedUrl = createMemo(() => getYouTubeEmbedUrl(currentStep()?.materialUrl))
 
   const openCompleteDialog = (stepId: string) => {
     setPendingStepId(stepId)
@@ -211,6 +213,20 @@ export function StudentHome() {
                       <Show when={step().isLocked}>
                         <div class="mt-2 text-xs font-medium text-muted-foreground">
                           {t('student.home.stepLocked')}
+                        </div>
+                      </Show>
+                      <Show when={currentStepEmbedUrl() && !step().isLocked}>
+                        <div class="mt-4 overflow-hidden rounded-[var(--radius-md)] border border-border/70 bg-muted/30">
+                          <div class="aspect-video">
+                            <iframe
+                              class="h-full w-full"
+                              src={currentStepEmbedUrl() ?? undefined}
+                              title={step().title}
+                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                              allowfullscreen
+                              referrerPolicy="strict-origin-when-cross-origin"
+                            />
+                          </div>
                         </div>
                       </Show>
                       <Show when={step().materialUrl}>
