@@ -80,7 +80,7 @@ export function AdminHome() {
             href="/admin/step-completions"
             class="panel panel--center hover:shadow-lg"
           >
-            <h3 class="text-lg font-semibold">Step Completions</h3>
+            <h3 class="text-lg font-semibold">Lesson Completions</h3>
             <p class="text-sm text-muted-foreground">
               Review and edit completion notes.
             </p>

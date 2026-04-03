@@ -10,6 +10,8 @@ import {
   TextFieldTextArea,
 } from "../../components/ui/text-field";
 import { Badge } from "../../components/ui/badge";
+import { DestructiveConfirmDialog } from "../../components/ui/destructive-confirm-dialog";
+import { Skeleton } from "../../components/ui/skeleton";
 import { showToast } from "../../components/ui/toast";
 import {
   Breadcrumb,
@@ -56,6 +58,7 @@ export function AdminCourses() {
   const [loading, setLoading] = createSignal(true);
   const [error, setError] = createSignal<string | null>(null);
   const [saving, setSaving] = createSignal(false);
+  const [deleteTarget, setDeleteTarget] = createSignal<AdminCourse | null>(null);
   const [query, setQuery] = createSignal("");
   const [form, setForm] = createSignal<CourseForm>({
     title: "",
@@ -178,8 +181,9 @@ export function AdminCourses() {
     }
   };
 
-  const remove = async (item: AdminCourse) => {
-    if (!confirm(`Deactivate course "${item.title}"?`)) return;
+  const remove = async () => {
+    const item = deleteTarget();
+    if (!item) return;
     setSaving(true);
     setError(null);
     try {
@@ -189,6 +193,7 @@ export function AdminCourses() {
       if (form().id === item.id) {
         resetForm();
       }
+      setDeleteTarget(null);
     } catch (err) {
       const message = (err as Error).message;
       setError(message);
@@ -265,12 +270,22 @@ export function AdminCourses() {
             </div>
           }
         >
-          <Show when={!loading()} fallback={<div class="mt-4 text-sm">Loading…</div>}>
+          <Show
+            when={!loading()}
+            fallback={
+              <div class="mt-4 space-y-2">
+                <Skeleton class="h-12 w-full rounded-[var(--radius-md)]" animate />
+                <Skeleton class="h-12 w-full rounded-[var(--radius-md)]" animate />
+                <Skeleton class="h-12 w-full rounded-[var(--radius-md)]" animate />
+                <Skeleton class="h-12 w-full rounded-[var(--radius-md)]" animate />
+              </div>
+            }
+          >
             <Show
               when={items().length > 0}
               fallback={
-                <div class="mt-4 rounded-xl border border-border/70 p-4 text-sm text-muted-foreground">
-                  No courses yet.
+                <div class="py-8 text-center text-sm text-muted-foreground">
+                  No courses yet. Create one above.
                 </div>
               }
             >
@@ -306,7 +321,7 @@ export function AdminCourses() {
                             Lessons
                           </Button>
                           <Button variant="outline" size="sm" onClick={() => selectItem(item)}>
-                            Edit
+                            Manage
                           </Button>
                           <Button
                             variant="outline"
@@ -319,7 +334,7 @@ export function AdminCourses() {
                           <Button
                             variant="destructive"
                             size="sm"
-                            onClick={() => void remove(item)}
+                            onClick={() => setDeleteTarget(item)}
                             disabled={saving() || !item.isActive}
                           >
                             Soft delete
@@ -422,6 +437,21 @@ export function AdminCourses() {
           </div>
         </SectionCard>
       </div>
+
+      <DestructiveConfirmDialog
+        open={deleteTarget() !== null}
+        onOpenChange={(open) => {
+          if (!saving() && !open) setDeleteTarget(null);
+        }}
+        title="Deactivate course?"
+        description={`This hides "${deleteTarget()?.title || "this course"}" from active sales and onboarding selection.`}
+        acknowledgeLabel="I understand this action removes the course from active use."
+        confirmKeyword="DELETE"
+        confirmLabel="Confirm deactivate"
+        loading={saving()}
+        onConfirm={remove}
+        testIdPrefix="delete-course"
+      />
     </Page>
   );
 }

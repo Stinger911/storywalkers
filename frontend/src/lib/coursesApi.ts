@@ -7,6 +7,7 @@ export type Course = {
   priceUsdCents: number;
   isActive: boolean;
   goalIds: string[];
+  lessonCount?: number;
 };
 
 type CoursesResponse = {
@@ -22,6 +23,7 @@ type RawCourse = {
   price?: unknown;
   isActive?: unknown;
   goalIds?: unknown;
+  lessonCount?: unknown;
 };
 
 async function handleJson<T>(response: Response): Promise<T> {
@@ -64,6 +66,10 @@ function normalizeCourse(raw: RawCourse): Course | null {
     priceUsdCents: Number.isFinite(cents) ? Math.max(0, Math.round(cents)) : 0,
     isActive: raw.isActive !== false,
     goalIds,
+    lessonCount:
+      typeof raw.lessonCount === "number" && Number.isFinite(raw.lessonCount)
+        ? Math.max(0, Math.round(raw.lessonCount))
+        : undefined,
   };
 }
 

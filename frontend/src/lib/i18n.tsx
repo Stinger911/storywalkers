@@ -103,6 +103,7 @@ type RawDictionary = {
       contactAdmin: string;
       dashboardTitle: string;
       progressComplete: string;
+      progressCounter: string;
       goalLabel: string;
       goalFallbackTitle: string;
       goalFallbackDescription: string;
@@ -120,6 +121,7 @@ type RawDictionary = {
       currentStepMaterial: string;
       currentStepMarkDone: string;
       currentStepEmpty: string;
+      stepLocked: string;
       completeDialogTitle: string;
       completeDialogDescription: string;
       completeDialogCommentLabel: string;
@@ -288,6 +290,7 @@ type RawDictionary = {
         loadError: string;
         saveError: string;
         currencySaveError: string;
+        lessonCount: string;
         empty: string;
       };
       checkout: {
@@ -393,7 +396,8 @@ const dictionaries: Record<Locale, RawDictionary> = {
       titleExpired: "Access expired",
       descriptionExpired:
         "Your access period has ended. Some sections are unavailable until renewal.",
-      renewalMessage: "To continue learning, contact support and request renewal.",
+      renewalMessage:
+        "To continue learning, contact support and request renewal.",
       continueOnboarding: "Continue onboarding",
       logout: "Log out",
     },
@@ -418,24 +422,27 @@ const dictionaries: Record<Locale, RawDictionary> = {
         contactAdmin: "Contact admin",
         dashboardTitle: "Student Dashboard",
         progressComplete: "{{ percent }}% complete",
+        progressCounter: "{{ done }} / {{ total }} lessons done",
         goalLabel: "Goal",
         goalFallbackTitle: "Learning goal",
         goalFallbackDescription: "Your personalized learning path.",
         goalThumbnailAlt: "Goal thumbnail",
-        stepsTitle: "Steps",
+        stepsTitle: "Lessons",
         stepsDescription: "Work through your path in order.",
-        stepsEmpty: "No steps yet. Ask a question or explore the library.",
+        stepsEmpty: "No lessons yet. Ask a question or explore the library.",
         stepsAskQuestion: "Ask a question",
         stepsBrowseLibrary: "Browse library",
         markDone: "Mark as done",
         markNotDone: "Mark as not done",
-        currentStepTitle: "Current step",
-        currentStepDescription: "Focus on the next unfinished step in your path.",
+        currentStepTitle: "Current lesson",
+        currentStepDescription:
+          "Focus on the next unfinished lesson in your path.",
         currentStepLabel: "Up next",
         currentStepMaterial: "View material",
         currentStepMarkDone: "Mark done",
-        currentStepEmpty: "You’ve completed every step. Nice work!",
-        completeDialogTitle: "Complete step",
+        currentStepEmpty: "You’ve completed every lesson. Nice work!",
+        stepLocked: "Complete previous lessons first",
+        completeDialogTitle: "Complete lesson",
         completeDialogDescription: "Add a comment and link if needed.",
         completeDialogCommentLabel: "Comment (optional)",
         completeDialogLinkLabel: "Link (optional)",
@@ -446,9 +453,9 @@ const dictionaries: Record<Locale, RawDictionary> = {
         completeDialogDriveHelpStep3: "Set access to “Viewer”.",
         completeDialogDriveHelpStep4: "Copy the link and paste it above.",
         completeDialogCancel: "Cancel",
-        completeDialogConfirm: "Complete step",
+        completeDialogConfirm: "Complete lesson",
         completeDialogErrorTitle: "Error",
-        completeDialogErrorBody: "Could not complete step",
+        completeDialogErrorBody: "Could not complete lesson",
       },
       questionsRail: {
         illustrationAlt: "Questions illustration",
@@ -606,6 +613,7 @@ const dictionaries: Record<Locale, RawDictionary> = {
           loadError: "Could not load courses.",
           saveError: "Could not save selected courses.",
           currencySaveError: "Could not save preferred currency.",
+          lessonCount: "{{ count }} lessons",
           empty: "No courses selected yet.",
         },
         checkout: {
@@ -734,24 +742,26 @@ const dictionaries: Record<Locale, RawDictionary> = {
         contactAdmin: "Связаться с админом",
         dashboardTitle: "Панель студента",
         progressComplete: "{{ percent }}% выполнено",
+        progressCounter: "{{ done }} из {{ total }} уроков выполнено",
         goalLabel: "Цель",
         goalFallbackTitle: "Учебная цель",
         goalFallbackDescription: "Ваш персональный путь обучения.",
         goalThumbnailAlt: "Иконка цели",
-        stepsTitle: "Шаги",
+        stepsTitle: "Уроки",
         stepsDescription: "Проходите путь по порядку.",
-        stepsEmpty: "Шагов пока нет. Задайте вопрос или изучите библиотеку.",
+        stepsEmpty: "Уроков пока нет. Задайте вопрос или изучите библиотеку.",
         stepsAskQuestion: "Задать вопрос",
         stepsBrowseLibrary: "Открыть библиотеку",
         markDone: "Отметить как выполненное",
         markNotDone: "Снять отметку выполнения",
-        currentStepTitle: "Текущий шаг",
-        currentStepDescription: "Следующий невыполненный шаг вашего пути.",
+        currentStepTitle: "Текущий урок",
+        currentStepDescription: "Следующий невыполненный урок вашего пути.",
         currentStepLabel: "Следующее действие",
         currentStepMaterial: "Открыть материалы",
         currentStepMarkDone: "Отметить выполненным",
-        currentStepEmpty: "Все шаги выполнены. Отличная работа!",
-        completeDialogTitle: "Завершить шаг",
+        currentStepEmpty: "Все уроки выполнены. Отличная работа!",
+        stepLocked: "Сначала завершите предыдущие уроки",
+        completeDialogTitle: "Завершить урок",
         completeDialogDescription:
           "Добавьте комментарий и ссылку при необходимости.",
         completeDialogCommentLabel: "Комментарий (опц.)",
@@ -764,9 +774,9 @@ const dictionaries: Record<Locale, RawDictionary> = {
         completeDialogDriveHelpStep4:
           "Скопируйте ссылку и вставьте в поле выше.",
         completeDialogCancel: "Отмена",
-        completeDialogConfirm: "Завершить шаг",
+        completeDialogConfirm: "Завершить урок",
         completeDialogErrorTitle: "Ошибка",
-        completeDialogErrorBody: "Не удалось завершить шаг",
+        completeDialogErrorBody: "Не удалось завершить урок",
       },
       questionsRail: {
         illustrationAlt: "Иллюстрация вопросов",
@@ -924,6 +934,7 @@ const dictionaries: Record<Locale, RawDictionary> = {
           loadError: "Не удалось загрузить курсы.",
           saveError: "Не удалось сохранить выбранные курсы.",
           currencySaveError: "Не удалось сохранить предпочитаемую валюту.",
+          lessonCount: "{{ count }} уроков",
           empty: "Курсы пока не выбраны.",
         },
         checkout: {

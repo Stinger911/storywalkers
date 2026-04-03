@@ -22,6 +22,7 @@ type PlanStep = {
   materialUrl: string;
   order: number;
   isDone: boolean;
+  isLocked: boolean;
   doneAt?: { toDate?: () => Date } | null;
   doneComment?: string | null;
   doneLink?: string | null;
@@ -72,17 +73,22 @@ export function StudentPlanProvider(props: { children: JSX.Element }) {
         stepsData.items
           .slice()
           .sort((a, b) => a.order - b.order)
-          .map((step: ApiPlanStep) => ({
-            id: step.stepId,
-            title: step.title,
-            description: step.description,
-            materialUrl: step.materialUrl,
-            order: step.order,
-            isDone: step.isDone,
-            doneAt: step.doneAt as { toDate?: () => Date } | null,
-            doneComment: step.doneComment ?? null,
-            doneLink: step.doneLink ?? null,
-          })),
+          .map((step: ApiPlanStep) => {
+            // TODO: implement sequential locking in future epic.
+            const isLocked = step.order > 0 && false;
+            return {
+              id: step.stepId,
+              title: step.title,
+              description: step.description,
+              materialUrl: step.materialUrl,
+              order: step.order,
+              isDone: step.isDone,
+              isLocked,
+              doneAt: step.doneAt as { toDate?: () => Date } | null,
+              doneComment: step.doneComment ?? null,
+              doneLink: step.doneLink ?? null,
+            };
+          }),
       );
     } catch (err) {
       setError((err as Error).message);

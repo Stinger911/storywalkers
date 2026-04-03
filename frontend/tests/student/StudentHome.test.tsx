@@ -67,8 +67,77 @@ describe("StudentHome", () => {
     ));
     expect(screen.getByText("Hi, Alex!")).toBeInTheDocument();
     expect(screen.getByText("Student Dashboard")).toBeInTheDocument();
-    expect(screen.getByText("Current step")).toBeInTheDocument();
+    expect(screen.getByText("Current lesson")).toBeInTheDocument();
+    expect(screen.getByText("Lessons")).toBeInTheDocument();
+    expect(screen.getByText("0 / 1 lessons done")).toBeInTheDocument();
+    expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "0");
     expect(screen.getAllByText("Import footage").length).toBeGreaterThan(0);
+  });
+
+  it("embeds official youtube lesson links in the current lesson card", () => {
+    useMyPlanMock.mockReturnValue({
+      plan: () => ({ studentUid: "u1", goalId: "g1" }),
+      goal: () => ({ title: "Video Editing Basics", description: "Learn the workflow." }),
+      steps: () => [
+        {
+          id: "s1",
+          title: "Import footage",
+          description: "Bring clips into the editor",
+          isDone: false,
+          materialUrl: "https://youtu.be/dQw4w9WgXcQ",
+        },
+      ],
+      loading: () => false,
+      error: () => null,
+      progress: () => ({ total: 1, done: 0, percent: 0 }),
+      markStepDone: markStepDoneMock,
+      completeStep: completeStepMock,
+      openMaterial: vi.fn(),
+    });
+
+    render(() => (
+      <I18nProvider>
+        <StudentHome />
+      </I18nProvider>
+    ));
+
+    const frame = screen.getByTitle("Import footage");
+    expect(frame.tagName).toBe("IFRAME");
+    expect(frame).toHaveAttribute(
+      "src",
+      "https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?rel=0",
+    );
+  });
+
+  it("does not embed non-youtube lesson links", () => {
+    useMyPlanMock.mockReturnValue({
+      plan: () => ({ studentUid: "u1", goalId: "g1" }),
+      goal: () => ({ title: "Video Editing Basics", description: "Learn the workflow." }),
+      steps: () => [
+        {
+          id: "s1",
+          title: "Import footage",
+          description: "Bring clips into the editor",
+          isDone: false,
+          materialUrl: "https://example.com/lesson",
+        },
+      ],
+      loading: () => false,
+      error: () => null,
+      progress: () => ({ total: 1, done: 0, percent: 0 }),
+      markStepDone: markStepDoneMock,
+      completeStep: completeStepMock,
+      openMaterial: vi.fn(),
+    });
+
+    render(() => (
+      <I18nProvider>
+        <StudentHome />
+      </I18nProvider>
+    ));
+
+    expect(screen.queryByTitle("Import footage")).not.toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Open" }).length).toBeGreaterThan(0);
   });
 
   it("shows empty goal state when no plan", () => {
@@ -151,7 +220,7 @@ describe("StudentHome", () => {
     fireEvent.input(screen.getByLabelText("Link (optional)"), {
       target: { value: "https://example.com" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Complete step" }));
+    fireEvent.click(screen.getByRole("button", { name: "Complete lesson" }));
 
     expect(completeStepMock).toHaveBeenCalledWith("s1", {
       comment: "comment",
@@ -171,7 +240,7 @@ describe("StudentHome", () => {
     ));
 
     fireEvent.click(screen.getByText("Mark done"));
-    fireEvent.click(screen.getByRole("button", { name: "Complete step" }));
+    fireEvent.click(screen.getByRole("button", { name: "Complete lesson" }));
 
     await waitFor(() => {
       expect(showToastMock).toHaveBeenCalledWith(
@@ -181,6 +250,40 @@ describe("StudentHome", () => {
         }),
       );
     });
+  });
+
+  it("renders locked lesson state and disables lesson actions", () => {
+    useMyPlanMock.mockReturnValue({
+      plan: () => ({ studentUid: "u1", goalId: "g1" }),
+      goal: () => ({ title: "Video Editing Basics", description: "Learn the workflow." }),
+      steps: () => [
+        {
+          id: "s1",
+          title: "Locked lesson",
+          description: "Finish previous work first",
+          isDone: false,
+          isLocked: true,
+          materialUrl: "https://example.com/lesson",
+        },
+      ],
+      loading: () => false,
+      error: () => null,
+      progress: () => ({ total: 1, done: 0, percent: 0 }),
+      markStepDone: markStepDoneMock,
+      completeStep: completeStepMock,
+      openMaterial: vi.fn(),
+    });
+
+    render(() => (
+      <I18nProvider>
+        <StudentHome />
+      </I18nProvider>
+    ));
+
+    expect(screen.getAllByText("Complete previous lessons first").length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("button", { name: "Open" }).every((button) => button.hasAttribute("disabled"))).toBe(true);
+    expect(screen.getByRole("button", { name: "Mark done" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Mark as done" })).toBeDisabled();
   });
 
   it("renders done comment and link only when values exist", () => {

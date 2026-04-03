@@ -26,11 +26,13 @@ class PatchCategoryRequest(BaseModel):
 class CreateGoalRequest(BaseModel):
     title: str
     description: str | None = None
+    isActive: bool = True
 
 
 class PatchGoalRequest(BaseModel):
     title: str | None = None
     description: str | None = None
+    isActive: bool | None = None
 
 
 class CreateStepTemplateRequest(BaseModel):
@@ -129,15 +131,25 @@ async def delete_category(
 @router.get("/goals")
 async def list_goals(
     user: dict = Depends(get_current_user),
+    is_active: bool | None = Query(None, alias="isActive"),
     limit: int = Query(100, ge=1, le=100),
 ):
     db = get_firestore_client()
-    query = db.collection("goals").order_by("createdAt").limit(limit)
+    query = db.collection("goals").order_by("createdAt")
     items = []
     for snap in query.stream():
         data = snap.to_dict() or {}
+        goal_is_active = data.get("isActive")
+        if user.get("role") == "staff":
+            expected_is_active = True if is_active is None else is_active
+            if bool(goal_is_active if goal_is_active is not None else True) != expected_is_active:
+                continue
+        elif data.get("isActive") is False:
+            continue
         data["id"] = snap.id
         items.append(data)
+        if len(items) >= limit:
+            break
     return {"items": items}
 
 
@@ -151,6 +163,7 @@ async def create_goal(
     data = {
         "title": payload.title,
         "description": payload.description,
+        "isActive": payload.isActive,
         "createdAt": now,
         "updatedAt": now,
     }
@@ -182,7 +195,7 @@ async def delete_goal(
     db = get_firestore_client()
     doc_ref = db.collection("goals").document(id)
     _doc_or_404(doc_ref)
-    doc_ref.delete()
+    doc_ref.update({"isActive": False, "updatedAt": firestore.SERVER_TIMESTAMP})
     return None
 
 

@@ -26,6 +26,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "../../components/ui/dialog";
+import { DestructiveConfirmDialog } from "../../components/ui/destructive-confirm-dialog";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -134,8 +135,6 @@ export function AdminStudentProfile() {
   const [previewConfirm, setPreviewConfirm] = createSignal("");
   const [previewAcknowledge, setPreviewAcknowledge] = createSignal(false);
   const [deleteOpen, setDeleteOpen] = createSignal(false);
-  const [deleteConfirm, setDeleteConfirm] = createSignal("");
-  const [deleteAcknowledge, setDeleteAcknowledge] = createSignal(false);
   const [deletingStudent, setDeletingStudent] = createSignal(false);
 
   const load = async () => {
@@ -413,16 +412,12 @@ export function AdminStudentProfile() {
   };
 
   const openDeleteDialog = () => {
-    setDeleteConfirm("");
-    setDeleteAcknowledge(false);
     setDeleteOpen(true);
   };
 
   const closeDeleteDialog = () => {
     if (deletingStudent()) return;
     setDeleteOpen(false);
-    setDeleteConfirm("");
-    setDeleteAcknowledge(false);
   };
 
   const confirmDeleteStudent = async () => {
@@ -933,68 +928,24 @@ export function AdminStudentProfile() {
         </DialogContent>
       </Dialog>
 
-      <Dialog
+      <DestructiveConfirmDialog
         open={deleteOpen()}
         onOpenChange={(open) => {
-          if (!deletingStudent()) setDeleteOpen(open);
+          if (open) {
+            setDeleteOpen(true);
+            return;
+          }
+          closeDeleteDialog();
         }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete student account?</DialogTitle>
-            <DialogDescription>
-              This permanently deletes the student user and their learning data.
-              This cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div class="space-y-3 text-sm">
-            <label class="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={deleteAcknowledge()}
-                onChange={(event) =>
-                  setDeleteAcknowledge(event.currentTarget.checked)
-                }
-                data-testid="delete-student-acknowledge"
-              />
-              I understand this action is permanent.
-            </label>
-            <TextField>
-              <TextFieldLabel for="delete-student-confirm">Type DELETE</TextFieldLabel>
-              <TextFieldInput
-                id="delete-student-confirm"
-                value={deleteConfirm()}
-                onInput={(event) => setDeleteConfirm(event.currentTarget.value)}
-                placeholder="DELETE"
-                data-testid="delete-student-confirm-input"
-              />
-            </TextField>
-          </div>
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={closeDeleteDialog}
-              disabled={deletingStudent()}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={() => void confirmDeleteStudent()}
-              disabled={
-                deletingStudent() ||
-                !deleteAcknowledge() ||
-                deleteConfirm() !== "DELETE"
-              }
-              data-testid="delete-student-confirm-button"
-            >
-              Confirm delete
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        title="Delete student account?"
+        description="This permanently deletes the student user and their learning data. This cannot be undone."
+        acknowledgeLabel="I understand this action is permanent."
+        confirmKeyword="DELETE"
+        confirmLabel="Confirm delete"
+        loading={deletingStudent()}
+        onConfirm={confirmDeleteStudent}
+        testIdPrefix="delete-student"
+      />
     </Page>
   );
 }

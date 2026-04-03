@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AdminCourseLessons } from "../../src/routes/admin/AdminCourseLessons";
 import {
+  deleteAdminCourseLesson,
   listAdminCourseLessons,
   reorderAdminCourseLessons,
 } from "../../src/lib/adminApi";
@@ -37,6 +38,7 @@ describe("AdminCourseLessons", () => {
   beforeEach(() => {
     vi.mocked(listAdminCourseLessons).mockReset();
     vi.mocked(reorderAdminCourseLessons).mockReset();
+    vi.mocked(deleteAdminCourseLesson).mockReset();
   });
 
   it("triggers reorder request via fallback move control", async () => {
@@ -76,6 +78,39 @@ describe("AdminCourseLessons", () => {
           { lessonId: "l1", order: 1 },
         ],
       });
+    });
+  });
+
+  it("requires typed confirmation before deactivating a lesson", async () => {
+    vi.mocked(listAdminCourseLessons).mockResolvedValue({
+      items: [
+        {
+          id: "l1",
+          title: "Lesson One",
+          type: "video",
+          content: "A",
+          order: 0,
+          isActive: true,
+        },
+      ],
+    });
+    vi.mocked(deleteAdminCourseLesson).mockResolvedValue(undefined);
+
+    render(() => <AdminCourseLessons />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Deactivate" }));
+
+    const confirmButton = await screen.findByTestId("delete-lesson-confirm-button");
+    expect(confirmButton).toBeDisabled();
+
+    fireEvent.click(await screen.findByTestId("delete-lesson-acknowledge"));
+    fireEvent.input(await screen.findByTestId("delete-lesson-confirm-input"), {
+      target: { value: "DELETE" },
+    });
+    fireEvent.click(confirmButton);
+
+    await waitFor(() => {
+      expect(deleteAdminCourseLesson).toHaveBeenCalledWith("course-1", "l1");
     });
   });
 });

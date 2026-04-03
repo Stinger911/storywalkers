@@ -1322,11 +1322,25 @@ paths:
           schema:
             type: integer
             default: 50
-            maximum: 200
+            minimum: 1
+            maximum: 100
         - in: query
           name: cursor
           schema:
             type: string
+          description: UID of the last item from the previous page.
+        - in: query
+          name: sortBy
+          schema:
+            type: string
+            enum: [createdAt, progress]
+            default: createdAt
+        - in: query
+          name: sortDir
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
       responses:
         "200":
           description: OK

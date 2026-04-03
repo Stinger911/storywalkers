@@ -389,12 +389,18 @@ export async function listStudents(params?: {
   role?: string
   q?: string
   limit?: number
+  sortBy?: 'createdAt' | 'progress'
+  sortDir?: 'asc' | 'desc'
+  cursor?: string
 }) {
   const query = new URLSearchParams()
   if (params?.status) query.set('status', params.status)
   if (params?.role) query.set('role', params.role)
   if (params?.q) query.set('q', params.q)
   if (params?.limit) query.set('limit', String(params.limit))
+  if (params?.sortBy) query.set('sortBy', params.sortBy)
+  if (params?.sortDir) query.set('sortDir', params.sortDir)
+  if (params?.cursor) query.set('cursor', params.cursor)
   const response = await apiFetch(`/api/admin/students?${query.toString()}`)
   return handleJson<ApiList<Student>>(response)
 }

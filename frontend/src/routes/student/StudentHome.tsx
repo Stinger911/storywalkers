@@ -11,7 +11,9 @@ import {
 } from '../../components/ui/dialog'
 import { Illustration } from '../../components/ui/illustration'
 import { SectionCard } from '../../components/ui/section-card'
+import { Skeleton } from '../../components/ui/skeleton'
 import { SmallStatBadge } from '../../components/ui/small-stat-badge'
+import { ProgressBar } from '../../components/ui/progress-bar'
 import { TextField, TextFieldInput, TextFieldLabel, TextFieldTextArea } from '../../components/ui/text-field'
 import { showToast } from '../../components/ui/toast'
 import { EditableDisplayName } from '../../components/ui/editable-display-name'
@@ -19,6 +21,7 @@ import { useMe } from '../../lib/useMe'
 import { useI18n } from '../../lib/i18n'
 import { useMyPlan } from './studentPlanContext'
 import { cn } from '../../lib/utils'
+import { getYouTubeEmbedUrl } from '../../lib/youtube'
 
 export function StudentHome() {
   const { me } = useMe()
@@ -34,6 +37,7 @@ export function StudentHome() {
     return raw.trim().split(' ')[0] || t('student.home.fallbackName')
   })
   const currentStep = createMemo(() => steps().find((step) => !step.isDone) ?? null)
+  const currentStepEmbedUrl = createMemo(() => getYouTubeEmbedUrl(currentStep()?.materialUrl))
 
   const openCompleteDialog = (stepId: string) => {
     setPendingStepId(stepId)
@@ -77,14 +81,14 @@ export function StudentHome() {
         fallback={
           <div class="space-y-4">
             <div class="flex items-center gap-4">
-              <div class="h-10 w-56 animate-pulse rounded-[var(--radius-md)] bg-muted" />
-              <div class="h-7 w-20 animate-pulse rounded-full bg-muted" />
+              <Skeleton class="h-10 w-56 rounded-[var(--radius-md)]" animate />
+              <Skeleton class="h-7 w-20 rounded-full" animate />
             </div>
-            <div class="h-24 animate-pulse rounded-[var(--radius-lg)] bg-muted" />
+            <Skeleton class="h-24 rounded-[var(--radius-lg)]" animate />
             <div class="space-y-3">
-              <div class="h-6 w-40 animate-pulse rounded-[var(--radius-md)] bg-muted" />
-              <div class="h-20 animate-pulse rounded-[var(--radius-lg)] bg-muted" />
-              <div class="h-16 animate-pulse rounded-[var(--radius-lg)] bg-muted" />
+              <Skeleton class="h-6 w-40 rounded-[var(--radius-md)]" animate />
+              <Skeleton class="h-20 rounded-[var(--radius-lg)]" animate />
+              <Skeleton class="h-16 rounded-[var(--radius-lg)]" animate />
             </div>
           </div>
         }
@@ -134,9 +138,17 @@ export function StudentHome() {
         >
           <div class="flex items-center justify-between gap-4">
             <h2 class="text-lg font-semibold">{t('student.home.dashboardTitle')}</h2>
-            <SmallStatBadge>
-              {t('student.home.progressComplete', { percent: progress().percent })}
-            </SmallStatBadge>
+            <div class="flex flex-wrap items-center justify-end gap-2">
+              <SmallStatBadge>
+                {t('student.home.progressComplete', { percent: progress().percent })}
+              </SmallStatBadge>
+              <SmallStatBadge>
+                {t('student.home.progressCounter', {
+                  done: progress().done,
+                  total: progress().total,
+                })}
+              </SmallStatBadge>
+            </div>
           </div>
 
           <Card class="border border-border/70">
@@ -151,12 +163,7 @@ export function StudentHome() {
                 <p class="text-sm text-muted-foreground">
                   {goal()?.description ?? t('student.home.goalFallbackDescription')}
                 </p>
-                <div class="mt-4 h-2 w-full overflow-hidden rounded-full bg-muted">
-                  <div
-                    class="h-full rounded-full bg-primary transition-all"
-                    style={{ width: `${progress().percent}%` }}
-                  />
-                </div>
+                <ProgressBar class="mt-4" value={progress().percent} />
               </div>
               <div class="flex justify-start lg:justify-center">
                 <Illustration
@@ -181,22 +188,52 @@ export function StudentHome() {
               }
             >
               {(step) => (
-                <div class="rounded-[var(--radius-lg)] border border-border/70 bg-card p-5 shadow-rail">
+                <div
+                  class={cn(
+                    'rounded-[var(--radius-lg)] border border-border/70 bg-card p-5 shadow-rail',
+                    step().isLocked && 'opacity-60',
+                  )}
+                >
                   <div class="flex flex-wrap items-start justify-between gap-4">
                     <div class="min-w-0">
                       <div class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                         {t('student.home.currentStepLabel')}
                       </div>
-                      <div class="mt-2 text-lg font-semibold">
+                      <div
+                        class={cn(
+                          'mt-2 text-lg font-semibold',
+                          step().isLocked && 'text-muted-foreground',
+                        )}
+                      >
                         {step().title}
                       </div>
                       <div class="mt-2 text-sm text-muted-foreground">
                         {step().description}
                       </div>
+                      <Show when={step().isLocked}>
+                        <div class="mt-2 text-xs font-medium text-muted-foreground">
+                          {t('student.home.stepLocked')}
+                        </div>
+                      </Show>
+                      <Show when={currentStepEmbedUrl() && !step().isLocked}>
+                        <div class="mt-4 overflow-hidden rounded-[var(--radius-md)] border border-border/70 bg-muted/30">
+                          <div class="aspect-video">
+                            <iframe
+                              class="h-full w-full"
+                              src={currentStepEmbedUrl() ?? undefined}
+                              title={step().title}
+                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                              allowfullscreen
+                              referrerPolicy="strict-origin-when-cross-origin"
+                            />
+                          </div>
+                        </div>
+                      </Show>
                       <Show when={step().materialUrl}>
                         <button
                           class="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-primary"
                           onClick={() => openMaterial(step().materialUrl)}
+                          disabled={step().isLocked}
                         >
                           <span class="material-symbols-outlined text-[18px]">open_in_new</span>
                           {t('student.home.currentStepMaterial')}
@@ -208,6 +245,7 @@ export function StudentHome() {
                         <button
                           class={buttonVariants({ size: 'sm' })}
                           onClick={() => openMaterial(step().materialUrl)}
+                          disabled={step().isLocked}
                         >
                           {t('common.open')}
                         </button>
@@ -220,6 +258,7 @@ export function StudentHome() {
                         variant="outline"
                         size="sm"
                         onClick={() => openCompleteDialog(step().id)}
+                        disabled={step().isLocked}
                       >
                         {t('student.home.currentStepMarkDone')}
                       </Button>
@@ -252,22 +291,41 @@ export function StudentHome() {
             >
               <div class="grid gap-3">
                 {steps().map((step) => (
-                  <div class="rounded-[var(--radius-md)] border border-border/70 bg-card px-4 py-3 shadow-rail">
+                  <div
+                    class={cn(
+                      'rounded-[var(--radius-md)] border border-border/70 bg-card px-4 py-3 shadow-rail',
+                      step.isLocked && 'opacity-60',
+                    )}
+                  >
                     <div class="flex items-center justify-between gap-4">
                       <div class="flex items-center gap-3 min-w-0">
                         <span
                           class={cn(
                             "material-symbols-outlined text-[22px]",
-                            step.isDone ? "text-success-foreground" : "text-muted-foreground",
+                            step.isDone
+                              ? "text-success-foreground"
+                              : "text-muted-foreground",
                           )}
                         >
-                          {step.isDone ? "check_circle" : "schedule"}
+                          {step.isDone ? "check_circle" : step.isLocked ? "lock" : "schedule"}
                         </span>
                         <div class="min-w-0 max-w-[520px]">
-                          <div class="truncate text-sm font-semibold">{step.title}</div>
+                          <div
+                            class={cn(
+                              "truncate text-sm font-semibold",
+                              step.isLocked && "text-muted-foreground",
+                            )}
+                          >
+                            {step.title}
+                          </div>
                           <div class="line-clamp-2 text-xs text-muted-foreground">
                             {step.description}
                           </div>
+                          <Show when={step.isLocked}>
+                            <div class="mt-2 text-xs font-medium text-muted-foreground">
+                              {t('student.home.stepLocked')}
+                            </div>
+                          </Show>
                           <Show when={step.isDone && step.doneComment}>
                             <div class="mt-2 text-xs">
                               <span class="font-semibold">Комментарий: </span>
@@ -294,6 +352,7 @@ export function StudentHome() {
                           <button
                             class={buttonVariants({ size: "sm" })}
                             onClick={() => openMaterial(step.materialUrl)}
+                            disabled={step.isLocked}
                           >
                             {t('common.open')}
                           </button>
@@ -315,7 +374,9 @@ export function StudentHome() {
                               ? t('student.home.markNotDone')
                               : t('student.home.markDone')
                           }
+                          disabled={step.isLocked}
                           onClick={() => {
+                            if (step.isLocked) return
                             if (step.isDone) {
                               void markStepDone(step.id, false)
                               return
