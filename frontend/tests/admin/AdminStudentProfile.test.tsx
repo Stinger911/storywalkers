@@ -5,6 +5,7 @@ import { AdminStudentProfile } from "../../src/routes/admin/AdminStudentProfile"
 import { AppShell } from "../../src/components/AppShell";
 import { I18nProvider } from "../../src/lib/i18n";
 import {
+  appendCoursesToStudentPlan,
   getStudent,
   getStudentPlan,
   getStudentPlanSteps,
@@ -83,6 +84,7 @@ vi.mock("../../src/components/ui/editable-text", () => ({
 
 vi.mock("../../src/lib/adminApi", () => ({
   assignPlan: vi.fn(),
+  appendCoursesToStudentPlan: vi.fn(),
   bulkAddSteps: vi.fn(),
   deleteStudent: vi.fn(),
   deleteStudentPlanStep: vi.fn(),
@@ -102,6 +104,7 @@ const getStudentPlanMock = getStudentPlan as unknown as ReturnType<typeof vi.fn>
 const getStudentPlanStepsMock = getStudentPlanSteps as unknown as ReturnType<typeof vi.fn>;
 const listAdminCoursesMock = listAdminCourses as unknown as ReturnType<typeof vi.fn>;
 const listGoalsMock = listGoals as unknown as ReturnType<typeof vi.fn>;
+const appendCoursesToStudentPlanMock = appendCoursesToStudentPlan as unknown as ReturnType<typeof vi.fn>;
 const updateStudentMock = updateStudent as unknown as ReturnType<typeof vi.fn>;
 const previewResetMock = previewResetFromGoal as unknown as ReturnType<typeof vi.fn>;
 const assignPlanMock = assignPlan as unknown as ReturnType<typeof vi.fn>;
@@ -126,6 +129,7 @@ describe("AdminStudentProfile", () => {
     getStudentPlanStepsMock.mockReset();
     listAdminCoursesMock.mockReset();
     listGoalsMock.mockReset();
+    appendCoursesToStudentPlanMock.mockReset();
     updateStudentMock.mockReset();
     previewResetMock.mockReset();
     assignPlanMock.mockReset();
@@ -470,6 +474,49 @@ describe("AdminStudentProfile", () => {
       expect(deleteStudentMock).toHaveBeenCalledWith("u1");
       expect(navigateMock).toHaveBeenCalledWith("/admin/students", {
         replace: true,
+      });
+    });
+  });
+
+  it("appends selected course lessons to the student plan", async () => {
+    getStudentMock.mockResolvedValue({
+      uid: "u1",
+      displayName: "Student One",
+      email: "s1@x.com",
+      role: "student",
+      selectedCourses: ["course-a"],
+    });
+    getStudentPlanMock.mockResolvedValue({ goalId: "g1" });
+    getStudentPlanStepsMock.mockResolvedValue({ items: [] });
+    listGoalsMock.mockResolvedValue({ items: [] });
+    listAdminCoursesMock.mockResolvedValue({
+      items: [
+        { id: "course-a", title: "Light Basics", description: "Owned", isActive: true },
+        { id: "course-b", title: "Color Workflow", description: "New", isActive: true },
+      ],
+    });
+    appendCoursesToStudentPlanMock.mockResolvedValue({
+      status: "ok",
+      addedCourseIds: ["course-b"],
+      createdSteps: 2,
+    });
+
+    renderWithShell();
+
+    await screen.findByText("Add course lessons");
+    await waitFor(() => {
+      expect(screen.getByText("Color Workflow")).toBeInTheDocument();
+    });
+    const courseCard = screen.getByText("Color Workflow").closest("label");
+    if (!courseCard) {
+      throw new Error("Course card not found");
+    }
+    fireEvent.click(courseCard);
+    fireEvent.click(screen.getByText("Add selected courses to plan"));
+
+    await waitFor(() => {
+      expect(appendCoursesToStudentPlanMock).toHaveBeenCalledWith("u1", {
+        courseIds: ["course-b"],
       });
     });
   });

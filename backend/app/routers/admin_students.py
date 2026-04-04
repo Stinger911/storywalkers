@@ -17,6 +17,7 @@ from app.auth.user_status import (
 from app.core.errors import AppError, forbidden_error
 from app.core.logging import get_logger
 from app.db.firestore import get_firestore_client
+from app.services.course_plan_sync import append_courses_to_student_plan
 from app.services.goal_template_steps import list_steps
 from app.services.telegram import send_admin_message
 from app.services.telegram_events import fmt_registration, fmt_status_changed
@@ -76,6 +77,39 @@ class AssignPlanRequest(BaseModel):
 
 class PreviewResetFromGoalRequest(BaseModel):
     goalId: str
+
+
+class AppendCoursesRequest(BaseModel):
+    courseIds: list[str]
+
+    model_config = {"extra": "forbid"}
+
+    @field_validator("courseIds", mode="before")
+    @classmethod
+    def _trim_course_ids(cls, value: list[str]) -> list[str]:
+        normalized: list[str] = []
+        for item in value:
+            if not isinstance(item, str):
+                continue
+            trimmed = item.strip()
+            if trimmed:
+                normalized.append(trimmed)
+        return normalized
+
+    @field_validator("courseIds")
+    @classmethod
+    def _validate_course_ids(cls, value: list[str]) -> list[str]:
+        if not value:
+            raise PydanticCustomError(
+                "course_ids_required",
+                "courseIds must not be empty",
+            )
+        if len(set(value)) != len(value):
+            raise PydanticCustomError(
+                "course_ids_unique",
+                "courseIds must be unique",
+            )
+        return value
 
 
 class BulkStepItem(BaseModel):
@@ -693,6 +727,23 @@ async def preview_reset_from_goal(
         "willCreateSteps": len(template_steps),
         "willLoseProgressStepsDone": done_total,
         "sampleTitles": sample_titles,
+    }
+
+
+@router.post("/students/{uid}/plan/courses", status_code=status.HTTP_201_CREATED)
+async def append_courses_to_plan(
+    uid: str,
+    payload: AppendCoursesRequest,
+    user: dict = Depends(require_staff),
+):
+    _ = user
+    db = get_firestore_client()
+    _ensure_user_exists(db, uid)
+    result = append_courses_to_student_plan(db, uid, payload.courseIds)
+    return {
+        "status": "ok",
+        "addedCourseIds": result["addedCourseIds"],
+        "createdSteps": result["createdSteps"],
     }
 
 

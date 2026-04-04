@@ -177,6 +177,36 @@ def test_list_students_staff_filter(monkeypatch):
     app.dependency_overrides.clear()
 
 
+def test_append_courses_to_plan_returns_created_steps(monkeypatch):
+    users = {"u1": {"role": "student", "status": "active", "email": "u1@x.com"}}
+    fake_db = FakeFirestore(users)
+    monkeypatch.setattr(admin_students, "get_firestore_client", lambda: fake_db)
+    monkeypatch.setattr(
+        admin_students,
+        "append_courses_to_student_plan",
+        lambda db, uid, course_ids: {
+            "addedCourseIds": course_ids,
+            "createdSteps": 3,
+        },
+    )
+    app.dependency_overrides[require_staff] = _override_staff
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/admin/students/u1/plan/courses",
+        json={"courseIds": ["course-1", "course-2"]},
+    )
+
+    assert response.status_code == 201
+    assert response.json() == {
+        "status": "ok",
+        "addedCourseIds": ["course-1", "course-2"],
+        "createdSteps": 3,
+    }
+
+    app.dependency_overrides.clear()
+
+
 def test_list_students_rejects_invalid_status_filter(monkeypatch):
     users = {"s1": {"role": "student", "status": "active", "email": "s1@x.com"}}
     fake_db = FakeFirestore(users)

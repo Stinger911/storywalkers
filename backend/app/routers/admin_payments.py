@@ -11,6 +11,7 @@ from app.core.errors import AppError
 from app.db.firestore import get_firestore_client
 from app.repositories.payments import get_payment, list_payments_page
 from app.schemas.payments import Payment, PaymentStatus
+from app.services.course_plan_sync import append_courses_to_student_plan
 
 router = APIRouter(prefix="/api/admin", tags=["Admin - Payments"])
 
@@ -202,6 +203,10 @@ async def activate_admin_payment(
     user_snap = user_ref.get()
     if not user_snap.exists:
         raise AppError(code="not_found", message="User not found", status_code=404)
+
+    selected_courses = payment_data.get("selectedCourses")
+    if isinstance(selected_courses, list) and selected_courses:
+        append_courses_to_student_plan(db, user_uid, selected_courses)
 
     tx = db.transaction()
     tx.update(
