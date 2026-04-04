@@ -17,6 +17,7 @@ import { ProgressBar } from '../../components/ui/progress-bar'
 import { TextField, TextFieldInput, TextFieldLabel, TextFieldTextArea } from '../../components/ui/text-field'
 import { showToast } from '../../components/ui/toast'
 import { EditableDisplayName } from '../../components/ui/editable-display-name'
+import { Markdown } from '../../components/ui/markdown'
 import { useMe } from '../../lib/useMe'
 import { useI18n } from '../../lib/i18n'
 import { useMyPlan } from './studentPlanContext'
@@ -207,9 +208,10 @@ export function StudentHome() {
                       >
                         {step().title}
                       </div>
-                      <div class="mt-2 text-sm text-muted-foreground">
-                        {step().description}
-                      </div>
+                      <Markdown
+                        class="mt-2 text-sm text-muted-foreground [&_a]:text-primary [&_a]:underline [&_code]:rounded [&_code]:bg-muted [&_code]:px-1 [&_code]:py-0.5 [&_ol]:ml-5 [&_ol]:list-decimal [&_p]:m-0 [&_ul]:ml-5 [&_ul]:list-disc"
+                        content={step().description}
+                      />
                       <Show when={step().isLocked}>
                         <div class="mt-2 text-xs font-medium text-muted-foreground">
                           {t('student.home.stepLocked')}
@@ -318,9 +320,10 @@ export function StudentHome() {
                           >
                             {step.title}
                           </div>
-                          <div class="line-clamp-2 text-xs text-muted-foreground">
-                            {step.description}
-                          </div>
+                          <Markdown
+                            class="line-clamp-2 text-xs text-muted-foreground [&_a]:text-primary [&_a]:underline [&_code]:rounded [&_code]:bg-muted [&_code]:px-1 [&_code]:py-0.5 [&_ol]:ml-4 [&_ol]:list-decimal [&_p]:m-0 [&_ul]:ml-4 [&_ul]:list-disc"
+                            content={step.description}
+                          />
                           <Show when={step.isLocked}>
                             <div class="mt-2 text-xs font-medium text-muted-foreground">
                               {t('student.home.stepLocked')}

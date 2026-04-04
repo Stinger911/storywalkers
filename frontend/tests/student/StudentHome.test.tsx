@@ -109,6 +109,41 @@ describe("StudentHome", () => {
     );
   });
 
+  it("renders lesson descriptions as markdown", () => {
+    useMyPlanMock.mockReturnValue({
+      plan: () => ({ studentUid: "u1", goalId: "g1" }),
+      goal: () => ({ title: "Video Editing Basics", description: "Learn the workflow." }),
+      steps: () => [
+        {
+          id: "s1",
+          title: "Import footage",
+          description: "**Bold** with [link](https://example.com)",
+          isDone: false,
+          materialUrl: "",
+        },
+      ],
+      loading: () => false,
+      error: () => null,
+      progress: () => ({ total: 1, done: 0, percent: 0 }),
+      markStepDone: markStepDoneMock,
+      completeStep: completeStepMock,
+      openMaterial: vi.fn(),
+    });
+
+    render(() => (
+      <I18nProvider>
+        <StudentHome />
+      </I18nProvider>
+    ));
+
+    expect(screen.getAllByText("Bold")[0].tagName).toBe("STRONG");
+    expect(
+      screen.getAllByRole("link", { name: "link" }).every((link) =>
+        link.getAttribute("href") === "https://example.com",
+      ),
+    ).toBe(true);
+  });
+
   it("does not embed non-youtube lesson links", () => {
     useMyPlanMock.mockReturnValue({
       plan: () => ({ studentUid: "u1", goalId: "g1" }),
