@@ -31,6 +31,11 @@ export function StudentLayout(props: StudentLayoutProps) {
           label: t("student.layout.tabs.library"),
           icon: "library_books",
         },
+        {
+          id: "courses",
+          label: "Courses",
+          icon: "school",
+        },
       ] as const,
   );
 

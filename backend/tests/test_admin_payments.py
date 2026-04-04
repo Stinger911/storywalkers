@@ -340,6 +340,13 @@ def test_admin_activate_payment_transaction_and_idempotency(monkeypatch):
         users={"u1": {"status": "disabled"}},
     )
     monkeypatch.setattr(admin_payments, "get_firestore_client", lambda: fake_db)
+    append_calls: list[tuple[str, list[str]]] = []
+    monkeypatch.setattr(
+        admin_payments,
+        "append_courses_to_student_plan",
+        lambda db, uid, course_ids: append_calls.append((uid, course_ids))
+        or {"addedCourseIds": course_ids, "createdSteps": 2},
+    )
     app.dependency_overrides[auth_deps.get_current_user] = _staff
     client = TestClient(app)
 
@@ -354,6 +361,7 @@ def test_admin_activate_payment_transaction_and_idempotency(monkeypatch):
     assert isinstance(fake_db._payments["p1"]["updatedAt"], datetime)
     assert len(fake_db._transactions) == 1
     assert fake_db._transactions[0].committed is True
+    assert append_calls == [("u1", ["c1"])]
 
     second = client.post("/api/admin/payments/p1/activate")
     assert second.status_code == 200

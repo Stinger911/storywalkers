@@ -168,6 +168,11 @@ def test_activate_by_code_rejects_payment_with_invalid_status(monkeypatch):
         users={"u2": {"status": "disabled"}},
     )
     monkeypatch.setattr(payments_service, "get_settings", lambda: _Settings())
+    monkeypatch.setattr(
+        payments_service,
+        "append_courses_to_student_plan",
+        lambda db, uid, course_ids: {"addedCourseIds": course_ids, "createdSteps": 0},
+    )
     sent_messages: list[str] = []
     monkeypatch.setattr(payments_service, "_notify_admin_async", sent_messages.append)
 
@@ -185,7 +190,7 @@ def test_activate_by_code_rejects_payment_with_invalid_status(monkeypatch):
     assert "evidence: ev-2" in sent_messages[0]
 
 
-def test_activate_by_code_rejects_when_user_not_disabled(monkeypatch):
+def test_activate_by_code_rejects_when_user_status_is_blocked(monkeypatch):
     fake_db = _FakeFirestore(
         payments={
             "p3": {
@@ -194,9 +199,14 @@ def test_activate_by_code_rejects_when_user_not_disabled(monkeypatch):
                 "userUid": "u3",
             }
         },
-        users={"u3": {"status": "active"}},
+        users={"u3": {"status": "expired"}},
     )
     monkeypatch.setattr(payments_service, "get_settings", lambda: _Settings())
+    monkeypatch.setattr(
+        payments_service,
+        "append_courses_to_student_plan",
+        lambda db, uid, course_ids: {"addedCourseIds": course_ids, "createdSteps": 0},
+    )
     sent_messages: list[str] = []
     monkeypatch.setattr(payments_service, "_notify_admin_async", sent_messages.append)
 
@@ -209,7 +219,7 @@ def test_activate_by_code_rejects_when_user_not_disabled(monkeypatch):
     assert "❌ Email activation failed" in sent_messages[0]
     assert "reason: user_not_disabled" in sent_messages[0]
     assert "user_uid: u3" in sent_messages[0]
-    assert "user_status: active" in sent_messages[0]
+    assert "user_status: expired" in sent_messages[0]
     assert "evidence: ev-3" in sent_messages[0]
 
 
@@ -220,11 +230,19 @@ def test_activate_by_code_transaction_activates_user_and_payment(monkeypatch):
                 "activationCode": "SW-DDDD4444",
                 "status": "email_detected",
                 "userUid": "u4",
+                "selectedCourses": ["course-1"],
             }
         },
         users={"u4": {"status": "disabled"}},
     )
     monkeypatch.setattr(payments_service, "get_settings", lambda: _Settings())
+    append_calls: list[tuple[str, list[str]]] = []
+    monkeypatch.setattr(
+        payments_service,
+        "append_courses_to_student_plan",
+        lambda db, uid, course_ids: append_calls.append((uid, course_ids))
+        or {"addedCourseIds": course_ids, "createdSteps": 2},
+    )
     sent_messages: list[str] = []
     monkeypatch.setattr(payments_service, "_notify_admin_async", sent_messages.append)
 
@@ -233,6 +251,7 @@ def test_activate_by_code_transaction_activates_user_and_payment(monkeypatch):
     assert result is True
     assert len(fake_db._transactions) == 1
     assert fake_db._transactions[0].committed is True
+    assert append_calls == [("u4", ["course-1"])]
     assert fake_db._users["u4"]["status"] == "active"
     assert fake_db._users["u4"]["updatedAt"] == "SERVER_TIMESTAMP"
     assert fake_db._payments["p4"]["status"] == "activated"

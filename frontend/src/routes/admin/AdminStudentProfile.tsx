@@ -1,4 +1,4 @@
-import { createEffect, createMemo, createSignal, Show } from "solid-js";
+import { For, createEffect, createMemo, createSignal, Show } from "solid-js";
 import { useNavigate, useParams } from "@solidjs/router";
 
 import { Button } from "../../components/ui/button";
@@ -41,6 +41,7 @@ import {
 // } from "../../components/ui/text-field";
 import { TextField, TextFieldInput, TextFieldLabel } from "../../components/ui/text-field";
 import {
+  appendCoursesToStudentPlan,
   assignPlan,
   deleteStudentPlanStep,
   deleteStudent,
@@ -114,6 +115,7 @@ export function AdminStudentProfile() {
   const [loading, setLoading] = createSignal(true);
   const [error, setError] = createSignal<string | null>(null);
   const [saving, setSaving] = createSignal(false);
+  const [addingCourses, setAddingCourses] = createSignal(false);
   const [savingProfile, setSavingProfile] = createSignal(false);
   const [savingName, setSavingName] = createSignal(false);
   const [activeTab, setActiveTab] = createSignal<"profile" | "questionnaire">(
@@ -123,6 +125,7 @@ export function AdminStudentProfile() {
   const [roleDraft, setRoleDraft] = createSignal("student");
   const [statusDraft, setStatusDraft] = createSignal("active");
   const [boostyUserIdDraft, setBoostyUserIdDraft] = createSignal("");
+  const [selectedCourseIdsToAppend, setSelectedCourseIdsToAppend] = createSignal<string[]>([]);
   const [previewOpen, setPreviewOpen] = createSignal(false);
   const [previewLoading, setPreviewLoading] = createSignal(false);
   const [previewData, setPreviewData] = createSignal<{
@@ -235,6 +238,10 @@ export function AdminStudentProfile() {
       (courseId) => courseTitleById().get(courseId) || courseId,
     ),
   );
+  const appendableCourses = createMemo(() => {
+    const owned = new Set(questionnaireSelectedCourses());
+    return courses().filter((course) => course.isActive && !owned.has(course.id));
+  });
   const questionnaireExperience = createMemo(() => {
     const level = student()?.profileForm?.experienceLevel;
     if (level === "beginner") return "Beginner";
@@ -393,6 +400,34 @@ export function AdminStudentProfile() {
       setError((err as Error).message);
     } finally {
       setSavingProfile(false);
+    }
+  };
+
+  const toggleCourseToAppend = (courseId: string) => {
+    setSelectedCourseIdsToAppend((current) =>
+      current.includes(courseId)
+        ? current.filter((value) => value !== courseId)
+        : [...current, courseId],
+    );
+  };
+
+  const appendCourses = async () => {
+    if (selectedCourseIdsToAppend().length === 0) {
+      setError("Select at least one course.");
+      return;
+    }
+    setAddingCourses(true);
+    setError(null);
+    try {
+      await appendCoursesToStudentPlan(uid(), {
+        courseIds: selectedCourseIdsToAppend(),
+      });
+      setSelectedCourseIdsToAppend([]);
+      await load();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setAddingCourses(false);
     }
   };
 
@@ -765,6 +800,44 @@ export function AdminStudentProfile() {
               >
                 Assign goal + Replace steps
               </Button>
+            </div>
+          </SectionCard>
+
+          <SectionCard title="Add course lessons">
+            <div class="space-y-4">
+              <Show
+                when={appendableCourses().length > 0}
+                fallback={
+                  <div class="text-sm text-muted-foreground">
+                    No additional active courses are available for this student.
+                  </div>
+                }
+              >
+                <div class="grid gap-3 md:grid-cols-2">
+                  <For each={appendableCourses()}>
+                    {(course) => (
+                      <label class="rounded-[var(--radius-md)] border border-border/70 bg-card p-3 shadow-rail">
+                        <div class="flex items-start justify-between gap-3">
+                          <div>
+                            <div class="text-sm font-semibold">{course.title}</div>
+                            <div class="text-xs text-muted-foreground">
+                              {course.description || "No description"}
+                            </div>
+                          </div>
+                          <input
+                            type="checkbox"
+                            checked={selectedCourseIdsToAppend().includes(course.id)}
+                            onChange={() => toggleCourseToAppend(course.id)}
+                          />
+                        </div>
+                      </label>
+                    )}
+                  </For>
+                </div>
+                <Button onClick={() => void appendCourses()} disabled={addingCourses() || selectedCourseIdsToAppend().length === 0}>
+                  Add selected courses to plan
+                </Button>
+              </Show>
             </div>
           </SectionCard>
           </div>

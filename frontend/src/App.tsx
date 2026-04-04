@@ -140,6 +140,11 @@ const StudentLibraryDetail = lazy(async () => {
   return { default: module.StudentLibraryDetail };
 });
 
+const StudentCourses = lazy(async () => {
+  const module = await import("./routes/student/StudentCourses.tsx");
+  return { default: module.StudentCourses };
+});
+
 const OnboardingGoal = lazy(async () => {
   const module = await import("./routes/onboarding/OnboardingGoal.tsx");
   return { default: module.OnboardingGoal };
@@ -374,6 +379,12 @@ const StudentLibraryDetailRoute = () => (
   </StudentLayout>
 );
 
+const StudentCoursesRoute = () => (
+  <StudentLayout>
+    <StudentCourses />
+  </StudentLayout>
+);
+
 
 const AdminLibraryRoute = () => (
   <AdminLayout>
@@ -408,6 +419,7 @@ export default function App() {
           <Route path="/student/questions/:id" component={StudentQuestionDetailRoute} />
           <Route path="/student/library" component={StudentLibraryRoute} />
           <Route path="/student/library/:id" component={StudentLibraryDetailRoute} />
+          <Route path="/student/courses" component={StudentCoursesRoute} />
           <Route path="/onboarding/goal" component={OnboardingGoalRoute} />
           <Route path="/onboarding/profile" component={OnboardingProfileRoute} />
           <Route path="/onboarding/courses" component={OnboardingCoursesRoute} />

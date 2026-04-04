@@ -141,6 +141,22 @@ def _resolve_active_course_prices(
     return total_usd_cents, invalid
 
 
+def _normalize_selected_courses(value: object) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    normalized: list[str] = []
+    seen: set[str] = set()
+    for item in value:
+        if not isinstance(item, str):
+            continue
+        trimmed = item.strip()
+        if not trimmed or trimmed in seen:
+            continue
+        seen.add(trimmed)
+        normalized.append(trimmed)
+    return normalized
+
+
 @router.post(
     "/checkout/intents", response_model=CheckoutIntentResponse, status_code=201
 )
@@ -150,11 +166,23 @@ async def create_checkout_intent(
 ) -> CheckoutIntentResponse:
     if user.get("role") != "student":
         raise forbidden_error()
-    if user.get("status") != "disabled":
+    if user.get("status") not in {"disabled", "active"}:
         raise AppError(
             code="status_blocked",
-            message="Checkout intent is available only for disabled students",
+            message="Checkout intent is available only for active or disabled students",
             status_code=403,
+        )
+
+    existing_courses = set(_normalize_selected_courses(user.get("selectedCourses")))
+    already_owned = [
+        course_id for course_id in payload.selectedCourses if course_id in existing_courses
+    ]
+    if already_owned:
+        raise AppError(
+            code="validation_error",
+            message="selectedCourses contains courses already owned by the student",
+            status_code=400,
+            details={"alreadyOwnedCourseIds": already_owned},
         )
 
     db = get_firestore_client()

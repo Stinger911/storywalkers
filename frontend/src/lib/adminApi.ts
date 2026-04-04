@@ -140,6 +140,12 @@ type PreviewResetFromGoalResponse = {
   sampleTitles: string[]
 }
 
+type AppendCoursesToPlanResponse = {
+  status: 'ok'
+  addedCourseIds: string[]
+  createdSteps: number
+}
+
 async function handleJson<T>(response: Response): Promise<T> {
   if (!response.ok) {
     const payload = await response.json().catch(() => ({}))
@@ -459,6 +465,17 @@ export async function assignPlan(
     body: JSON.stringify({ goalId, ...(options ?? {}) }),
   })
   return handleJson<PlanResponse>(response)
+}
+
+export async function appendCoursesToStudentPlan(
+  uid: string,
+  payload: { courseIds: string[] },
+) {
+  const response = await apiFetch(`/api/admin/students/${uid}/plan/courses`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+  return handleJson<AppendCoursesToPlanResponse>(response)
 }
 
 export async function previewResetFromGoal(uid: string, goalId: string) {

@@ -6,6 +6,7 @@ from google.cloud import firestore
 from app.core.config import get_settings
 from app.core.logging import get_logger
 from app.schemas.payments import PaymentStatus
+from app.services.course_plan_sync import append_courses_to_student_plan
 from app.services.telegram import send_admin_message
 from app.services.telegram_events import (
     fmt_email_activation_failed,
@@ -169,7 +170,7 @@ def activate_by_code(
     user_snap = user_ref.get()
     user_data = user_snap.to_dict() or {}
     user_status = user_data.get("status")
-    if not user_snap.exists or user_status != "disabled":
+    if not user_snap.exists or user_status not in {"disabled", "active"}:
         snap.reference.set(
             {
                 "status": PaymentStatus.rejected.value,
@@ -200,6 +201,10 @@ def activate_by_code(
                 )
             )
         return False
+
+    selected_courses = data.get("selectedCourses")
+    if isinstance(selected_courses, list) and selected_courses:
+        append_courses_to_student_plan(db, user_uid, selected_courses)
 
     transaction = db.transaction()
     transaction.update(

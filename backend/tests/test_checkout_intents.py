@@ -127,7 +127,7 @@ def _student(status: str):
     }
 
 
-def test_checkout_intent_blocks_non_disabled_students(monkeypatch):
+def test_checkout_intent_allows_active_students(monkeypatch):
     fake_db = FakeFirestore(
         courses={
             "c1": {"priceUsdCents": 1200, "isActive": True},
@@ -139,10 +139,9 @@ def test_checkout_intent_blocks_non_disabled_students(monkeypatch):
 
     response = client.post("/api/checkout/intents", json={"selectedCourses": ["c1"]})
 
-    assert response.status_code == 403
-    payload = response.json()["error"]
-    assert payload["code"] == "status_blocked"
-    assert fake_db._payments == {}
+    assert response.status_code == 201
+    assert response.json()["amount"] == 1200
+    assert fake_db._payments["doc_1"]["selectedCourses"] == ["c1"]
 
     app.dependency_overrides.clear()
 
@@ -182,5 +181,52 @@ def test_checkout_intent_retries_activation_code_until_unique(monkeypatch):
     assert created_payment["userUid"] == "u1"
     assert created_payment["createdAt"] == "SERVER_TIMESTAMP"
     assert created_payment["updatedAt"] == "SERVER_TIMESTAMP"
+
+    app.dependency_overrides.clear()
+
+
+def test_checkout_intent_allows_active_students_for_additional_courses(monkeypatch):
+    fake_db = FakeFirestore(
+        courses={
+            "c2": {"priceUsdCents": 2500, "isActive": True},
+        }
+    )
+    monkeypatch.setattr(checkout, "get_firestore_client", lambda: fake_db)
+    app.dependency_overrides[auth_deps.get_current_user] = lambda: {
+        **_student("active"),
+        "selectedCourses": ["c1"],
+    }
+    monkeypatch.setattr(checkout, "_generate_activation_code", lambda: "SW-ADD1TION")
+    client = TestClient(app)
+
+    response = client.post("/api/checkout/intents", json={"selectedCourses": ["c2"]})
+
+    assert response.status_code == 201
+    assert response.json()["activationCode"] == "SW-ADD1TION"
+    assert fake_db._payments["doc_1"]["selectedCourses"] == ["c2"]
+
+    app.dependency_overrides.clear()
+
+
+def test_checkout_intent_rejects_already_owned_courses(monkeypatch):
+    fake_db = FakeFirestore(
+        courses={
+            "c1": {"priceUsdCents": 1200, "isActive": True},
+        }
+    )
+    monkeypatch.setattr(checkout, "get_firestore_client", lambda: fake_db)
+    app.dependency_overrides[auth_deps.get_current_user] = lambda: {
+        **_student("active"),
+        "selectedCourses": ["c1"],
+    }
+    client = TestClient(app)
+
+    response = client.post("/api/checkout/intents", json={"selectedCourses": ["c1"]})
+
+    assert response.status_code == 400
+    payload = response.json()["error"]
+    assert payload["code"] == "validation_error"
+    assert payload["details"]["alreadyOwnedCourseIds"] == ["c1"]
+    assert fake_db._payments == {}
 
     app.dependency_overrides.clear()

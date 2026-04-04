@@ -87,6 +87,15 @@ export function StudentProfileRail() {
             </div>
           </RailCard>
 
+          <RailCard title="Courses">
+            <div class="space-y-2 text-sm text-muted-foreground">
+              <div>Buy additional lessons and add them to your plan after payment activation.</div>
+              <A href="/student/courses" class="text-primary underline">
+                Browse courses
+              </A>
+            </div>
+          </RailCard>
+
           <div class="grid grid-cols-2 gap-3">
             <A
               href="/student/questions"
