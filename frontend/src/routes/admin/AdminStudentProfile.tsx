@@ -40,6 +40,7 @@ import {
 //   TextFieldLabel,
 // } from "../../components/ui/text-field";
 import { TextField, TextFieldInput, TextFieldLabel } from "../../components/ui/text-field";
+import { clampWords } from "../../lib/utils";
 import {
   appendCoursesToStudentPlan,
   assignPlan,
@@ -509,7 +510,7 @@ export function AdminStudentProfile() {
                         </div>
                         <div class="text-sm font-semibold">{step.title}</div>
                         <div class="text-xs text-muted-foreground">
-                          {step.description}
+                          {clampWords(step.description, 20)}
                         </div>
                         <Show when={step.materialUrl}>
                           <a

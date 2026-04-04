@@ -31,3 +31,11 @@ export function clampText(text: string, maxLength = 80) {
   if (value.length <= maxLength) return value
   return `${value.slice(0, Math.max(0, maxLength - 1))}…`
 }
+
+export function clampWords(text: string, maxWords = 20) {
+  const value = (text ?? '').trim()
+  if (!value) return ''
+  const words = value.split(/\s+/)
+  if (words.length <= maxWords) return value
+  return `${words.slice(0, maxWords).join(' ')}…`
+}
