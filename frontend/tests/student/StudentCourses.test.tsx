@@ -36,6 +36,7 @@ vi.mock("../../src/lib/checkoutApi", () => ({
 import { createCheckoutIntent } from "../../src/lib/checkoutApi";
 import { listCourses } from "../../src/lib/coursesApi";
 import { getFxRates } from "../../src/lib/fxApi";
+import { I18nProvider } from "../../src/lib/i18n";
 import { StudentCourses } from "../../src/routes/student/StudentCourses";
 
 describe("StudentCourses", () => {
@@ -80,7 +81,11 @@ describe("StudentCourses", () => {
       instructionsText: "Pay and send the code to support.",
     });
 
-    render(() => <StudentCourses />);
+    render(() => (
+      <I18nProvider>
+        <StudentCourses />
+      </I18nProvider>
+    ));
 
     expect(await screen.findByText("New course")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("checkbox"));

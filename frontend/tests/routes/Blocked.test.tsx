@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from "@solidjs/testing-library";
 import { describe, expect, it, vi } from "vitest";
 
 import { Blocked } from "../../src/routes/Blocked";
+import { ThemeProvider } from "../../src/lib/theme";
 
 let typeParam: string | undefined;
 const logoutMock = vi.fn();
@@ -11,6 +12,7 @@ vi.mock("@solidjs/router", () => ({
 }));
 vi.mock("../../src/lib/auth", () => ({
   useAuth: () => ({
+    me: () => null,
     logout: logoutMock,
   }),
 }));
@@ -37,13 +39,20 @@ vi.mock("../../src/lib/i18n", () => ({
 }));
 
 describe("Blocked route", () => {
+  const renderBlocked = () =>
+    render(() => (
+      <ThemeProvider>
+        <Blocked />
+      </ThemeProvider>
+    ));
+
   it("allows logout from blocked page", () => {
     typeParam = undefined;
-    render(() => <Blocked />);
+    renderBlocked();
 
     expect(
       screen.getByRole("link", { name: "Continue onboarding" }),
-    ).toHaveAttribute("href", "/onboarding/goal");
+    ).toHaveAttribute("href", "/onboarding/profile");
 
     const button = screen.getByRole("button", { name: "Log out" });
     fireEvent.click(button);
@@ -52,22 +61,22 @@ describe("Blocked route", () => {
 
   it("renders disabled variant by default", () => {
     typeParam = undefined;
-    render(() => <Blocked />);
+    renderBlocked();
 
     expect(screen.getByText("Account disabled")).toBeInTheDocument();
     expect(
-      screen.getByText(
+      screen.getAllByText(
         "Your account is currently disabled. Access to protected sections is restricted.",
       ),
-    ).toBeInTheDocument();
+    ).toHaveLength(2);
     expect(
-      screen.getByRole("link", { name: "Contact Support" }),
+      screen.getByRole("link", { name: /Contact Support/ }),
     ).toBeInTheDocument();
   });
 
   it("renders expired variant with renewal message", () => {
     typeParam = "expired";
-    render(() => <Blocked />);
+    renderBlocked();
 
     expect(screen.getByText("Access expired")).toBeInTheDocument();
     expect(

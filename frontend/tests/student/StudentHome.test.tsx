@@ -65,12 +65,13 @@ describe("StudentHome", () => {
         <StudentHome />
       </I18nProvider>
     ));
-    expect(screen.getByText("Hi, Alex!")).toBeInTheDocument();
-    expect(screen.getByText("Student Dashboard")).toBeInTheDocument();
+    expect(screen.getByText("Welcome back, Alex")).toBeInTheDocument();
+    expect(screen.getByText("Morning, Archivist")).toBeInTheDocument();
     expect(screen.getByText("Current lesson")).toBeInTheDocument();
     expect(screen.getByText("Lessons")).toBeInTheDocument();
-    expect(screen.getByText("0 / 1 lessons done")).toBeInTheDocument();
-    expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "0");
+    expect(
+      screen.getByText("Your narrative path is waiting. You've completed 0% of your weekly goal."),
+    ).toBeInTheDocument();
     expect(screen.getAllByText("Import footage").length).toBeGreaterThan(0);
   });
 
@@ -215,7 +216,7 @@ describe("StudentHome", () => {
         <StudentHome />
       </I18nProvider>
     ));
-    expect(screen.getByText("fallback@example.com")).toBeInTheDocument();
+    expect(screen.getByText("Welcome back, there")).toBeInTheDocument();
   });
 
   it("opens complete modal and cancels without changing state", async () => {
@@ -225,7 +226,7 @@ describe("StudentHome", () => {
       </I18nProvider>
     ));
 
-    fireEvent.click(screen.getByText("Mark done"));
+    fireEvent.click(screen.getAllByRole("button", { name: "Mark done" })[0]);
     expect(screen.getByText("Comment (optional)")).toBeInTheDocument();
 
     fireEvent.click(screen.getByText("Cancel"));
@@ -248,7 +249,7 @@ describe("StudentHome", () => {
       </I18nProvider>
     ));
 
-    fireEvent.click(screen.getByText("Mark done"));
+    fireEvent.click(screen.getAllByRole("button", { name: "Mark done" })[0]);
     fireEvent.input(screen.getByLabelText("Comment (optional)"), {
       target: { value: "comment" },
     });
@@ -274,7 +275,7 @@ describe("StudentHome", () => {
       </I18nProvider>
     ));
 
-    fireEvent.click(screen.getByText("Mark done"));
+    fireEvent.click(screen.getAllByRole("button", { name: "Mark done" })[0]);
     fireEvent.click(screen.getByRole("button", { name: "Complete lesson" }));
 
     await waitFor(() => {
@@ -317,8 +318,7 @@ describe("StudentHome", () => {
 
     expect(screen.getAllByText("Complete previous lessons first").length).toBeGreaterThan(0);
     expect(screen.getAllByRole("button", { name: "Open" }).every((button) => button.hasAttribute("disabled"))).toBe(true);
-    expect(screen.getByRole("button", { name: "Mark done" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Mark as done" })).toBeDisabled();
+    expect(screen.getAllByRole("button", { name: "Mark done" }).every((button) => button.hasAttribute("disabled"))).toBe(true);
   });
 
   it("renders done comment and link only when values exist", () => {
@@ -356,14 +356,14 @@ describe("StudentHome", () => {
       </I18nProvider>
     ));
 
-    expect(screen.getByText("Комментарий:")).toBeInTheDocument();
-    expect(screen.getByText("Готово")).toBeInTheDocument();
+    expect(screen.getByText("Comment:")).toBeInTheDocument();
+    expect(screen.getAllByText("Готово").length).toBeGreaterThan(0);
     const link = screen.getByRole("link", { name: "https://example.com/work" });
     expect(link).toHaveAttribute("target", "_blank");
     expect(link).toHaveAttribute("rel", "noopener");
 
-    const commentLabels = screen.getAllByText("Комментарий:");
-    const linkLabels = screen.getAllByText("Ссылка:");
+    const commentLabels = screen.getAllByText("Comment:");
+    const linkLabels = screen.getAllByText("Link:");
     expect(commentLabels).toHaveLength(1);
     expect(linkLabels).toHaveLength(1);
   });

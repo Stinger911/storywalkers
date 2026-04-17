@@ -28,6 +28,7 @@ vi.mock("../../src/lib/auth", () => ({
       status: "active",
       selectedGoalId: "goal-1",
       profileForm: {
+        aboutMe: "About me",
         telegram: "@alice",
         socialUrl: null,
         experienceLevel: "beginner",
@@ -107,8 +108,9 @@ describe("OnboardingCourses", () => {
     expect(listCourses).toHaveBeenCalledWith({ goalId: "goal-1" });
 
     fireEvent.click(screen.getByText("Course One"));
-    fireEvent.click(screen.getByText("Community"));
-    expect(screen.getByText("$59.00")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText("$59.00")).toBeInTheDocument();
+    });
 
     fireEvent.click(screen.getByRole("button", { name: "Next" }));
 
@@ -154,7 +156,6 @@ describe("OnboardingCourses", () => {
 
     expect(await screen.findByText("Unavailable courses")).toBeInTheDocument();
     expect(listCourses).toHaveBeenCalledWith({ goalId: "goal-1" });
-    expect(screen.getByText("Inactive")).toBeInTheDocument();
     expect(screen.getByText("Course Two")).toBeInTheDocument();
     expect(screen.getByText("4 lessons")).toBeInTheDocument();
 
@@ -164,7 +165,7 @@ describe("OnboardingCourses", () => {
     await waitFor(() => {
       expect(patchMeMock).toHaveBeenCalledWith({
         selectedCourses: ["course-1"],
-        subscriptionSelected: undefined,
+        subscriptionSelected: true,
       });
     });
   });

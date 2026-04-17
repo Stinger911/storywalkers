@@ -8,6 +8,11 @@ const student = (status: "active" | "disabled" | "community_only" | "expired") =
   displayName: "User One",
   role: "student" as const,
   status,
+  profileForm: {
+    aboutMe: "About me",
+  },
+  selectedGoalId: "goal-1",
+  selectedCourses: ["course-1"],
 });
 
 const staff = () => ({

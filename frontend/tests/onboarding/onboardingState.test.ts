@@ -14,8 +14,10 @@ function baseMe(): MeProfile {
     displayName: "User One",
     role: "student",
     status: "active",
+    level: 1,
     selectedGoalId: null,
     profileForm: {
+      aboutMe: null,
       telegram: null,
       socialUrl: null,
       experienceLevel: null,
@@ -29,19 +31,20 @@ function baseMe(): MeProfile {
 describe("onboardingState", () => {
   it("computes next step in order", () => {
     const me1 = baseMe();
-    expect(getNextOnboardingStep(me1)).toBe("goal");
+    expect(getNextOnboardingStep(me1)).toBe("profile");
 
-    const me2 = { ...baseMe(), selectedGoalId: "goal-1" };
-    expect(getNextOnboardingStep(me2)).toBe("profile");
+    const me2 = {
+      ...baseMe(),
+      profileForm: {
+        ...baseMe().profileForm,
+        aboutMe: "I want to learn",
+      },
+    };
+    expect(getNextOnboardingStep(me2)).toBe("goal");
 
     const me3 = {
       ...me2,
-      profileForm: {
-        telegram: "@abc",
-        socialUrl: null,
-        experienceLevel: null,
-        notes: null,
-      },
+      selectedGoalId: "goal-1",
     };
     expect(getNextOnboardingStep(me3)).toBe("courses");
 
@@ -57,6 +60,7 @@ describe("onboardingState", () => {
       isProfileComplete({
         ...baseMe(),
         profileForm: {
+          aboutMe: "I am here",
           telegram: null,
           socialUrl: "https://example.com",
           experienceLevel: null,
