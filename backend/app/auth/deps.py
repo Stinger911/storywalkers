@@ -59,6 +59,21 @@ def _normalize_preferred_currency(value: object) -> str | None:
     return None
 
 
+def _normalize_level(value: object) -> int:
+    if isinstance(value, bool):
+        return 1
+    if isinstance(value, int):
+        return max(1, value)
+    if isinstance(value, float):
+        return max(1, int(value))
+    if isinstance(value, str):
+        try:
+            return max(1, int(value.strip()))
+        except ValueError:
+            return 1
+    return 1
+
+
 def _build_user_payload(uid: str, decoded: dict, profile: dict | None) -> dict:
     profile = profile or {}
     email = decoded.get("email") or profile.get("email") or ""
@@ -73,6 +88,19 @@ def _build_user_payload(uid: str, decoded: dict, profile: dict | None) -> dict:
     status = profile.get("status") or "active"
     profile_form_raw = profile.get("profileForm")
     profile_form = profile_form_raw if isinstance(profile_form_raw, dict) else {}
+    social_links_raw = profile_form.get("socialLinks")
+    social_links = (
+        [
+            item.strip()
+            for item in social_links_raw
+            if isinstance(item, str) and item.strip()
+        ]
+        if isinstance(social_links_raw, list)
+        else []
+    )
+    social_url = _sanitize_optional_text(profile_form.get("socialUrl"))
+    if not social_links and social_url:
+        social_links = [social_url]
     return {
         "uid": uid,
         "email": email,
@@ -80,10 +108,14 @@ def _build_user_payload(uid: str, decoded: dict, profile: dict | None) -> dict:
         "role": role,
         "status": status,
         "roleRaw": role_raw,
+        "level": _normalize_level(profile.get("level")),
         "selectedGoalId": _sanitize_optional_text(profile.get("selectedGoalId")),
         "profileForm": {
+            "aboutMe": _sanitize_optional_text(profile_form.get("aboutMe"))
+            or _sanitize_optional_text(profile_form.get("notes")),
             "telegram": _sanitize_optional_text(profile_form.get("telegram")),
-            "socialUrl": _sanitize_optional_text(profile_form.get("socialUrl")),
+            "socialLinks": social_links,
+            "socialUrl": social_url,
             "experienceLevel": _normalize_experience_level(
                 profile_form.get("experienceLevel")
             ),
@@ -119,6 +151,7 @@ async def get_current_user(
             "role": "staff",
             "status": "active",
             "roleRaw": "admin",
+            "level": 1,
         }
         request.state.uid = dev_user["uid"]
         return dev_user
@@ -150,6 +183,7 @@ async def get_current_user(
         created_profile = {
             "role": "student",
             "status": DEFAULT_NEW_USER_STATUS,
+            "level": 1,
             "email": decoded.get("email", ""),
             "displayName": decoded.get("name", decoded.get("email", "")),
             "createdAt": datetime.now(timezone.utc),

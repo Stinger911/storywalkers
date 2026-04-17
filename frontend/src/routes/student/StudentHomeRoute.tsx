@@ -4,7 +4,7 @@ import { Loading } from "../../components/Loading";
 import { useAuth } from "../../lib/auth";
 import { resolveGuardRedirect } from "../../lib/routeAccess";
 import { StudentLayout } from "./StudentLayout";
-import { StudentProfile, StudentProfileRail } from "./StudentProfile";
+import { StudentProfile } from "./StudentProfile";
 import {
   getNextOnboardingStep,
   isOnboardingIncomplete,
@@ -31,7 +31,7 @@ export function StudentHomeRoute() {
           return <Navigate href={onboardingPath(getNextOnboardingStep(me()!))} />;
         }
         return (
-          <StudentLayout rightRail={<StudentProfileRail />}>
+          <StudentLayout>
             <StudentProfile />
           </StudentLayout>
         );

@@ -10,6 +10,16 @@ export type Course = {
   lessonCount?: number;
 };
 
+export type CourseLesson = {
+  id: string;
+  title: string;
+  content: string;
+  materialUrl: string | null;
+  order: number;
+  isActive: boolean;
+  updatedAt?: unknown;
+};
+
 type CoursesResponse = {
   items: Course[];
 };
@@ -26,6 +36,16 @@ type RawCourse = {
   lessonCount?: unknown;
 };
 
+type RawCourseLesson = {
+  id?: unknown;
+  title?: unknown;
+  content?: unknown;
+  materialUrl?: unknown;
+  order?: unknown;
+  isActive?: unknown;
+  updatedAt?: unknown;
+};
+
 async function handleJson<T>(response: Response): Promise<T> {
   if (!response.ok) {
     const payload = await response.json().catch(() => ({}));
@@ -35,6 +55,7 @@ async function handleJson<T>(response: Response): Promise<T> {
 }
 
 const cachedCoursesByGoal = new Map<string, Course[]>();
+const cachedLessonsByCourse = new Map<string, CourseLesson[]>();
 
 function normalizeCourse(raw: RawCourse): Course | null {
   if (typeof raw?.id !== "string" || !raw.id.trim()) return null;
@@ -108,8 +129,60 @@ export async function listCourses(options?: ListCoursesOptions) {
   return { items };
 }
 
+function normalizeCourseLesson(raw: RawCourseLesson): CourseLesson | null {
+  if (typeof raw?.id !== "string" || !raw.id.trim()) return null;
+  const title = typeof raw.title === "string" ? raw.title.trim() : "";
+  if (!title) return null;
+  return {
+    id: raw.id,
+    title,
+    content: typeof raw.content === "string" ? raw.content : "",
+    materialUrl:
+      typeof raw.materialUrl === "string" && raw.materialUrl.trim()
+        ? raw.materialUrl
+        : null,
+    order:
+      typeof raw.order === "number" && Number.isFinite(raw.order)
+        ? Math.max(0, Math.round(raw.order))
+        : 0,
+    isActive: raw.isActive !== false,
+    updatedAt: raw.updatedAt,
+  };
+}
+
+export async function listCourseLessons(
+  courseId: string,
+  options?: { force?: boolean },
+) {
+  const normalizedCourseId = typeof courseId === "string" ? courseId.trim() : "";
+  if (!normalizedCourseId) {
+    throw new Error("courseId is required");
+  }
+  if (!options?.force && cachedLessonsByCourse.has(normalizedCourseId)) {
+    return { items: cachedLessonsByCourse.get(normalizedCourseId) ?? [] };
+  }
+  const response = await apiFetch(
+    `/api/courses/${encodeURIComponent(normalizedCourseId)}/lessons`,
+  );
+  const payload = await handleJson<{ items?: RawCourseLesson[] } | RawCourseLesson[]>(
+    response,
+  );
+  const list = Array.isArray(payload)
+    ? payload
+    : Array.isArray(payload?.items)
+      ? payload.items
+      : [];
+  const items = list
+    .map((item) => normalizeCourseLesson(item as RawCourseLesson))
+    .filter((item): item is CourseLesson => Boolean(item))
+    .sort((a, b) => a.order - b.order);
+  cachedLessonsByCourse.set(normalizedCourseId, items);
+  return { items };
+}
+
 export function resetCoursesCacheForTests() {
   cachedCoursesByGoal.clear();
+  cachedLessonsByCourse.clear();
 }
 
 export function convertUsdCentsToCurrencyCents(

@@ -23,9 +23,12 @@ export type MeProfile = {
   role: 'student' | 'staff'
   status: 'active' | 'disabled' | 'community_only' | 'expired'
   roleRaw?: 'student' | 'admin' | 'expert'
+  level?: number
   selectedGoalId?: string | null
   profileForm?: {
+    aboutMe?: string | null
     telegram?: string | null
+    socialLinks?: string[]
     socialUrl?: string | null
     experienceLevel?: 'beginner' | 'intermediate' | 'advanced' | null
     notes?: string | null
@@ -39,7 +42,9 @@ export type PatchMePayload = {
   displayName?: string
   selectedGoalId?: string | null
   profileForm?: {
+    aboutMe?: string | null
     telegram?: string | null
+    socialLinks?: string[]
     socialUrl?: string | null
     experienceLevel?: 'beginner' | 'intermediate' | 'advanced' | null
     notes?: string | null

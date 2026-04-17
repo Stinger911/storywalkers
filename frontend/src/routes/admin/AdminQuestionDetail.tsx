@@ -264,7 +264,7 @@ export function AdminQuestionDetail() {
                   </label>
                   <select
                     id="library-category"
-                    class="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                    class="admin-select h-10 rounded-md border border-input bg-background px-3 text-sm"
                     value={form().library.categoryId}
                     onChange={(e) =>
                       setForm({
@@ -324,7 +324,7 @@ export function AdminQuestionDetail() {
                   </label>
                   <select
                     id="library-status"
-                    class="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                    class="admin-select h-10 rounded-md border border-input bg-background px-3 text-sm"
                     value={form().library.status}
                     onChange={(e) =>
                       setForm({

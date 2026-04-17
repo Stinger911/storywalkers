@@ -71,7 +71,7 @@ tests: ## run tests
 
 dev: ## run the development servers
 	@(cd backend && \
-	uv run --group dev granian app.main:app --reload --host 0.0.0.0 --port 8080)
+	uv run --group dev granian --interface asgi app.main:app --reload --host 0.0.0.0 --port 8080)
 
 build-frontend: ## build frontend for hosting
 	@./scripts/ci/build-frontend.sh

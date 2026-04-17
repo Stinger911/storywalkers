@@ -7,24 +7,8 @@ import { StudentHome } from "./StudentHome";
 import { StudentPlanProvider } from "./studentPlanContext";
 
 export function StudentProfile() {
-  const { locale, setLocale, t } = useI18n();
   return (
     <section class="space-y-6">
-      <div class="flex items-center justify-end">
-        <label class="flex items-center gap-2 text-xs text-muted-foreground">
-          <span>{t("common.language")}</span>
-          <select
-            class="h-8 rounded-md border border-input bg-background px-2 text-xs text-foreground"
-            value={locale()}
-            onChange={(event) => setLocale(event.currentTarget.value as "en" | "ru")}
-            aria-label={t("common.language")}
-            title={t("common.language")}
-          >
-            <option value="en">English</option>
-            <option value="ru">Русский</option>
-          </select>
-        </label>
-      </div>
       <StudentPlanProvider>
         <StudentHome />
       </StudentPlanProvider>
@@ -87,11 +71,11 @@ export function StudentProfileRail() {
             </div>
           </RailCard>
 
-          <RailCard title="Courses">
+          <RailCard title={t("student.profileRail.courses")}>
             <div class="space-y-2 text-sm text-muted-foreground">
-              <div>Buy additional lessons and add them to your plan after payment activation.</div>
+              <div>{t("student.profileRail.coursesBody")}</div>
               <A href="/student/courses" class="text-primary underline">
-                Browse courses
+                {t("student.profileRail.browseCourses")}
               </A>
             </div>
           </RailCard>

@@ -226,20 +226,43 @@ def test_fx_rates_bootstraps_missing_doc(monkeypatch):
     assert response.status_code == 200
     payload = response.json()
     assert payload["base"] == "USD"
-    assert payload["rates"] == {"USD": 1.0}
+    assert payload["rates"] == {
+        "USD": 1.0,
+        "EUR": 0.88,
+        "PLN": 3.79,
+        "RUB": 82.0,
+    }
     assert payload["asOf"] is None
     assert payload["source"] == "firestore"
     assert fake_db._config["fx_rates"]["base"] == "USD"
-    assert fake_db._config["fx_rates"]["rates"] == {"USD": 1.0}
+    assert fake_db._config["fx_rates"]["rates"] == {
+        "USD": 1.0,
+        "EUR": 0.88,
+        "PLN": 3.79,
+        "RUB": 82.0,
+    }
 
     app.dependency_overrides.clear()
 
 
-def test_lessons_content_requires_active_status(monkeypatch):
+def test_onboarding_user_can_list_active_lessons(monkeypatch):
     fake_db = FakeFirestore(
         courses_data={"c1": {"title": "Course A"}},
         lesson_data={
-            "c1": {"l1": {"title": "Lesson 1", "content": "Text", "order": 1}}
+            "c1": {
+                "l1": {
+                    "title": "Lesson 1",
+                    "content": "Text 1",
+                    "order": 2,
+                    "isActive": True,
+                },
+                "l2": {
+                    "title": "Lesson 2",
+                    "content": "Text 2",
+                    "order": 1,
+                    "isActive": False,
+                },
+            }
         },
     )
     monkeypatch.setattr(courses, "get_firestore_client", lambda: fake_db)
@@ -248,48 +271,9 @@ def test_lessons_content_requires_active_status(monkeypatch):
 
     response = client.get("/api/courses/c1/lessons")
 
-    assert response.status_code == 403
-    assert response.json()["error"]["code"] == "status_blocked"
-
-    app.dependency_overrides.clear()
-
-
-def test_lessons_content_denies_expired_status(monkeypatch):
-    fake_db = FakeFirestore(
-        courses_data={"c1": {"title": "Course A"}},
-        lesson_data={
-            "c1": {"l1": {"title": "Lesson 1", "content": "Text", "order": 1}}
-        },
-    )
-    monkeypatch.setattr(courses, "get_firestore_client", lambda: fake_db)
-    app.dependency_overrides[auth_deps.get_current_user] = lambda: _student("expired")
-    client = TestClient(app)
-
-    response = client.get("/api/courses/c1/lessons")
-
-    assert response.status_code == 403
-    assert response.json()["error"]["code"] == "status_blocked"
-
-    app.dependency_overrides.clear()
-
-
-def test_lessons_content_denies_community_only_status(monkeypatch):
-    fake_db = FakeFirestore(
-        courses_data={"c1": {"title": "Course A"}},
-        lesson_data={
-            "c1": {"l1": {"title": "Lesson 1", "content": "Text", "order": 1}}
-        },
-    )
-    monkeypatch.setattr(courses, "get_firestore_client", lambda: fake_db)
-    app.dependency_overrides[auth_deps.get_current_user] = lambda: _student(
-        "community_only"
-    )
-    client = TestClient(app)
-
-    response = client.get("/api/courses/c1/lessons")
-
-    assert response.status_code == 403
-    assert response.json()["error"]["code"] == "status_blocked"
+    assert response.status_code == 200
+    payload = response.json()
+    assert [item["id"] for item in payload["items"]] == ["l1"]
 
     app.dependency_overrides.clear()
 

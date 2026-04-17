@@ -190,7 +190,7 @@ export function StudentQuestions() {
             {items().map((question) => (
               <A
                 href={`/student/questions/${question.id}`}
-                class="rounded-[var(--radius-md)] border border-border/70 bg-card px-4 py-3 shadow-rail transition hover:border-primary/40"
+                class="student-list-card rounded-[calc(var(--radius-md)+2px)] border border-border/70 bg-card px-4 py-3 shadow-none transition hover:border-primary/40"
               >
                 <div class="flex flex-wrap items-center justify-between gap-3">
                   <div class="min-w-0">

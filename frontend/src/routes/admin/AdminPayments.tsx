@@ -140,7 +140,7 @@ export function AdminPayments() {
               </label>
               <select
                 id="payments-status-filter"
-                class="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                class="admin-select h-10 rounded-md border border-input bg-background px-3 text-sm"
                 value={statusFilter()}
                 onChange={(event) =>
                   setStatusFilter(event.currentTarget.value as "all" | PaymentStatus)

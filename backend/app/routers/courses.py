@@ -11,7 +11,12 @@ from app.repositories.courses import list_active_courses
 router = APIRouter(prefix="/api", tags=["Courses"])
 
 DEFAULT_FX_BASE = "USD"
-DEFAULT_FX_RATES = {"USD": 1.0}
+DEFAULT_FX_RATES = {
+    "USD": 1.0,
+    "EUR": 0.88,
+    "PLN": 3.79,
+    "RUB": 82.0,
+}
 FX_DOC_COLLECTION = "config"
 FX_DOC_ID = "fx_rates"
 
@@ -134,8 +139,9 @@ def _get_or_bootstrap_fx_rates(db: firestore.Client) -> dict[str, Any]:
                 continue
             if isinstance(value, (int, float)) and value > 0:
                 rates[key.upper()] = float(value)
-    if "USD" not in rates:
-        rates["USD"] = 1.0
+    for currency, rate in DEFAULT_FX_RATES.items():
+        if currency not in rates:
+            rates[currency] = rate
     return {
         "base": base,
         "rates": rates,
@@ -155,7 +161,7 @@ async def list_course_lessons(
     course_id: str,
     user: dict = Depends(get_current_user),
 ):
-    _ensure_active_status(user)
+    _ = user
     db = get_firestore_client()
     course_ref = db.collection("courses").document(course_id)
     if not course_ref.get().exists:

@@ -143,6 +143,179 @@
   }
 }
 
+@layer components {
+  .admin-shell [data-page-header] {
+    @apply mb-1;
+  }
+
+  .admin-shell [data-page-header] ol {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: hsl(var(--muted-foreground));
+  }
+
+  .admin-shell [data-page-header] a {
+    @apply transition-colors duration-300;
+  }
+
+  .admin-shell [data-page-header] h1 {
+    @apply text-4xl sm:text-5xl;
+  }
+
+  .admin-shell [data-section-card] {
+    background: rgba(255, 255, 255, 0.94);
+    border-color: rgba(194, 199, 208, 0.18);
+    box-shadow: none;
+  }
+
+  .admin-shell [data-section-card] .text-muted-foreground {
+    color: hsl(var(--muted-foreground) / 0.9);
+  }
+
+  .admin-shell main input:not([type="search"]),
+  .admin-shell main select,
+  .admin-shell main textarea {
+    border-color: transparent;
+    background: rgba(223, 233, 247, 0.78);
+    border-radius: calc(var(--radius-md) + 2px);
+    box-shadow: none;
+    transition:
+      background-color 300ms ease-out,
+      box-shadow 300ms ease-out,
+      transform 300ms ease-out;
+  }
+
+  .admin-shell main input:not([type="search"]):focus,
+  .admin-shell main select:focus,
+  .admin-shell main textarea:focus {
+    outline: none;
+    box-shadow: 0 0 0 4px rgba(47, 95, 141, 0.12);
+    background: rgba(223, 233, 247, 0.95);
+  }
+
+  .admin-shell main label,
+  .admin-shell main [data-kb-label] {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: hsl(var(--muted-foreground));
+  }
+
+  .admin-shell .admin-select {
+    @apply h-11 px-4;
+  }
+
+  .admin-shell .admin-callout {
+    @apply rounded-[calc(var(--radius-lg)+2px)] border-0 px-5 py-4 shadow-none;
+  }
+
+  .admin-shell .admin-callout--error {
+    background: rgba(255, 218, 214, 0.8);
+    color: #7f1d1d;
+  }
+
+  .admin-shell .admin-list-card {
+    border-radius: calc(var(--radius-lg) + 2px);
+    border-color: rgba(194, 199, 208, 0.16);
+    background: rgba(255, 255, 255, 0.92);
+    box-shadow: none;
+    transition:
+      border-color 300ms ease-out,
+      box-shadow 300ms ease-out,
+      transform 300ms ease-out;
+  }
+
+  .admin-shell .admin-list-card:hover {
+    border-color: rgba(47, 95, 141, 0.18);
+    box-shadow: var(--shadow-card);
+    transform: translateY(-1px);
+  }
+
+  .student-shell [data-section-card] {
+    background: rgba(255, 255, 255, 0.94);
+    border-color: rgba(194, 199, 208, 0.16);
+    box-shadow: var(--shadow-card);
+  }
+
+  .student-shell .student-stat-card {
+    background: rgba(237, 244, 255, 0.82);
+  }
+
+  .student-shell main input:not([type="search"]),
+  .student-shell main select,
+  .student-shell main textarea {
+    border-color: transparent;
+    background: rgba(223, 233, 247, 0.72);
+    border-radius: calc(var(--radius-md) + 2px);
+    box-shadow: none;
+    transition:
+      background-color 300ms ease-out,
+      box-shadow 300ms ease-out,
+      transform 300ms ease-out;
+  }
+
+  .student-shell main input:not([type="search"]):focus,
+  .student-shell main select:focus,
+  .student-shell main textarea:focus {
+    outline: none;
+    box-shadow: 0 0 0 4px rgba(47, 95, 141, 0.12);
+    background: rgba(223, 233, 247, 0.92);
+  }
+
+  .student-shell main label,
+  .student-shell main [data-kb-label] {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: hsl(var(--muted-foreground));
+  }
+
+  .student-shell .student-select {
+    @apply h-11 px-4;
+  }
+
+  .student-shell .student-callout {
+    @apply rounded-[calc(var(--radius-lg)+2px)] border-0 px-5 py-4 shadow-none;
+  }
+
+  .student-shell .student-callout--error {
+    background: rgba(255, 218, 214, 0.8);
+    color: #7f1d1d;
+  }
+
+  .student-shell .student-list-card {
+    border-color: rgba(194, 199, 208, 0.16);
+    background: rgba(255, 255, 255, 0.92);
+    transition:
+      border-color 300ms ease-out,
+      box-shadow 300ms ease-out,
+      transform 300ms ease-out;
+  }
+
+  .student-shell .student-list-card:hover {
+    border-color: rgba(47, 95, 141, 0.18);
+    box-shadow: var(--shadow-card);
+    transform: translateY(-1px);
+  }
+
+  .student-shell .student-resource-item {
+    transition:
+      background-color 300ms ease-out,
+      border-color 300ms ease-out,
+      transform 300ms ease-out;
+  }
+
+  .student-shell .student-resource-item:hover {
+    background: rgba(237, 244, 255, 0.72);
+    border-color: rgba(47, 95, 141, 0.14);
+    transform: translateY(-1px);
+  }
+}
+
 ::-webkit-scrollbar {
   width: 16px;
 }

@@ -134,6 +134,14 @@ export function OnboardingGoal() {
             <Button
               as={A}
               href="/onboarding/profile"
+              variant="outline"
+              disabled={saving()}
+            >
+              {t("student.onboarding.profile.back")}
+            </Button>
+            <Button
+              as={A}
+              href="/onboarding/courses"
               disabled={saving() || !selectedGoalId()}
             >
               {saving() ? t("student.onboarding.common.saving") : t("student.onboarding.goal.next")}

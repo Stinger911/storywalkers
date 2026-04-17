@@ -219,7 +219,7 @@ export function AdminStepCompletions() {
           </label>
           <select
             id="step-completions-status-filter"
-            class="h-10 rounded-md border border-input bg-background px-3 text-sm"
+            class="admin-select h-10 rounded-md border border-input bg-background px-3 text-sm"
             value={statusFilter()}
             onChange={(event) =>
               setStatusFilter(event.currentTarget.value as CompletionStatusFilter)

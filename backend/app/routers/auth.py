@@ -29,15 +29,37 @@ logger = get_logger("app.db")
 ExperienceLevel = Literal["beginner", "intermediate", "advanced"]
 PreferredCurrency = Literal["USD", "EUR", "PLN", "RUB"]
 TELEGRAM_HANDLE_RE = re.compile(r"^@[A-Za-z0-9_]{1,32}$")
+PHONE_LIKE_RE = re.compile(r"^[0-9+\-\s()]+$")
 
 
 class ProfileFormModel(BaseModel):
+    aboutMe: str | None = None
     telegram: str | None = None
+    socialLinks: list[str] = Field(default_factory=list)
     socialUrl: str | None = None
     experienceLevel: ExperienceLevel | None = None
     notes: str | None = None
 
     model_config = {"extra": "forbid"}
+
+    @field_validator("aboutMe", mode="before")
+    @classmethod
+    def _trim_about_me(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        trimmed = value.strip()
+        return trimmed or None
+
+    @field_validator("aboutMe")
+    @classmethod
+    def _validate_about_me(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        if len(value) > 4000:
+            raise PydanticCustomError(
+                "about_me_max_length", "aboutMe must be 4000 characters or fewer"
+            )
+        return value
 
     @field_validator("telegram", mode="before")
     @classmethod
@@ -56,8 +78,20 @@ class ProfileFormModel(BaseModel):
             raise PydanticCustomError(
                 "telegram_max_length", "telegram must be 64 characters or fewer"
             )
+        if PHONE_LIKE_RE.match(value):
+            raise PydanticCustomError(
+                "telegram_invalid", "telegram must be a handle, not a phone number"
+            )
         if TELEGRAM_HANDLE_RE.match(value):
             return value
+        if value.startswith("@") and not TELEGRAM_HANDLE_RE.match(value):
+            raise PydanticCustomError(
+                "telegram_invalid", "telegram must be a valid @handle"
+            )
+        if not value.startswith("@") and not value.startswith("http"):
+            candidate = f"@{value.lstrip('@')}"
+            if TELEGRAM_HANDLE_RE.match(candidate):
+                return candidate
         parsed = urlparse(value)
         host = (parsed.netloc or "").lower()
         path = (parsed.path or "").strip("/")
@@ -70,6 +104,49 @@ class ProfileFormModel(BaseModel):
         raise PydanticCustomError(
             "telegram_invalid", "telegram must be @handle or t.me link"
         )
+
+    @field_validator("socialLinks", mode="before")
+    @classmethod
+    def _normalize_social_links(cls, value: object) -> list[str]:
+        if value is None:
+            return []
+        if isinstance(value, str):
+            value = [value]
+        if not isinstance(value, list):
+            return []
+        normalized: list[str] = []
+        for item in value:
+            if not isinstance(item, str):
+                continue
+            trimmed = item.strip()
+            if trimmed:
+                normalized.append(trimmed)
+        return normalized
+
+    @field_validator("socialLinks")
+    @classmethod
+    def _validate_social_links(cls, value: list[str]) -> list[str]:
+        if len(value) > 10:
+            raise PydanticCustomError(
+                "social_links_max_items", "socialLinks must contain at most 10 items"
+            )
+        unique: list[str] = []
+        seen: set[str] = set()
+        for item in value:
+            if len(item) > 200:
+                raise PydanticCustomError(
+                    "social_link_max_length",
+                    "each social link must be 200 characters or fewer",
+                )
+            parsed = urlparse(item)
+            if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+                raise PydanticCustomError(
+                    "social_link_invalid", "each social link must be a valid URL"
+                )
+            if item not in seen:
+                seen.add(item)
+                unique.append(item)
+        return unique
 
     @field_validator("socialUrl", mode="before")
     @classmethod
@@ -122,6 +199,7 @@ class MeResponse(BaseModel):
     role: str
     status: UserStatus
     roleRaw: str | None = None
+    level: int = 1
     selectedGoalId: str | None = None
     profileForm: ProfileFormModel = Field(default_factory=ProfileFormModel)
     selectedCourses: list[str] = Field(default_factory=list)
@@ -231,22 +309,35 @@ def _sanitize_profile_form(
     merged = dict(existing or {})
     payload = incoming.model_dump(exclude_unset=True)
     for key, value in payload.items():
-        if key in {"telegram", "socialUrl", "notes"}:
+        if key in {"aboutMe", "telegram", "socialUrl", "notes"}:
             merged[key] = _sanitize_optional_text(value)
         else:
             merged[key] = value
+    social_links = merged.get("socialLinks")
+    if not social_links and _sanitize_optional_text(merged.get("socialUrl")):
+        social_links = [_sanitize_optional_text(merged.get("socialUrl"))]
     normalized = {
+        "aboutMe": _sanitize_optional_text(merged.get("aboutMe"))
+        or _sanitize_optional_text(merged.get("notes")),
         "telegram": _sanitize_optional_text(merged.get("telegram")),
+        "socialLinks": social_links if isinstance(social_links, list) else [],
         "socialUrl": _sanitize_optional_text(merged.get("socialUrl")),
         "experienceLevel": merged.get("experienceLevel"),
         "notes": _sanitize_optional_text(merged.get("notes")),
     }
     # Keep read path backward-compatible with legacy/invalid stored values.
     try:
-        return ProfileFormModel.model_validate(normalized).model_dump()
+        validated = ProfileFormModel.model_validate(normalized).model_dump()
+        if not validated.get("socialUrl") and validated.get("socialLinks"):
+            validated["socialUrl"] = validated["socialLinks"][0]
+        if not validated.get("notes") and validated.get("aboutMe"):
+            validated["notes"] = validated["aboutMe"]
+        return validated
     except Exception:
         return {
+            "aboutMe": None,
             "telegram": None,
+            "socialLinks": [],
             "socialUrl": None,
             "experienceLevel": None,
             "notes": None,
@@ -269,18 +360,16 @@ def _is_profile_complete(data: dict[str, Any]) -> bool:
     if not isinstance(profile_form, dict):
         return False
     return bool(
-        _sanitize_optional_text(profile_form.get("telegram"))
-        or _sanitize_optional_text(profile_form.get("socialUrl"))
-        or profile_form.get("experienceLevel")
+        _sanitize_optional_text(profile_form.get("aboutMe"))
         or _sanitize_optional_text(profile_form.get("notes"))
     )
 
 
 def _onboarding_step(data: dict[str, Any]) -> str:
-    if not _sanitize_optional_text(data.get("selectedGoalId")):
-        return "goal_selection"
     if not _is_profile_complete(data):
         return "questionnaire"
+    if not _sanitize_optional_text(data.get("selectedGoalId")):
+        return "goal_selection"
     selected_courses = data.get("selectedCourses")
     if (
         not isinstance(selected_courses, list)
@@ -345,9 +434,6 @@ async def patch_me(
             payload.profileForm or ProfileFormModel(),
         )
 
-    if "subscriptionSelected" in payload_data and user.get("role") == "student":
-        ensure_active_student_status({**user, "status": current_status})
-
     before_step = _onboarding_step(current)
     next_state = {**current, **updates}
     after_step = _onboarding_step(next_state)
@@ -383,6 +469,11 @@ async def patch_me(
         "role": role,
         "status": current_status,
         "roleRaw": role_raw,
+        "level": (
+            response_data.get("level")
+            if isinstance(response_data.get("level"), int) and response_data.get("level") > 0
+            else 1
+        ),
         "selectedGoalId": _sanitize_optional_text(response_data.get("selectedGoalId")),
         "profileForm": _sanitize_profile_form(
             response_data.get("profileForm")

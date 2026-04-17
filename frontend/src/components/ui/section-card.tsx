@@ -13,12 +13,20 @@ type SectionCardProps = {
 
 export function SectionCard(props: SectionCardProps) {
   return (
-    <Card class={cn("border border-border/70", props.class)}>
-      <CardHeader class="flex flex-row flex-wrap items-start justify-between gap-4 px-6 py-5">
+    <Card
+      data-section-card
+      class={cn(
+        "border border-border/70 rounded-[calc(var(--radius-lg)+4px)] shadow-none",
+        props.class,
+      )}
+    >
+      <CardHeader class="flex flex-row flex-wrap items-start justify-between gap-4 px-6 py-6">
         <div>
-          <CardTitle class="text-lg">{props.title}</CardTitle>
+          <CardTitle class="text-xl tracking-[-0.03em]">{props.title}</CardTitle>
           <Show when={props.description}>
-            <CardDescription>{props.description}</CardDescription>
+            <CardDescription class="mt-1 max-w-2xl text-sm leading-6">
+              {props.description}
+            </CardDescription>
           </Show>
         </div>
         <Show when={props.actions}>{props.actions}</Show>

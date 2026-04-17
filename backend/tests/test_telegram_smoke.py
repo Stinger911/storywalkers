@@ -186,7 +186,9 @@ def test_telegram_questionnaire_completion_is_idempotent(monkeypatch):
                 "selectedGoalId": "goal-1",
                 "selectedCourses": [],
                 "profileForm": {
+                    "aboutMe": None,
                     "telegram": None,
+                    "socialLinks": [],
                     "socialUrl": None,
                     "experienceLevel": None,
                     "notes": None,
@@ -205,7 +207,7 @@ def test_telegram_questionnaire_completion_is_idempotent(monkeypatch):
     client = TestClient(app)
 
     first = client.patch(
-        "/api/me", json={"profileForm": {"experienceLevel": "beginner"}}
+        "/api/me", json={"profileForm": {"aboutMe": "Ready for onboarding."}}
     )
     assert first.status_code == 200
     assert calls["count"] == 1

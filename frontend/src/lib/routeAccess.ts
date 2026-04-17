@@ -1,4 +1,9 @@
 import type { MeProfile } from "./auth";
+import {
+  getNextOnboardingStep,
+  isOnboardingIncomplete,
+  onboardingPath,
+} from "../routes/onboarding/onboardingState";
 
 type GuardRole = "student" | "staff";
 
@@ -31,6 +36,10 @@ export function resolveGuardRedirect(input: ResolveGuardInput): string | null {
 
   if (me.role !== "student") {
     return null;
+  }
+
+  if (isOnboardingIncomplete(me) && !isOnboardingPath(pathname)) {
+    return onboardingPath(getNextOnboardingStep(me));
   }
 
   if (me.status === "disabled" && !isOnboardingPath(pathname)) {

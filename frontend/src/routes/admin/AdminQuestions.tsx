@@ -91,7 +91,7 @@ export function AdminQuestions() {
             </label>
             <select
               id="question-status"
-              class="h-10 rounded-md border border-input bg-background px-3 text-sm"
+              class="admin-select h-10 rounded-md border border-input bg-background px-3 text-sm"
               value={filters().status}
               onChange={(e) =>
                 setFilters({ ...filters(), status: e.currentTarget.value })
@@ -108,7 +108,7 @@ export function AdminQuestions() {
             </label>
             <select
               id="question-category"
-              class="h-10 rounded-md border border-input bg-background px-3 text-sm"
+              class="admin-select h-10 rounded-md border border-input bg-background px-3 text-sm"
               value={filters().categoryId}
               onChange={(e) =>
                 setFilters({ ...filters(), categoryId: e.currentTarget.value })
