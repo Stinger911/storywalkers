@@ -1,7 +1,7 @@
 import { A, useNavigate } from "@solidjs/router";
 import { createMemo, createSignal, For, onMount, Show } from "solid-js";
 
-import { Button } from "../../components/ui/button";
+import { Button, buttonVariants } from "../../components/ui/button";
 import { SectionCard } from "../../components/ui/section-card";
 import { SmallStatBadge } from "../../components/ui/small-stat-badge";
 import {
@@ -18,7 +18,9 @@ import { useAuth } from "../../lib/auth";
 import {
   convertUsdCentsToCurrencyCents,
   formatCents,
+  listCourseLessons,
   listCourses,
+  type CourseLesson,
   type Course,
 } from "../../lib/coursesApi";
 import { getFxRates } from "../../lib/fxApi";
@@ -33,7 +35,7 @@ const COMMUNITY_CARD = {
 } as const;
 
 type CurrencyOption = {
-  value: "USD" | "EUR" | "PLN";
+  value: "USD" | "EUR" | "PLN" | "RUB";
   label: string;
 };
 
@@ -41,6 +43,7 @@ const CURRENCY_OPTIONS: CurrencyOption[] = [
   { value: "USD", label: "USD" },
   { value: "EUR", label: "EUR" },
   { value: "PLN", label: "PLN" },
+  { value: "RUB", label: "RUB" },
 ];
 
 export function OnboardingCourses() {
@@ -51,14 +54,20 @@ export function OnboardingCourses() {
   const [loading, setLoading] = createSignal(true);
   const [loadError, setLoadError] = createSignal<string | null>(null);
   const [courses, setCourses] = createSignal<Course[]>([]);
+  const [expandedCourseId, setExpandedCourseId] = createSignal<string | null>(null);
+  const [lessonsByCourse, setLessonsByCourse] = createSignal<Record<string, CourseLesson[]>>({});
+  const [lessonLoadingByCourse, setLessonLoadingByCourse] = createSignal<Record<string, boolean>>({});
+  const [lessonErrorByCourse, setLessonErrorByCourse] = createSignal<Record<string, string | null>>({});
   const [fxRates, setFxRates] = createSignal<Record<string, number>>({ USD: 1 });
-  const [preferredCurrency, setPreferredCurrency] = createSignal<"USD" | "EUR" | "PLN">(
-    auth.me()?.preferredCurrency === "EUR"
-      ? "EUR"
-      : auth.me()?.preferredCurrency === "PLN"
-        ? "PLN"
-        : "USD",
-  );
+  const initialPreferredCurrency = (): CurrencyOption["value"] => {
+    const current = auth.me()?.preferredCurrency;
+    if (current === "EUR" || current === "PLN" || current === "RUB") {
+      return current;
+    }
+    return "USD";
+  };
+  const [preferredCurrency, setPreferredCurrency] =
+    createSignal<CurrencyOption["value"]>(initialPreferredCurrency());
   const selectedGoalId = createMemo(() => auth.me()?.selectedGoalId || null);
 
   const [saving, setSaving] = createSignal(false);
@@ -70,14 +79,14 @@ export function OnboardingCourses() {
     auth.me()?.selectedCourses || [],
   );
   const [communitySelected, setCommunitySelected] = createSignal(
-    Boolean(auth.me()?.subscriptionSelected),
+    auth.me()?.subscriptionSelected ?? true,
   );
 
   const hasPreferredRate = createMemo(() => {
     const next = fxRates()[preferredCurrency()];
     return typeof next === "number" && next > 0;
   });
-  const displayCurrency = createMemo<"USD" | "EUR" | "PLN">(() =>
+  const displayCurrency = createMemo<CurrencyOption["value"]>(() =>
     hasPreferredRate() ? preferredCurrency() : "USD",
   );
   const currencyRate = createMemo(() =>
@@ -120,6 +129,37 @@ export function OnboardingCourses() {
         ? prev.filter((id) => id !== courseId)
         : [...prev, courseId],
     );
+  };
+
+  const setLessonsLoading = (courseId: string, value: boolean) => {
+    setLessonLoadingByCourse((current) => ({ ...current, [courseId]: value }));
+  };
+
+  const setLessonsError = (courseId: string, value: string | null) => {
+    setLessonErrorByCourse((current) => ({ ...current, [courseId]: value }));
+  };
+
+  const loadLessons = async (courseId: string) => {
+    if (lessonsByCourse()[courseId] || lessonLoadingByCourse()[courseId]) return;
+    setLessonsLoading(courseId, true);
+    setLessonsError(courseId, null);
+    try {
+      const response = await listCourseLessons(courseId);
+      setLessonsByCourse((current) => ({ ...current, [courseId]: response.items }));
+    } catch (err) {
+      setLessonsError(courseId, formatError(err, t("student.onboarding.courses.loadError")));
+    } finally {
+      setLessonsLoading(courseId, false);
+    }
+  };
+
+  const toggleExpandedCourse = (courseId: string) => {
+    if (expandedCourseId() === courseId) {
+      setExpandedCourseId(null);
+      return;
+    }
+    setExpandedCourseId(courseId);
+    void loadLessons(courseId);
   };
 
   const formatError = (err: unknown, fallback: string) => {
@@ -166,7 +206,7 @@ export function OnboardingCourses() {
     }
   };
 
-  const updatePreferredCurrency = async (nextCurrency: "USD" | "EUR" | "PLN") => {
+  const updatePreferredCurrency = async (nextCurrency: CurrencyOption["value"]) => {
     if (nextCurrency === preferredCurrency()) return;
     const previous = preferredCurrency();
     setPreferredCurrency(nextCurrency);
@@ -191,6 +231,122 @@ export function OnboardingCourses() {
     }
   };
 
+  const CourseRow = (props: { course: Course; disabled?: boolean }) => {
+    const selected = () => selectedCourses().includes(props.course.id);
+    const expanded = () => expandedCourseId() === props.course.id;
+    const lessons = () => lessonsByCourse()[props.course.id] ?? [];
+    const lessonsLoading = () => Boolean(lessonLoadingByCourse()[props.course.id]);
+    const lessonsError = () => lessonErrorByCourse()[props.course.id];
+
+    return (
+      <div
+        class={`rounded-[calc(var(--radius-lg)+2px)] border bg-card transition-all duration-300 ${
+          selected()
+            ? "border-primary bg-primary/5 shadow-rail"
+            : "border-border/70 hover:border-primary/40"
+        } ${props.disabled ? "opacity-70" : ""}`}
+      >
+        <div class="flex flex-col gap-4 px-5 py-5 lg:flex-row lg:items-start lg:justify-between">
+          <button
+            type="button"
+            class="flex min-w-0 flex-1 items-start gap-4 text-left"
+            onClick={() => toggleCourse(props.course.id, props.course.isActive)}
+            disabled={saving() || currencySaving() || props.disabled}
+          >
+            <span
+              class={`mt-0.5 inline-flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full border ${
+                selected()
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-border bg-background text-transparent"
+              }`}
+            >
+              <span class="material-symbols-outlined text-[16px]">check</span>
+            </span>
+            <div class="min-w-0 flex-1 space-y-2">
+              <div class="flex flex-wrap items-center gap-2">
+                <div class="text-base font-semibold tracking-[-0.02em] text-foreground">
+                  {props.course.title}
+                </div>
+                <Show when={typeof props.course.lessonCount === "number"}>
+                  <SmallStatBadge class="bg-background">
+                    {t("student.onboarding.courses.lessonCount", {
+                      count: props.course.lessonCount ?? 0,
+                    })}
+                  </SmallStatBadge>
+                </Show>
+              </div>
+              <p class="max-w-3xl text-sm leading-6 text-muted-foreground">
+                {props.course.shortDescription}
+              </p>
+              <div class="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                {selected()
+                  ? t("student.onboarding.courses.selected")
+                  : t("student.onboarding.courses.clickToSelect")}
+              </div>
+            </div>
+          </button>
+
+          <div class="flex flex-col items-start gap-3 lg:items-end">
+            <div class="text-lg font-semibold text-foreground">
+              {formatPrice(props.course.priceUsdCents)}
+            </div>
+            <button
+              type="button"
+              class={buttonVariants({ variant: "outline", size: "sm" })}
+              onClick={() => toggleExpandedCourse(props.course.id)}
+            >
+              {expanded()
+                ? t("student.onboarding.courses.hideLessons")
+                : t("student.onboarding.courses.showLessons")}
+            </button>
+          </div>
+        </div>
+
+        <Show when={expanded()}>
+          <div class="border-t border-border/60 px-5 py-4">
+            <div class="mb-3 text-[11px] font-bold uppercase tracking-[0.14em] text-secondary">
+              {t("student.onboarding.courses.lessonsTitle")}
+            </div>
+            <Show when={!lessonsLoading()} fallback={<div class="space-y-2">
+              <Skeleton class="h-10 rounded-[var(--radius-md)]" />
+              <Skeleton class="h-10 rounded-[var(--radius-md)]" />
+            </div>}>
+              <Show when={!lessonsError()} fallback={
+                <div class="rounded-[var(--radius-md)] border border-error/40 bg-error/10 px-4 py-3 text-sm text-error-foreground">
+                  {lessonsError()}
+                </div>
+              }>
+                <Show
+                  when={lessons().length > 0}
+                  fallback={
+                    <div class="text-sm text-muted-foreground">
+                      {t("student.onboarding.courses.lessonsEmpty")}
+                    </div>
+                  }
+                >
+                  <div class="space-y-2">
+                    <For each={lessons()}>
+                      {(lesson, index) => (
+                        <div class="flex items-center gap-3 rounded-[var(--radius-md)] bg-[rgba(237,244,255,0.6)] px-4 py-3 text-sm">
+                          <span class="inline-flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-white text-[11px] font-bold text-primary shadow-sm">
+                            {index() + 1}
+                          </span>
+                          <span class="min-w-0 flex-1 truncate text-foreground">
+                            {lesson.title}
+                          </span>
+                        </div>
+                      )}
+                    </For>
+                  </div>
+                </Show>
+              </Show>
+            </Show>
+          </div>
+        </Show>
+      </div>
+    );
+  };
+
   return (
     <OnboardingLayout
       step="courses"
@@ -207,7 +363,12 @@ export function OnboardingCourses() {
               value={CURRENCY_OPTIONS.find((item) => item.value === preferredCurrency())}
               onChange={(value) => {
                 const raw = value?.value;
-                if (raw === "USD" || raw === "EUR" || raw === "PLN") {
+                if (
+                  raw === "USD" ||
+                  raw === "EUR" ||
+                  raw === "PLN" ||
+                  raw === "RUB"
+                ) {
                   void updatePreferredCurrency(raw);
                 }
               }}
@@ -268,48 +429,9 @@ export function OnboardingCourses() {
                   </div>
                 }
               >
-                <div class="grid gap-3 md:grid-cols-2">
+                <div class="space-y-3">
                   <For each={activeCourses()}>
-                    {(course) => {
-                      const selected = () => selectedCourses().includes(course.id);
-                      return (
-                        <button
-                          class={`rounded-xl border p-4 text-left transition-colors ${
-                            selected()
-                              ? "border-primary bg-primary/5"
-                              : "border-border/70 bg-card hover:border-primary/50"
-                          }`}
-                          onClick={() => toggleCourse(course.id, course.isActive)}
-                          disabled={saving() || currencySaving()}
-                        >
-                          <div class="flex items-start justify-between gap-3">
-                            <div>
-                              <div class="font-medium">{course.title}</div>
-                              <div class="mt-1 text-sm text-muted-foreground">
-                                {course.shortDescription}
-                              </div>
-                              <Show when={typeof course.lessonCount === "number"}>
-                                <div class="mt-2">
-                                  <SmallStatBadge class="bg-card">
-                                    {t("student.onboarding.courses.lessonCount", {
-                                      count: course.lessonCount ?? 0,
-                                    })}
-                                  </SmallStatBadge>
-                                </div>
-                              </Show>
-                            </div>
-                            <div class="text-sm font-semibold">
-                              {formatPrice(course.priceUsdCents)}
-                            </div>
-                          </div>
-                          <div class="mt-3 text-xs text-muted-foreground">
-                            {selected()
-                              ? t("student.onboarding.courses.selected")
-                              : t("student.onboarding.courses.clickToSelect")}
-                          </div>
-                        </button>
-                      );
-                    }}
+                    {(course) => <CourseRow course={course} />}
                   </For>
                 </div>
               </Show>
@@ -318,35 +440,9 @@ export function OnboardingCourses() {
                   <div class="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                     {t("student.onboarding.courses.inactiveSectionTitle")}
                   </div>
-                  <div class="grid gap-3 md:grid-cols-2">
+                  <div class="space-y-3">
                     <For each={inactiveCourses()}>
-                      {(course) => (
-                        <div class="rounded-xl border border-border/60 bg-muted/30 p-4 opacity-80">
-                          <div class="flex items-start justify-between gap-3">
-                            <div>
-                              <div class="font-medium">{course.title}</div>
-                              <div class="mt-1 text-sm text-muted-foreground">
-                                {course.shortDescription}
-                              </div>
-                              <Show when={typeof course.lessonCount === "number"}>
-                                <div class="mt-2">
-                                  <SmallStatBadge class="bg-card">
-                                    {t("student.onboarding.courses.lessonCount", {
-                                      count: course.lessonCount ?? 0,
-                                    })}
-                                  </SmallStatBadge>
-                                </div>
-                              </Show>
-                            </div>
-                            <div class="text-sm font-semibold">
-                              {formatPrice(course.priceUsdCents)}
-                            </div>
-                          </div>
-                          <div class="mt-3 text-xs text-muted-foreground">
-                            {t("student.onboarding.courses.inactiveBadge")}
-                          </div>
-                        </div>
-                      )}
+                      {(course) => <CourseRow course={course} disabled />}
                     </For>
                   </div>
                 </div>
@@ -395,7 +491,7 @@ export function OnboardingCourses() {
           <div class="flex flex-wrap gap-2">
             <Button
               as={A}
-              href="/onboarding/profile"
+              href="/onboarding/goal"
               variant="outline"
               disabled={saving() || currencySaving()}
             >

@@ -24,6 +24,19 @@ type RawDictionary = {
     question: string;
     answer: string;
     language: string;
+    settings: string;
+    appearance: string;
+    theme: string;
+    themeLight: string;
+    themeDark: string;
+    renameUser: string;
+    save: string;
+    cancel: string;
+    logout: string;
+    active: string;
+    valueRequired: string;
+    maxLength60: string;
+    saveFailed: string;
     contactSupport: string;
     status: {
       new: string;
@@ -86,6 +99,17 @@ type RawDictionary = {
     layout: {
       title: string;
       roleLabel: string;
+      brand: string;
+      searchPlaceholder: string;
+      levelLabel: string;
+      workspaceTitle: string;
+      workspaceSubtitle: string;
+      navDashboard: string;
+      navCourses: string;
+      navLibrary: string;
+      navCommunity: string;
+      tipTitle: string;
+      tipBody: string;
       tabs: {
         profile: string;
         questions: string;
@@ -136,6 +160,28 @@ type RawDictionary = {
       completeDialogConfirm: string;
       completeDialogErrorTitle: string;
       completeDialogErrorBody: string;
+      greetingEyebrow: string;
+      welcomeBack: string;
+      weeklyGoalProgress: string;
+      statusInProgress: string;
+      progressLabel: string;
+      continueJourney: string;
+      ongoingCourses: string;
+      completedLessons: string;
+      nextMilestone: string;
+      milestoneProgress: string;
+      recentActivityTitle: string;
+      viewAll: string;
+      activityCurrentFocus: string;
+      activityCompletedStep: string;
+      activityGoalProgress: string;
+      resourcesTitle: string;
+      resourceLatestMaterial: string;
+      resourceSavedDocuments: string;
+      resourceMentorSupport: string;
+      browseFullLibrary: string;
+      doneCommentLabel: string;
+      doneLinkLabel: string;
     };
     questionsRail: {
       illustrationAlt: string;
@@ -224,11 +270,30 @@ type RawDictionary = {
       library: string;
       recent: string;
       saved: string;
+      courses: string;
+      coursesBody: string;
+      browseCourses: string;
       learningIllustrationAlt: string;
       questionsAlt: string;
       libraryAlt: string;
     };
+    courses: {
+      title: string;
+      description: string;
+      loading: string;
+      emptyAvailable: string;
+      selectedCount: string;
+      createPaymentInstructions: string;
+      ownedTitle: string;
+      paymentInstructionsTitle: string;
+      activationCode: string;
+      amount: string;
+      openPaymentPage: string;
+      refreshCourses: string;
+      selectAtLeastOne: string;
+    };
     onboarding: {
+      eyebrow: string;
       stepperTitle: string;
       steps: {
         goal: string;
@@ -257,17 +322,19 @@ type RawDictionary = {
         title: string;
         subtitle: string;
         cardTitle: string;
+        cardDescription: string;
+        aboutMeLabel: string;
+        aboutMePlaceholder: string;
+        aboutMeRequired: string;
         telegramLabel: string;
         telegramPlaceholder: string;
-        socialUrlLabel: string;
-        socialUrlPlaceholder: string;
-        experienceLevelLabel: string;
-        experienceLevelPlaceholder: string;
-        experienceBeginner: string;
-        experienceIntermediate: string;
-        experienceAdvanced: string;
-        notesLabel: string;
-        notesPlaceholder: string;
+        telegramHelp: string;
+        telegramPhoneError: string;
+        socialLinksLabel: string;
+        socialLinkPlaceholder: string;
+        socialLinkError: string;
+        addSocialLink: string;
+        removeSocialLink: string;
         disclaimer: string;
         back: string;
         submit: string;
@@ -292,6 +359,10 @@ type RawDictionary = {
         currencySaveError: string;
         lessonCount: string;
         empty: string;
+        showLessons: string;
+        hideLessons: string;
+        lessonsTitle: string;
+        lessonsEmpty: string;
       };
       checkout: {
         title: string;
@@ -332,6 +403,19 @@ const dictionaries: Record<Locale, RawDictionary> = {
       question: "Question",
       answer: "Answer",
       language: "Language",
+      settings: "Settings",
+      appearance: "Appearance",
+      theme: "Theme",
+      themeLight: "Light",
+      themeDark: "Dark",
+      renameUser: "Rename user",
+      save: "Save",
+      cancel: "Cancel",
+      logout: "Logout",
+      active: "Active",
+      valueRequired: "Value is required.",
+      maxLength60: "Must be 60 characters or fewer.",
+      saveFailed: "Save failed.",
       contactSupport: "Contact Support",
       status: {
         new: "New",
@@ -405,6 +489,17 @@ const dictionaries: Record<Locale, RawDictionary> = {
       layout: {
         title: "Student Dashboard",
         roleLabel: "Student",
+        brand: "StoryWalkers Club",
+        searchPlaceholder: "Search archive...",
+        levelLabel: "Level {{ level }} Archivist",
+        workspaceTitle: "StoryWalkers",
+        workspaceSubtitle: "Modern Archivist",
+        navDashboard: "Dashboard",
+        navCourses: "My Courses",
+        navLibrary: "Library",
+        navCommunity: "Community",
+        tipTitle: "Pro Tip",
+        tipBody: "Complete 3 lessons to unlock the “Gold Quill” badge.",
         tabs: {
           profile: "Profile",
           questions: "My Questions",
@@ -456,6 +551,29 @@ const dictionaries: Record<Locale, RawDictionary> = {
         completeDialogConfirm: "Complete lesson",
         completeDialogErrorTitle: "Error",
         completeDialogErrorBody: "Could not complete lesson",
+        greetingEyebrow: "Morning, Archivist",
+        welcomeBack: "Welcome back, {{ name }}",
+        weeklyGoalProgress:
+          "Your narrative path is waiting. You've completed {{ percent }}% of your weekly goal.",
+        statusInProgress: "In Progress",
+        progressLabel: "Progress",
+        continueJourney: "Continue Journey",
+        ongoingCourses: "Ongoing Courses",
+        completedLessons: "Completed Lessons",
+        nextMilestone: "Next Milestone",
+        milestoneProgress: "{{ done }} of {{ total }} lessons complete",
+        recentActivityTitle: "Recent Activity",
+        viewAll: "View All",
+        activityCurrentFocus: "Current focus",
+        activityCompletedStep: "Completed step",
+        activityGoalProgress: "Goal progress",
+        resourcesTitle: "Resource Library",
+        resourceLatestMaterial: "Latest material",
+        resourceSavedDocuments: "Saved documents",
+        resourceMentorSupport: "Mentor support",
+        browseFullLibrary: "Browse Full Library",
+        doneCommentLabel: "Comment:",
+        doneLinkLabel: "Link:",
       },
       questionsRail: {
         illustrationAlt: "Questions illustration",
@@ -544,12 +662,33 @@ const dictionaries: Record<Locale, RawDictionary> = {
         library: "Library",
         recent: "Recent",
         saved: "Saved",
+        courses: "Courses",
+        coursesBody:
+          "Buy additional lessons and add them to your plan after payment activation.",
+        browseCourses: "Browse courses",
         learningIllustrationAlt: "Learning illustration",
         questionsAlt: "Questions",
         libraryAlt: "Library",
       },
-      onboarding: {
-        stepperTitle: "Onboarding progress",
+      courses: {
+        title: "Buy additional courses",
+        description:
+          "Select extra courses to add to your learning plan after payment activation.",
+        loading: "Loading courses…",
+        emptyAvailable: "No additional courses are available right now.",
+        selectedCount: "{{ count }} selected",
+        createPaymentInstructions: "Create payment instructions",
+        ownedTitle: "Your courses",
+        paymentInstructionsTitle: "Payment instructions",
+        activationCode: "Activation code",
+        amount: "Amount: {{ amount }}",
+        openPaymentPage: "Open payment page",
+        refreshCourses: "Refresh courses",
+        selectAtLeastOne: "Select at least one course.",
+      },
+    onboarding: {
+      eyebrow: "Onboarding",
+      stepperTitle: "Onboarding progress",
         steps: {
           goal: "Goal",
           profile: "Profile",
@@ -575,19 +714,24 @@ const dictionaries: Record<Locale, RawDictionary> = {
         },
         profile: {
           title: "Tell us about yourself",
-          subtitle: "This helps us tailor your learning path.",
-          cardTitle: "Profile form",
+          subtitle: "Start with a short introduction so we can shape your learning path around you.",
+          cardTitle: "Profile",
+          cardDescription:
+            "Only “About me” is required. Telegram and social links are optional.",
+          aboutMeLabel: "About me",
+          aboutMePlaceholder:
+            "Tell us about your goals, current level, and what you want from StoryWalkers.",
+          aboutMeRequired: "About me is required.",
           telegramLabel: "Telegram",
-          telegramPlaceholder: "@username or https://t.me/username",
-          socialUrlLabel: "Social URL",
-          socialUrlPlaceholder: "https://...",
-          experienceLevelLabel: "Experience level",
-          experienceLevelPlaceholder: "Select level",
-          experienceBeginner: "Beginner",
-          experienceIntermediate: "Intermediate",
-          experienceAdvanced: "Advanced",
-          notesLabel: "Notes",
-          notesPlaceholder: "Anything you want us to know...",
+          telegramPlaceholder: "@username",
+          telegramHelp:
+            "We add “@” automatically for Telegram handles. Phone numbers are not accepted here.",
+          telegramPhoneError: "Telegram must be a handle, not a phone number.",
+          socialLinksLabel: "Social links",
+          socialLinkPlaceholder: "https://instagram.com/yourname",
+          socialLinkError: "Each social link must be a valid URL.",
+          addSocialLink: "Add link",
+          removeSocialLink: "Remove link",
           disclaimer:
             "Your profile will be reviewed by a human. Activation is manual after review.",
           back: "Back",
@@ -615,6 +759,10 @@ const dictionaries: Record<Locale, RawDictionary> = {
           currencySaveError: "Could not save preferred currency.",
           lessonCount: "{{ count }} lessons",
           empty: "No courses selected yet.",
+          showLessons: "Show lessons",
+          hideLessons: "Hide lessons",
+          lessonsTitle: "Lessons",
+          lessonsEmpty: "No lessons available yet.",
         },
         checkout: {
           title: "Checkout",
@@ -652,6 +800,19 @@ const dictionaries: Record<Locale, RawDictionary> = {
       question: "Вопрос",
       answer: "Ответ",
       language: "Язык",
+      settings: "Настройки",
+      appearance: "Оформление",
+      theme: "Тема",
+      themeLight: "Светлая",
+      themeDark: "Тёмная",
+      renameUser: "Изменить имя",
+      save: "Сохранить",
+      cancel: "Отмена",
+      logout: "Выйти",
+      active: "Активно",
+      valueRequired: "Значение обязательно.",
+      maxLength60: "Не более 60 символов.",
+      saveFailed: "Не удалось сохранить.",
       contactSupport: "Связаться с поддержкой",
       status: {
         new: "Новые",
@@ -725,6 +886,17 @@ const dictionaries: Record<Locale, RawDictionary> = {
       layout: {
         title: "Панель студента",
         roleLabel: "Студент",
+        brand: "StoryWalkers Club",
+        searchPlaceholder: "Поиск по архиву...",
+        levelLabel: "Архивист {{ level }} уровня",
+        workspaceTitle: "StoryWalkers",
+        workspaceSubtitle: "Современный архивист",
+        navDashboard: "Дашборд",
+        navCourses: "Мои курсы",
+        navLibrary: "Библиотека",
+        navCommunity: "Сообщество",
+        tipTitle: "Совет",
+        tipBody: "Пройдите 3 урока, чтобы открыть бейдж «Gold Quill».",
         tabs: {
           profile: "Профиль",
           questions: "Мои вопросы",
@@ -777,6 +949,29 @@ const dictionaries: Record<Locale, RawDictionary> = {
         completeDialogConfirm: "Завершить урок",
         completeDialogErrorTitle: "Ошибка",
         completeDialogErrorBody: "Не удалось завершить урок",
+        greetingEyebrow: "Доброе утро, архивист",
+        welcomeBack: "С возвращением, {{ name }}",
+        weeklyGoalProgress:
+          "Ваш путь обучения ждёт вас. Вы выполнили {{ percent }}% недельной цели.",
+        statusInProgress: "В процессе",
+        progressLabel: "Прогресс",
+        continueJourney: "Продолжить путь",
+        ongoingCourses: "Текущие курсы",
+        completedLessons: "Завершённые уроки",
+        nextMilestone: "Следующая веха",
+        milestoneProgress: "Завершено уроков: {{ done }} из {{ total }}",
+        recentActivityTitle: "Недавняя активность",
+        viewAll: "Смотреть всё",
+        activityCurrentFocus: "Текущий фокус",
+        activityCompletedStep: "Завершённый шаг",
+        activityGoalProgress: "Прогресс по цели",
+        resourcesTitle: "Библиотека материалов",
+        resourceLatestMaterial: "Последний материал",
+        resourceSavedDocuments: "Сохранённые документы",
+        resourceMentorSupport: "Поддержка ментора",
+        browseFullLibrary: "Открыть всю библиотеку",
+        doneCommentLabel: "Комментарий:",
+        doneLinkLabel: "Ссылка:",
       },
       questionsRail: {
         illustrationAlt: "Иллюстрация вопросов",
@@ -865,12 +1060,33 @@ const dictionaries: Record<Locale, RawDictionary> = {
         library: "Библиотека",
         recent: "Недавние",
         saved: "Сохранено",
+        courses: "Курсы",
+        coursesBody:
+          "Покупайте дополнительные уроки и добавляйте их в план после активации оплаты.",
+        browseCourses: "Открыть курсы",
         learningIllustrationAlt: "Иллюстрация обучения",
         questionsAlt: "Вопросы",
         libraryAlt: "Библиотека",
       },
-      onboarding: {
-        stepperTitle: "Прогресс онбординга",
+      courses: {
+        title: "Купить дополнительные курсы",
+        description:
+          "Выберите дополнительные курсы, чтобы добавить их в учебный план после активации оплаты.",
+        loading: "Загрузка курсов…",
+        emptyAvailable: "Сейчас нет доступных дополнительных курсов.",
+        selectedCount: "Выбрано: {{ count }}",
+        createPaymentInstructions: "Создать инструкции по оплате",
+        ownedTitle: "Ваши курсы",
+        paymentInstructionsTitle: "Инструкции по оплате",
+        activationCode: "Код активации",
+        amount: "Сумма: {{ amount }}",
+        openPaymentPage: "Открыть страницу оплаты",
+        refreshCourses: "Обновить курсы",
+        selectAtLeastOne: "Выберите хотя бы один курс.",
+      },
+    onboarding: {
+      eyebrow: "Онбординг",
+      stepperTitle: "Прогресс онбординга",
         steps: {
           goal: "Цель",
           profile: "Профиль",
@@ -896,19 +1112,25 @@ const dictionaries: Record<Locale, RawDictionary> = {
         },
         profile: {
           title: "Расскажите о себе",
-          subtitle: "Это поможет нам точнее подобрать программу.",
-          cardTitle: "Анкета",
+          subtitle: "Начните с короткого рассказа о себе, чтобы мы могли точнее собрать ваш путь обучения.",
+          cardTitle: "Профиль",
+          cardDescription:
+            "Обязательное только поле «О себе». Telegram и ссылки на соцсети можно добавить по желанию.",
+          aboutMeLabel: "О себе",
+          aboutMePlaceholder:
+            "Расскажите о ваших целях, текущем уровне и том, чего вы ждёте от StoryWalkers.",
+          aboutMeRequired: "Поле «О себе» обязательно.",
           telegramLabel: "Telegram",
-          telegramPlaceholder: "@username или https://t.me/username",
-          socialUrlLabel: "Ссылка на соцсеть",
-          socialUrlPlaceholder: "https://...",
-          experienceLevelLabel: "Уровень подготовки",
-          experienceLevelPlaceholder: "Выберите уровень",
-          experienceBeginner: "Начинающий",
-          experienceIntermediate: "Средний",
-          experienceAdvanced: "Продвинутый",
-          notesLabel: "Комментарий",
-          notesPlaceholder: "Что нам важно знать о вас...",
+          telegramPlaceholder: "@username",
+          telegramHelp:
+            "Для Telegram-хэндла символ “@” добавляется автоматически. Номер телефона сюда вводить нельзя.",
+          telegramPhoneError:
+            "Telegram должен быть хэндлом, а не номером телефона.",
+          socialLinksLabel: "Ссылки на соцсети",
+          socialLinkPlaceholder: "https://instagram.com/yourname",
+          socialLinkError: "Каждая ссылка на соцсеть должна быть корректным URL.",
+          addSocialLink: "Добавить ссылку",
+          removeSocialLink: "Удалить ссылку",
           disclaimer:
             "Профиль проверяет человек. Активация выполняется вручную после проверки.",
           back: "Назад",
@@ -936,6 +1158,10 @@ const dictionaries: Record<Locale, RawDictionary> = {
           currencySaveError: "Не удалось сохранить предпочитаемую валюту.",
           lessonCount: "{{ count }} уроков",
           empty: "Курсы пока не выбраны.",
+          showLessons: "Показать уроки",
+          hideLessons: "Скрыть уроки",
+          lessonsTitle: "Уроки",
+          lessonsEmpty: "Пока нет доступных уроков.",
         },
         checkout: {
           title: "Оплата",

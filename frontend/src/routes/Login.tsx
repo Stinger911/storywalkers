@@ -1,4 +1,4 @@
-import { Show, createSignal } from "solid-js";
+import { Show, createSignal, onMount } from "solid-js";
 import {
   GoogleAuthProvider,
   signInWithPopup,
@@ -40,6 +40,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../components/ui/select";
+import {
+  getNextOnboardingStep,
+  isOnboardingIncomplete,
+  onboardingPath,
+} from "./onboarding/onboardingState";
 
 function friendlyAuthError(
   err: unknown,
@@ -92,6 +97,7 @@ export function Login() {
   const [info, setInfo] = createSignal<string | null>(null);
   const [error, setError] = createSignal<string | null>(null);
   const pendingPasswordStorageKey = "pendingPasswordForSignIn";
+  const loginPageYear = new Date().getFullYear();
 
   const googleProvider = new GoogleAuthProvider();
 
@@ -248,7 +254,9 @@ export function Login() {
       if (data.role === "staff") {
         window.location.href = "/admin/home";
       } else {
-        window.location.href = "/student/home";
+        window.location.href = isOnboardingIncomplete(data)
+          ? onboardingPath(getNextOnboardingStep(data))
+          : "/student/home";
       }
     } else if (!silent) {
       setError(t("login.errors.profileMissing"));
@@ -297,46 +305,87 @@ export function Login() {
     }
   }
 
-  // запуск авто-завершения email-link логина при заходе по ссылке
-  // (без onMount, чтобы избежать лишних импортов; Solid выполнит один раз при инициализации компонента)
-  void redirectIfLoggedIn(true);
-  void tryCompleteEmailLinkSignIn();
+  onMount(() => {
+    void redirectIfLoggedIn(true);
+    void tryCompleteEmailLinkSignIn();
+  });
 
   return (
-    <div class="min-h-screen grid place-items-center p-6">
-      <Card class="w-full max-w-md">
-        <CardHeader>
-          <div class="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <CardTitle>{t("login.title")}</CardTitle>
-              <CardDescription>{t("login.subtitle")}</CardDescription>
-            </div>
-            <div class="min-w-[140px]">
-              <Select
-                value={{ value: locale(), label: locale() === "ru" ? "Русский" : "English" }}
-                onChange={(value) => {
-                  const next = value?.value === "ru" ? "ru" : "en";
-                  setLocale(next);
-                }}
-                options={[
-                  { value: "en", label: "English" },
-                  { value: "ru", label: "Русский" },
-                ]}
-                optionValue={(option) =>
-                  (option as unknown as { value: string; label: string }).value
-                }
-                optionTextValue={(option) =>
-                  (option as unknown as { value: string; label: string }).label
-                }
-                itemComponent={(props) => (
-                  <SelectItem item={props.item}>
-                    {(props.item.rawValue as unknown as { label: string }).label}
-                  </SelectItem>
-                )}
+    <div
+      class="min-h-screen bg-background text-foreground [font-family:Manrope,'Space_Grotesk',system-ui,sans-serif]"
+      style={{
+        "--background": "220 44% 98%",
+        "--foreground": "210 35% 11%",
+        "--muted": "214 48% 95%",
+        "--muted-foreground": "217 9% 33%",
+        "--popover": "0 0% 100%",
+        "--popover-foreground": "210 35% 11%",
+        "--border": "220 20% 82%",
+        "--input": "215 45% 89%",
+        "--card": "0 0% 100%",
+        "--card-foreground": "210 35% 11%",
+        "--primary": "209 50% 37%",
+        "--primary-foreground": "0 0% 100%",
+        "--secondary": "212 100% 37%",
+        "--secondary-foreground": "0 0% 100%",
+        "--accent": "214 48% 95%",
+        "--accent-foreground": "210 35% 11%",
+        "--ring": "209 50% 37%",
+        "--radius": "0.5rem",
+        "--radius-lg": "2rem",
+        "--radius-md": "1rem",
+        "--shadow-card": "0 20px 40px rgba(18, 29, 38, 0.05)",
+      }}
+    >
+      <header class="sticky top-0 z-10 border-b border-white/40 bg-white/70 backdrop-blur-xl">
+        <div class="mx-auto flex h-16 w-full max-w-7xl items-center justify-between px-4 sm:px-6">
+          <a
+            href="/"
+            class="text-lg font-extrabold tracking-[-0.03em] text-[#1f3b67] transition-colors duration-300 hover:text-primary"
+          >
+            StoryWalkers Club
+          </a>
+          <div class="w-[132px] shrink-0">
+            <Select
+              value={{
+                value: locale(),
+                label: locale() === "ru" ? "Русский" : "English",
+              }}
+              onChange={(value) => {
+                const next = value?.value === "ru" ? "ru" : "en";
+                setLocale(next);
+              }}
+              options={[
+                { value: "en", label: "English" },
+                { value: "ru", label: "Русский" },
+              ]}
+              optionValue={(option) =>
+                (option as unknown as { value: string; label: string }).value
+              }
+              optionTextValue={(option) =>
+                (option as unknown as { value: string; label: string }).label
+              }
+              itemComponent={(props) => (
+                <SelectItem
+                  item={props.item}
+                  class="rounded-[var(--radius-md)] px-3 py-2 text-xs font-semibold uppercase tracking-[0.08em]"
+                >
+                  {(props.item.rawValue as unknown as { label: string }).label}
+                </SelectItem>
+              )}
+            >
+              <SelectLabel for="login-language" class="sr-only">
+                {t("common.language")}
+              </SelectLabel>
+              <SelectHiddenSelect id="login-language" />
+              <SelectTrigger
+                aria-label={t("common.language")}
+                class="h-10 rounded-[var(--radius-md)] border-0 bg-[rgba(223,233,247,0.95)] px-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-foreground shadow-none transition-colors duration-300 hover:bg-[rgba(217,227,241,0.95)] focus:ring-2 focus:ring-primary/20 focus:ring-offset-0"
               >
-                <SelectLabel for="login-language">{t("common.language")}</SelectLabel>
-                <SelectHiddenSelect id="login-language" />
-                <SelectTrigger aria-label={t("common.language")}>
+                <div class="flex min-w-0 items-center gap-2">
+                  <span class="material-symbols-outlined text-base text-foreground/70">
+                    language
+                  </span>
                   <SelectValue<string>>
                     {(state) =>
                       (
@@ -346,101 +395,211 @@ export function Login() {
                       ).label ?? t("common.language")
                     }
                   </SelectValue>
-                </SelectTrigger>
-                <SelectContent />
-              </Select>
-            </div>
+                </div>
+              </SelectTrigger>
+              <SelectContent class="rounded-[var(--radius-md)] border border-white/60 bg-white/95 p-1 shadow-card backdrop-blur-xl" />
+            </Select>
           </div>
-        </CardHeader>
+        </div>
+      </header>
 
-        <CardContent class="grid gap-4">
-          <Show when={info()}>
-            <div class="rounded-md border p-3 text-sm">{info()}</div>
-          </Show>
+      <main class="relative flex min-h-[calc(100vh-4rem)] flex-col overflow-hidden">
+        <div class="absolute inset-0">
+          <img
+            src="https://lh3.googleusercontent.com/aida-public/AB6AXuBLKZMi4N-1JtTpWI-Rc70zm5mveJUmrvfbPL3hULyGJGS2T0uAl2M6BAGd6uNZHdNbY5yWMBhXUrHGhbcqv9LH73kVw4EmcplwNCAM92WsX6C-cqYtWEunoZ9v3kTz1gbO4yf7xb7vDKZwmzq7aFotO6PGMyqYDwwvoQyo7EhjYT9lalsnlSeirNtd8IMiBkBCoMK5Sf8_xPH58JB6qRLbzuklgE27tvFTymSd0Mavg4pBqvp2ZOMz5NB5Vx7mdM6jNF2oW2thQmdX"
+            alt=""
+            class="h-full w-full object-cover opacity-[0.12] grayscale-[18%]"
+          />
+          {/* <div class="absolute inset-0 bg-[linear-gradient(135deg,rgba(47,95,141,0.08)_0%,rgba(74,120,167,0.06)_100%)]" />
+          <div class="absolute inset-0 bg-[rgba(247,249,255,0.88)]" /> */}
+        </div>
 
-          <Show when={error()}>
-            <div class="rounded-md border p-3 text-sm">{error()}</div>
-          </Show>
+        <div class="relative z-0 flex flex-1 items-center justify-center px-4 py-10 sm:px-6 sm:py-12">
+          <Card class="w-full max-w-[30rem] rounded-[2rem] border border-white/60 bg-white/95 shadow-card backdrop-blur-sm">
+            <CardHeader class="space-y-0 px-7 pb-0 pt-8 text-center sm:px-10 sm:pt-10">
+              <div class="space-y-3">
+                <span class="text-[11px] font-extrabold uppercase tracking-[0.12em] text-secondary">
+                  Welcome Back
+                </span>
+                <div class="space-y-2">
+                  <CardTitle class="text-[2rem] font-extrabold tracking-[-0.04em] text-foreground sm:text-[2.125rem]">
+                    {t("login.title")}
+                  </CardTitle>
+                  <CardDescription class="mx-auto max-w-xs text-sm leading-6 text-muted-foreground">
+                    {t("login.subtitle")}
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
 
-          <TextField class="grid gap-2">
-            <TextFieldLabel for="email">{t("login.emailLabel")}</TextFieldLabel>
-            <TextFieldInput
-              id="email"
-              type="email"
-              placeholder={t("login.emailPlaceholder")}
-              value={email()}
-              onInput={(e: { currentTarget: { value: any } }) =>
-                setEmail(e.currentTarget.value)
-              }
-              autocomplete="email"
-            />
-          </TextField>
+            <CardContent class="grid gap-6 px-7 pb-8 pt-8 sm:px-10 sm:pb-10">
+              <Show when={info()}>
+                <div class="rounded-[var(--radius-md)] bg-secondary/10 px-4 py-3 text-sm leading-6 text-secondary">
+                  {info()}
+                </div>
+              </Show>
 
-          <TextField class="grid gap-2">
-            <TextFieldLabel for="password">{t("login.passwordLabel")}</TextFieldLabel>
-            <TextFieldInput
-              id="password"
-              type="password"
-              placeholder={t("login.passwordPlaceholder")}
-              value={password()}
-              onInput={(e: { currentTarget: { value: any } }) =>
-                setPassword(e.currentTarget.value)
-              }
-              autocomplete="current-password"
-            />
-          </TextField>
+              <Show when={error()}>
+                <div class="rounded-[var(--radius-md)] bg-error/80 px-4 py-3 text-sm leading-6 text-red-900">
+                  {error()}
+                </div>
+              </Show>
 
-          <div class="flex justify-end">
-            <button
-              type="button"
-              class="text-sm text-primary underline-offset-4 hover:underline disabled:opacity-50"
-              disabled={busy()}
-              onClick={onPasswordReset}
+              <div class="grid gap-5">
+                <TextField class="gap-2.5">
+                  <TextFieldLabel
+                    for="email"
+                    class="pl-1 text-[11px] font-extrabold uppercase tracking-[0.12em] text-muted-foreground"
+                  >
+                    {t("login.emailLabel")}
+                  </TextFieldLabel>
+                  <TextFieldInput
+                    id="email"
+                    type="email"
+                    placeholder={t("login.emailPlaceholder")}
+                    value={email()}
+                    onInput={(e: { currentTarget: { value: any } }) =>
+                      setEmail(e.currentTarget.value)
+                    }
+                    autocomplete="email"
+                    class="h-14 rounded-[var(--radius-md)] border-0 bg-[hsl(var(--input))] px-4 text-base shadow-none transition-all duration-300 placeholder:text-[#99a4b3] focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:ring-offset-0"
+                  />
+                </TextField>
+
+                <TextField class="gap-2.5">
+                  <div class="flex items-center justify-between gap-3 px-1">
+                    <TextFieldLabel
+                      for="password"
+                      class="text-[11px] font-extrabold uppercase tracking-[0.12em] text-muted-foreground"
+                    >
+                      {t("login.passwordLabel")}
+                    </TextFieldLabel>
+                    <button
+                      type="button"
+                      class="text-xs font-semibold text-secondary transition-colors duration-300 hover:underline disabled:opacity-50"
+                      disabled={busy()}
+                      onClick={onPasswordReset}
+                    >
+                      {t("login.forgotPassword")}
+                    </button>
+                  </div>
+                  <TextFieldInput
+                    id="password"
+                    type="password"
+                    placeholder={t("login.passwordPlaceholder")}
+                    value={password()}
+                    onInput={(e: { currentTarget: { value: any } }) =>
+                      setPassword(e.currentTarget.value)
+                    }
+                    autocomplete="current-password"
+                    class="h-14 rounded-[var(--radius-md)] border-0 bg-[hsl(var(--input))] px-4 text-base shadow-none transition-all duration-300 placeholder:text-[#99a4b3] focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:ring-offset-0"
+                  />
+                </TextField>
+              </div>
+
+              <Button
+                disabled={busy()}
+                onClick={onEmailPasswordLogin}
+                class="h-14 rounded-[var(--radius-lg)] bg-[linear-gradient(135deg,#2f5f8d_0%,#4a78a7_100%)] text-base font-bold text-white shadow-card transition-transform duration-300 hover:scale-[1.01] hover:opacity-100 active:scale-[0.98]"
+              >
+                {t("login.signInPassword")}
+              </Button>
+
+              <div class="relative my-1">
+                <div class="absolute inset-0 flex items-center">
+                  <span class="h-px w-full bg-[rgba(194,199,208,0.3)]" />
+                </div>
+                <div class="relative flex justify-center">
+                  <span class="bg-white px-4 text-[10px] font-bold uppercase tracking-[0.16em] text-[#8b93a1]">
+                    {t("login.or")}
+                  </span>
+                </div>
+              </div>
+
+              <div class="grid gap-3">
+                <Button
+                  disabled={busy()}
+                  variant="outline"
+                  onClick={onGoogleLogin}
+                  class="h-12 rounded-[var(--radius-lg)] border border-[rgba(194,199,208,0.75)] bg-white text-sm font-bold text-foreground shadow-none transition-colors duration-300 hover:bg-[rgba(237,244,255,0.85)]"
+                >
+                  <svg aria-hidden="true" viewBox="0 0 24 24" class="size-5">
+                    <path
+                      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                      fill="#4285F4"
+                    />
+                    <path
+                      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                      fill="#34A853"
+                    />
+                    <path
+                      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                      fill="#FBBC05"
+                    />
+                    <path
+                      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                      fill="#EA4335"
+                    />
+                  </svg>
+                  {t("login.continueGoogle")}
+                </Button>
+
+                <Button
+                  disabled={busy()}
+                  variant="secondary"
+                  onClick={onSendEmailLink}
+                  class="h-11 rounded-[var(--radius-lg)] border-0 bg-[rgba(223,233,247,0.55)] text-sm font-bold text-secondary shadow-none transition-colors duration-300 hover:bg-[rgba(223,233,247,0.85)]"
+                >
+                  {t("login.sendLink")}
+                </Button>
+
+                <Button
+                  disabled={busy()}
+                  variant="outline"
+                  onClick={onEmailPasswordRegister}
+                  class="h-11 rounded-[var(--radius-lg)] border border-secondary/20 bg-white text-sm font-bold text-secondary shadow-none transition-colors duration-300 hover:bg-secondary/5"
+                >
+                  {t("login.createAccount")}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </main>
+
+      <footer class="bg-[rgba(237,244,255,0.55)] px-4 py-10 sm:px-6 sm:py-12">
+        <div class="mx-auto flex max-w-5xl flex-col items-center gap-6">
+          <nav class="flex flex-wrap items-center justify-center gap-x-8 gap-y-3">
+            <a
+              href="#"
+              class="text-[11px] font-extrabold uppercase tracking-[0.14em] text-muted-foreground transition-colors duration-300 hover:text-secondary"
             >
-              {t("login.forgotPassword")}
-            </button>
-          </div>
-
-          <div class="grid gap-2">
-            <Button disabled={busy()} onClick={onEmailPasswordLogin}>
-              {t("login.signInPassword")}
-            </Button>
-
-            <Button
-              disabled={busy()}
-              variant="outline"
-              onClick={onEmailPasswordRegister}
+              Help Center
+            </a>
+            <a
+              href="#"
+              class="text-[11px] font-extrabold uppercase tracking-[0.14em] text-muted-foreground transition-colors duration-300 hover:text-secondary"
             >
-              {t("login.createAccount")}
-            </Button>
-          </div>
-
-          <div class="grid gap-2">
-            <Button
-              disabled={busy()}
-              variant="outline"
-              onClick={onSendEmailLink}
+              Privacy Policy
+            </a>
+            <a
+              href="#"
+              class="text-[11px] font-extrabold uppercase tracking-[0.14em] text-muted-foreground transition-colors duration-300 hover:text-secondary"
             >
-              {t("login.sendLink")}
-            </Button>
-          </div>
-
-          <div class="relative my-2">
-            <div class="absolute inset-0 flex items-center">
-              <span class="w-full border-t" />
-            </div>
-            <div class="relative flex justify-center text-xs uppercase">
-              <span class="bg-background px-2 text-muted-foreground">
-                {t("login.or")}
-              </span>
-            </div>
-          </div>
-
-          <Button disabled={busy()} onClick={onGoogleLogin}>
-            {t("login.continueGoogle")}
-          </Button>
-        </CardContent>
-      </Card>
+              Terms of Service
+            </a>
+            <a
+              href="#"
+              class="text-[11px] font-extrabold uppercase tracking-[0.14em] text-muted-foreground transition-colors duration-300 hover:text-secondary"
+            >
+              Accessibility
+            </a>
+          </nav>
+          <p class="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#9ca3af]">
+            © {loginPageYear} StoryWalkers Club. All rights reserved.
+          </p>
+        </div>
+      </footer>
     </div>
   );
 }

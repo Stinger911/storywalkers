@@ -26,9 +26,10 @@ vi.mock("../../src/lib/auth", () => ({
       status: "active",
       selectedGoalId: "goal-1",
       profileForm: {
+        aboutMe: null,
         telegram: null,
+        socialLinks: [],
         socialUrl: null,
-        experienceLevel: null,
         notes: null,
       },
       selectedCourses: [],
@@ -56,17 +57,15 @@ describe("OnboardingProfile", () => {
       </I18nProvider>
     ));
 
+    fireEvent.input(screen.getByLabelText("About me"), {
+      target: { value: "I want to become a better storyteller." },
+    });
     fireEvent.input(screen.getByLabelText("Telegram"), {
       target: { value: "@alice" },
     });
-    fireEvent.input(screen.getByLabelText("Social URL"), {
+    fireEvent.click(screen.getByRole("button", { name: "Add link" }));
+    fireEvent.input(screen.getByPlaceholderText("https://instagram.com/yourname"), {
       target: { value: "https://example.com/alice" },
-    });
-    fireEvent.change(screen.getByLabelText("Experience level"), {
-      target: { value: "intermediate" },
-    });
-    fireEvent.input(screen.getByLabelText("Notes"), {
-      target: { value: "I prefer async format" },
     });
 
     fireEvent.click(screen.getByRole("button", { name: "Save profile" }));
@@ -74,10 +73,11 @@ describe("OnboardingProfile", () => {
     await waitFor(() => {
       expect(patchMeMock).toHaveBeenCalledWith({
         profileForm: {
+          aboutMe: "I want to become a better storyteller.",
+          notes: "I want to become a better storyteller.",
           telegram: "@alice",
+          socialLinks: ["https://example.com/alice"],
           socialUrl: "https://example.com/alice",
-          experienceLevel: "intermediate",
-          notes: "I prefer async format",
         },
       });
     });
@@ -97,11 +97,14 @@ describe("OnboardingProfile", () => {
       ),
     ).toBeInTheDocument();
 
+    fireEvent.input(screen.getByLabelText("About me"), {
+      target: { value: "I want to become a better storyteller." },
+    });
     fireEvent.click(screen.getByRole("button", { name: "Next" }));
 
     await waitFor(() => {
       expect(patchMeMock).toHaveBeenCalled();
-      expect(navigateMock).toHaveBeenCalledWith("/onboarding/courses");
+      expect(navigateMock).toHaveBeenCalledWith("/onboarding/goal");
     });
   });
 });

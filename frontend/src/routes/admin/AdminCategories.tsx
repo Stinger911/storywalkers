@@ -152,7 +152,7 @@ export function AdminCategories() {
           >
             <div class="mt-4 grid gap-3">
               {items().map((item) => (
-                <div class="rounded-xl border p-4">
+                <div class="admin-list-card rounded-xl border p-4">
                   <div class="flex items-start justify-between gap-4">
                     <div>
                       <div class="text-sm text-muted-foreground">

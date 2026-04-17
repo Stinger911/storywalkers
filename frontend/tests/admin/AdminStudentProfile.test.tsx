@@ -4,6 +4,7 @@ import { vi } from "vitest";
 import { AdminStudentProfile } from "../../src/routes/admin/AdminStudentProfile";
 import { AppShell } from "../../src/components/AppShell";
 import { I18nProvider } from "../../src/lib/i18n";
+import { ThemeProvider } from "../../src/lib/theme";
 import {
   appendCoursesToStudentPlan,
   getStudent,
@@ -115,11 +116,13 @@ const deleteStudentPlanStepMock = deleteStudentPlanStep as unknown as ReturnType
 
 const renderWithShell = () =>
   render(() => (
-    <I18nProvider>
-      <AppShell title="Admin" roleLabel="Admin" onLogout={() => {}}>
-        <AdminStudentProfile />
-      </AppShell>
-    </I18nProvider>
+    <ThemeProvider>
+      <I18nProvider>
+        <AppShell title="Admin" roleLabel="Admin" onLogout={() => {}}>
+          <AdminStudentProfile />
+        </AppShell>
+      </I18nProvider>
+    </ThemeProvider>
   ));
 
 describe("AdminStudentProfile", () => {

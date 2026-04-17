@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>StoryWalkers Club - Student Dashboard</title>
+<!-- Google Fonts: Manrope for Editorial Sophistication -->
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200;300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "primary": "#2f5f8d",
+                    "surface-container-highest": "#d9e3f1",
+                    "on-surface-variant": "#42474f",
+                    "on-surface": "#121d26",
+                    "secondary-container": "#2170e4",
+                    "on-background": "#121d26",
+                    "surface-container-lowest": "#ffffff",
+                    "surface-dim": "#d1dbe8",
+                    "on-secondary-fixed": "#001a42",
+                    "tertiary-fixed": "#b0f2b7",
+                    "on-tertiary-container": "#f7fff3",
+                    "secondary-fixed-dim": "#adc6ff",
+                    "on-primary-container": "#fdfcff",
+                    "surface-bright": "#f7f9ff",
+                    "surface-tint": "#326190",
+                    "secondary-fixed": "#d8e2ff",
+                    "background": "#f7f9ff",
+                    "tertiary-fixed-dim": "#95d69d",
+                    "inverse-on-surface": "#e8f2ff",
+                    "error-container": "#ffdad6",
+                    "on-error": "#ffffff",
+                    "primary-fixed": "#d1e4ff",
+                    "surface-container": "#e4effd",
+                    "surface": "#f7f9ff",
+                    "surface-container-low": "#edf4ff",
+                    "on-tertiary-fixed-variant": "#105226",
+                    "on-tertiary-fixed": "#00210a",
+                    "on-tertiary": "#ffffff",
+                    "on-error-container": "#93000a",
+                    "inverse-surface": "#27313c",
+                    "inverse-primary": "#9ecafe",
+                    "outline-variant": "#c2c7d0",
+                    "tertiary": "#2a683a",
+                    "on-secondary-fixed-variant": "#004395",
+                    "primary-fixed-dim": "#9ecafe",
+                    "primary-container": "#4a78a7",
+                    "on-primary-fixed-variant": "#134976",
+                    "error": "#ba1a1a",
+                    "on-secondary-container": "#fefcff",
+                    "on-primary-fixed": "#001d35",
+                    "secondary": "#0058be",
+                    "outline": "#727780",
+                    "on-secondary": "#ffffff",
+                    "tertiary-container": "#448150",
+                    "surface-container-high": "#dfe9f7",
+                    "on-primary": "#ffffff",
+                    "surface-variant": "#d9e3f1"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "fontFamily": {
+                    "headline": ["Manrope"],
+                    "body": ["Manrope"],
+                    "label": ["Manrope"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            background-color: #f7f9ff;
+            color: #121d26;
+            font-family: 'Manrope', sans-serif;
+        }
+        .scale-98-active:active {
+            transform: scale(0.98);
+        }
+        /* No border rule from Design System */
+        .no-border {
+            border: none !important;
+        }
+    </style>
+</head>
+<body class="font-body selection:bg-primary-fixed selection:text-on-primary-fixed">
+<!-- TopNavBar -->
+<header class="fixed top-0 w-full z-50 bg-slate-50/70 backdrop-blur-md flex justify-between items-center px-8 h-16 w-full no-border font-manrope tracking-tight">
+<div class="flex items-center gap-8">
+<h1 class="text-xl font-bold tracking-tighter text-blue-900">StoryWalkers Club</h1>
+<!-- Search Bar (on_left) -->
+<div class="hidden md:flex items-center bg-surface-container-high rounded-full px-4 py-1.5 gap-2 w-64 group focus-within:ring-2 ring-primary/20 transition-all">
+<span class="material-symbols-outlined text-slate-500 text-sm">search</span>
+<input class="bg-transparent border-none focus:ring-0 text-sm w-full p-0 placeholder:text-slate-400" placeholder="Search archive..." type="text"/>
+</div>
+</div>
+<nav class="flex items-center gap-6">
+<div class="flex items-center gap-4 text-slate-500">
+<span class="material-symbols-outlined hover:bg-slate-200/50 p-2 rounded-full cursor-pointer transition-all duration-300" data-icon="notifications">notifications</span>
+<span class="material-symbols-outlined hover:bg-slate-200/50 p-2 rounded-full cursor-pointer transition-all duration-300" data-icon="settings">settings</span>
+</div>
+<div class="flex items-center gap-3 pl-4 border-l border-slate-200">
+<div class="text-right hidden sm:block">
+<p class="text-xs font-bold text-on-surface">Alex Mercer</p>
+<p class="text-[10px] uppercase tracking-widest text-secondary">Level 4 Archivist</p>
+</div>
+<div class="h-10 w-10 rounded-full bg-surface-container-highest overflow-hidden">
+<img alt="Student avatar" class="h-full w-full object-cover" data-alt="close-up portrait of a young professional student with a friendly expression in a bright studio setting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCE8mJpLgU3d98Jydo8dyW9f3LLXqCtzXRqGlhA9Rf_mo45mY5uA_ZobfoukS42tLsew3LjJERm4UwqLahqP1f6moRBP34NavOHGkENUwaABpNkBL37HEEBId10255R3ohXJjE3BQ545mDwt0lc47dPmOMpYRUg_zD2V1xG86GT2MhFddS5Ytk60pqyDYgQQZxJLndWLb9pVsvwLkm-fWdTzdgLJ-WE0ZeLEw4ce4zGX2PzLq1oIMgjlr5d8msoFceqXaob_KTxk3dt"/>
+</div>
+</div>
+</nav>
+</header>
+<!-- SideNavBar (Desktop Only) -->
+<aside class="hidden md:flex flex-col gap-y-4 px-6 h-screen w-64 fixed left-0 top-0 pt-20 bg-slate-50 transition-all duration-300 ease-in-out">
+<div class="mb-6 px-2">
+<h2 class="text-lg font-extrabold text-blue-900">StoryWalkers</h2>
+<p class="font-manrope uppercase tracking-widest text-[10px] text-blue-700">Modern Archivist</p>
+</div>
+<nav class="flex flex-col gap-1">
+<a class="flex items-center gap-3 px-3 py-3 text-blue-800 font-bold border-r-4 border-blue-600 bg-slate-100 group transition-all duration-300" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="font-manrope uppercase tracking-widest text-[10px]">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-3 text-slate-500 font-medium hover:text-blue-600 hover:bg-slate-200/30 group transition-all duration-300" href="#">
+<span class="material-symbols-outlined" data-icon="school">school</span>
+<span class="font-manrope uppercase tracking-widest text-[10px]">My Courses</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-3 text-slate-500 font-medium hover:text-blue-600 hover:bg-slate-200/30 group transition-all duration-300" href="#">
+<span class="material-symbols-outlined" data-icon="local_library">local_library</span>
+<span class="font-manrope uppercase tracking-widest text-[10px]">Library</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-3 text-slate-500 font-medium hover:text-blue-600 hover:bg-slate-200/30 group transition-all duration-300" href="#">
+<span class="material-symbols-outlined" data-icon="group">group</span>
+<span class="font-manrope uppercase tracking-widest text-[10px]">Community</span>
+</a>
+</nav>
+<div class="mt-auto mb-8 px-2">
+<div class="p-4 rounded-xl bg-surface-container text-primary-container">
+<p class="text-[10px] font-bold uppercase tracking-widest mb-2">Pro Tip</p>
+<p class="text-xs font-medium leading-relaxed">Complete 3 lessons to unlock the 'Gold Quill' badge.</p>
+</div>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="md:ml-64 pt-24 pb-12 px-6 md:px-12 max-w-7xl mx-auto">
+<!-- Welcome Section -->
+<header class="mb-12">
+<p class="text-secondary font-label uppercase tracking-widest text-xs mb-2">Morning, Archivist</p>
+<h1 class="text-4xl font-headline font-extrabold tracking-tight text-on-surface">Welcome back, Alex Mercer</h1>
+<p class="text-on-surface-variant mt-2 text-lg">Your narrative path is waiting. You've completed 64% of your weekly goal.</p>
+</header>
+<!-- Bento Grid Layout -->
+<div class="grid grid-cols-12 gap-8">
+<!-- Learning Path Section (Primary Card) -->
+<section class="col-span-12 lg:col-span-8">
+<div class="bg-surface-container-lowest rounded-xl overflow-hidden shadow-[0px_20px_40px_rgba(18,29,38,0.05)] flex flex-col md:flex-row h-full">
+<div class="md:w-1/2 relative h-64 md:h-auto">
+<img alt="Archive background" class="absolute inset-0 w-full h-full object-cover" data-alt="a cozy high-end library with dark wood bookshelves, a green desk lamp, and dust motes dancing in sunlight" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDbNpOb3tFt84AITYntI1FAatWzBLHEEAV1QVEUUlhnmVukG6tS0HuwAjZseDPEyYbjl4JuH9Q55n7C9f5xZcaYfwpPGlbNYy4O0OYP3wyuFrivvpRfzyw9FRvVEYP6Zdw3NTHzvJLXssXjHlY1GSlBpSvn_5FB-IzgiB_pG2lQrQxqFVhygJHxDaaV0th-dEXEnuGJ5wF7476SbknwIuve3K5pE4YI2PV_LqpS82raEaBmIUpPQJXd2UHg56PlawnjxYwVQl5-1h3H"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex flex-col justify-end p-8">
+<span class="bg-tertiary text-white text-[10px] font-bold px-2 py-1 rounded w-max mb-3 uppercase tracking-wider">In Progress</span>
+<h3 class="text-white text-2xl font-bold">Mastering the Archive</h3>
+</div>
+</div>
+<div class="md:w-1/2 p-8 flex flex-col justify-center">
+<div class="mb-8">
+<div class="flex justify-between items-end mb-3">
+<span class="text-xs font-label uppercase tracking-widest text-slate-500">Progress</span>
+<span class="text-2xl font-extrabold text-primary">64%</span>
+</div>
+<!-- Segmented Progress Bar -->
+<div class="flex gap-1 h-2">
+<div class="flex-1 bg-tertiary rounded-full"></div>
+<div class="flex-1 bg-tertiary rounded-full"></div>
+<div class="flex-1 bg-tertiary rounded-full"></div>
+<div class="flex-1 bg-surface-container-highest rounded-full"></div>
+<div class="flex-1 bg-surface-container-highest rounded-full"></div>
+</div>
+</div>
+<p class="text-on-surface-variant text-sm mb-8 leading-relaxed">Module 4: "The Ethics of Curation" is waiting for you. Dive back into the history of digital preservation.</p>
+<button class="bg-gradient-to-br from-primary to-primary-container text-white px-8 py-4 rounded-xl font-bold text-sm scale-98-active transition-all duration-300 hover:shadow-lg hover:shadow-primary/20">
+                            Continue Journey
+                        </button>
+</div>
+</div>
+</section>
+<!-- Quick Stats Section -->
+<section class="col-span-12 lg:col-span-4 flex flex-col gap-6">
+<div class="bg-surface-container-low p-6 rounded-xl flex items-center justify-between transition-all hover:bg-surface-container-high cursor-pointer">
+<div>
+<p class="text-[10px] font-label uppercase tracking-widest text-slate-500 mb-1">Ongoing Courses</p>
+<p class="text-3xl font-extrabold text-on-surface">03</p>
+</div>
+<span class="material-symbols-outlined text-primary text-3xl" data-icon="play_circle">play_circle</span>
+</div>
+<div class="bg-surface-container-low p-6 rounded-xl flex items-center justify-between transition-all hover:bg-surface-container-high cursor-pointer">
+<div>
+<p class="text-[10px] font-label uppercase tracking-widest text-slate-500 mb-1">Completed Lessons</p>
+<p class="text-3xl font-extrabold text-on-surface">24</p>
+</div>
+<span class="material-symbols-outlined text-tertiary text-3xl" data-icon="task_alt">task_alt</span>
+</div>
+<div class="bg-primary text-white p-6 rounded-xl relative overflow-hidden group">
+<div class="relative z-10">
+<p class="text-[10px] font-label uppercase tracking-widest text-primary-fixed mb-1">Next Milestone</p>
+<p class="text-xl font-bold mb-4">Thesis Proposal Due</p>
+<div class="flex items-center gap-2 text-xs opacity-90">
+<span class="material-symbols-outlined text-sm">calendar_today</span>
+<span>In 3 days</span>
+</div>
+</div>
+<span class="material-symbols-outlined absolute -right-4 -bottom-4 text-9xl opacity-10 rotate-12 group-hover:rotate-0 transition-transform duration-500">auto_stories</span>
+</div>
+</section>
+<!-- Recent Activity/Questions -->
+<section class="col-span-12 lg:col-span-7">
+<div class="bg-surface-container-lowest rounded-xl p-8 shadow-[0px_20px_40px_rgba(18,29,38,0.05)]">
+<div class="flex justify-between items-center mb-10">
+<h2 class="text-xl font-headline font-bold text-on-surface">Recent Activity</h2>
+<button class="text-secondary text-[10px] font-bold uppercase tracking-widest hover:underline transition-all">View All</button>
+</div>
+<div class="space-y-8">
+<!-- Activity Item -->
+<div class="flex gap-6 group cursor-pointer">
+<div class="flex-shrink-0 h-12 w-12 rounded-full bg-surface-container-high flex items-center justify-center text-primary transition-all group-hover:bg-primary group-hover:text-white">
+<span class="material-symbols-outlined">forum</span>
+</div>
+<div class="flex-1">
+<p class="text-sm font-bold text-on-surface group-hover:text-secondary transition-colors">Mentor responded to: "Synthesizing Source Material"</p>
+<p class="text-xs text-on-surface-variant mt-1">"Excellent progress, Alex. The way you connected the 19th-century logs to modern..."</p>
+<p class="text-[10px] font-label uppercase tracking-widest text-slate-400 mt-3">2 hours ago</p>
+</div>
+</div>
+<!-- Activity Item -->
+<div class="flex gap-6 group cursor-pointer">
+<div class="flex-shrink-0 h-12 w-12 rounded-full bg-surface-container-high flex items-center justify-center text-primary transition-all group-hover:bg-primary group-hover:text-white">
+<span class="material-symbols-outlined">assignment</span>
+</div>
+<div class="flex-1">
+<p class="text-sm font-bold text-on-surface group-hover:text-secondary transition-colors">You submitted: "Module 3 Practical Exercise"</p>
+<p class="text-xs text-on-surface-variant mt-1">Awaiting review from Dr. Aris Thorne.</p>
+<p class="text-[10px] font-label uppercase tracking-widest text-slate-400 mt-3">Yesterday</p>
+</div>
+</div>
+<!-- Activity Item -->
+<div class="flex gap-6 group cursor-pointer">
+<div class="flex-shrink-0 h-12 w-12 rounded-full bg-surface-container-high flex items-center justify-center text-primary transition-all group-hover:bg-primary group-hover:text-white">
+<span class="material-symbols-outlined">star</span>
+</div>
+<div class="flex-1">
+<p class="text-sm font-bold text-on-surface group-hover:text-secondary transition-colors">New Badge Earned: "Swift Researcher"</p>
+<p class="text-xs text-on-surface-variant mt-1">You've accessed 10 primary sources in under 24 hours.</p>
+<p class="text-[10px] font-label uppercase tracking-widest text-slate-400 mt-3">3 days ago</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Resource Library Widget -->
+<section class="col-span-12 lg:col-span-5">
+<div class="bg-surface-container-lowest rounded-xl p-8 shadow-[0px_20px_40px_rgba(18,29,38,0.05)] h-full">
+<h2 class="text-xl font-headline font-bold text-on-surface mb-8">Resource Library</h2>
+<div class="space-y-4">
+<div class="p-4 rounded-xl border border-slate-100 hover:bg-surface-container-low transition-all cursor-pointer group">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-slate-400 group-hover:text-primary transition-colors">description</span>
+<div class="flex-1">
+<p class="text-sm font-bold text-on-surface">The Archivist's Toolkit v2.1</p>
+<p class="text-[10px] uppercase tracking-widest text-slate-500">Latest Material • PDF</p>
+</div>
+<span class="material-symbols-outlined text-slate-300 group-hover:text-slate-600 transition-colors">download</span>
+</div>
+</div>
+<div class="p-4 rounded-xl border border-slate-100 hover:bg-surface-container-low transition-all cursor-pointer group">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-slate-400 group-hover:text-primary transition-colors" style="font-variation-settings: 'FILL' 1;">bookmark</span>
+<div class="flex-1">
+<p class="text-sm font-bold text-on-surface">Citation Guide: Narrative Sourcing</p>
+<p class="text-[10px] uppercase tracking-widest text-slate-500">Saved Document • LINK</p>
+</div>
+<span class="material-symbols-outlined text-slate-300 group-hover:text-slate-600 transition-colors">open_in_new</span>
+</div>
+</div>
+<div class="p-4 rounded-xl border border-slate-100 hover:bg-surface-container-low transition-all cursor-pointer group">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-slate-400 group-hover:text-primary transition-colors">video_library</span>
+<div class="flex-1">
+<p class="text-sm font-bold text-on-surface">Webinar: Future of Fieldwork</p>
+<p class="text-[10px] uppercase tracking-widest text-slate-500">Recommended • MP4</p>
+</div>
+<span class="material-symbols-outlined text-slate-300 group-hover:text-slate-600 transition-colors">play_arrow</span>
+</div>
+</div>
+</div>
+<div class="mt-8 pt-8 border-t border-slate-50">
+<button class="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-surface-container-high text-primary font-bold text-sm hover:bg-secondary hover:text-white transition-all duration-300">
+<span class="material-symbols-outlined text-lg">local_library</span>
+                            Browse Full Library
+                        </button>
+</div>
+</div>
+</section>
+</div>
+</main>
+<!-- Mobile Navigation (BottomNavBar) -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full bg-white/90 backdrop-blur-lg px-6 h-20 flex justify-around items-center z-50">
+<button class="flex flex-col items-center gap-1 text-primary">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">dashboard</span>
+<span class="text-[10px] font-bold uppercase tracking-widest">Home</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined">school</span>
+<span class="text-[10px] font-bold uppercase tracking-widest">Learn</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined">local_library</span>
+<span class="text-[10px] font-bold uppercase tracking-widest">Library</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined">person</span>
+<span class="text-[10px] font-bold uppercase tracking-widest">Profile</span>
+</button>
+</nav>
+</body></html>

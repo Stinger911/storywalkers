@@ -7,7 +7,9 @@ type AuthMe = {
   role: "student" | "staff";
   status: "active" | "disabled" | "community_only" | "expired";
   selectedGoalId?: string | null;
+  level?: number;
   profileForm?: {
+    aboutMe?: string | null;
     telegram?: string | null;
     socialUrl?: string | null;
     experienceLevel?: "beginner" | "intermediate" | "advanced" | null;
@@ -45,8 +47,10 @@ vi.mock("../../src/routes/student/StudentProfile", () => ({
 const completedStudent = (): AuthMe => ({
   role: "student",
   status: "active",
+  level: 1,
   selectedGoalId: "goal-1",
   profileForm: {
+    aboutMe: "About me",
     telegram: "@user",
     socialUrl: null,
     experienceLevel: null,
@@ -75,7 +79,7 @@ describe("StudentHomeRoute", () => {
   it("redirects to onboarding step when onboarding is incomplete", () => {
     meState = { role: "student", status: "active", selectedGoalId: null, profileForm: {}, selectedCourses: [] };
     render(() => <StudentHomeRoute />);
-    expect(screen.getByTestId("navigate")).toHaveTextContent("/onboarding/goal");
+    expect(screen.getByTestId("navigate")).toHaveTextContent("/onboarding/profile");
   });
 
   it("renders student home shell when onboarding is complete", () => {
@@ -90,12 +94,12 @@ describe("StudentHomeRoute", () => {
     meState = {
       role: "student",
       status: "community_only",
+      level: 1,
       selectedGoalId: null,
-      profileForm: {},
+      profileForm: { aboutMe: "About me" },
       selectedCourses: [],
     };
     render(() => <StudentHomeRoute />);
-    expect(screen.queryByTestId("navigate")).not.toBeInTheDocument();
-    expect(screen.getByTestId("student-layout")).toBeInTheDocument();
+    expect(screen.getByTestId("navigate")).toHaveTextContent("/onboarding/goal");
   });
 });

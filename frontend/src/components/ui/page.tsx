@@ -26,20 +26,20 @@ export function Page(props: PageProps) {
   });
 
   return (
-    <section class={cn("space-y-6", props.class)}>
-      <header class="space-y-3">
+    <section data-page-root class={cn("space-y-8", props.class)}>
+      <header data-page-header class="space-y-4">
         <Show when={props.breadcrumb}>{props.breadcrumb}</Show>
-        <div class="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 class="text-2xl font-semibold">{props.title}</h1>
+        <div class="flex flex-wrap items-end justify-between gap-5">
+        <div class="space-y-1.5">
+          <h1 class="text-3xl font-extrabold tracking-[-0.04em]">{props.title}</h1>
           <Show when={props.subtitle}>
-            <p class="text-sm text-muted-foreground">{props.subtitle}</p>
+            <p class="max-w-3xl text-sm text-muted-foreground sm:text-base">{props.subtitle}</p>
           </Show>
         </div>
         <Show when={props.actions}>{props.actions}</Show>
         </div>
       </header>
-      <div class="space-y-6">{props.children}</div>
+      <div class="space-y-8">{props.children}</div>
     </section>
   );
 }

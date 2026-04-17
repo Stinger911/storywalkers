@@ -37,7 +37,7 @@ The backend is a Python project using FastAPI.
     ```
 4.  **Run the backend server:**
     ```bash
-    uv run --group dev granian app.main:app --reload --host 0.0.0.0 --port 8080
+    uv run --group dev granian --interface asgi app.main:app --reload --host 0.0.0.0 --port 8080
     ```
     The backend will be available at `http://localhost:8080`.
 

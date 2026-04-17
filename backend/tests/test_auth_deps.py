@@ -62,9 +62,12 @@ def test_build_user_payload_includes_onboarding_fields():
         "displayName": "User One",
         "role": "student",
         "status": "active",
+        "level": "4",
         "selectedGoalId": " goal-1 ",
         "profileForm": {
+            "aboutMe": " about me ",
             "telegram": " @name ",
+            "socialLinks": [" https://example.com/social ", "https://example.com/yt"],
             "socialUrl": " https://example.com/social ",
             "experienceLevel": "intermediate",
             "notes": " note ",
@@ -75,8 +78,14 @@ def test_build_user_payload_includes_onboarding_fields():
 
     payload = _build_user_payload("u1", decoded, profile)
 
+    assert payload["level"] == 4
     assert payload["selectedGoalId"] == "goal-1"
+    assert payload["profileForm"]["aboutMe"] == "about me"
     assert payload["profileForm"]["telegram"] == "@name"
+    assert payload["profileForm"]["socialLinks"] == [
+        "https://example.com/social",
+        "https://example.com/yt",
+    ]
     assert payload["profileForm"]["socialUrl"] == "https://example.com/social"
     assert payload["profileForm"]["experienceLevel"] == "intermediate"
     assert payload["profileForm"]["notes"] == "note"
@@ -89,9 +98,12 @@ def test_build_user_payload_defaults_missing_onboarding_fields():
         "u1", {"email": "u1@example.com"}, {"role": "student"}
     )
 
+    assert payload["level"] == 1
     assert payload["selectedGoalId"] is None
     assert payload["profileForm"] == {
+        "aboutMe": None,
         "telegram": None,
+        "socialLinks": [],
         "socialUrl": None,
         "experienceLevel": None,
         "notes": None,

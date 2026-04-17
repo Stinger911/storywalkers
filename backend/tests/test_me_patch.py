@@ -190,6 +190,7 @@ def test_patch_me_updates_onboarding_fields(monkeypatch):
     )
     assert response.status_code == 200
     payload = response.json()
+    assert payload["level"] == 1
     assert payload["selectedGoalId"] == "goal-1"
     assert payload["selectedCourses"] == ["course-a", "course-b"]
     assert payload["preferredCurrency"] == "EUR"
@@ -220,7 +221,9 @@ def test_patch_me_sends_questionnaire_completed_once_on_course_selection_transit
             "selectedGoalId": "goal-1",
             "selectedCourses": [],
             "profileForm": {
+                "aboutMe": None,
                 "telegram": None,
+                "socialLinks": [],
                 "socialUrl": None,
                 "experienceLevel": None,
                 "notes": None,
@@ -240,7 +243,7 @@ def test_patch_me_sends_questionnaire_completed_once_on_course_selection_transit
 
     response = client.patch(
         "/api/me",
-        json={"profileForm": {"experienceLevel": "beginner"}},
+        json={"profileForm": {"aboutMe": "I want to grow as a storyteller."}},
     )
     assert response.status_code == 200
     assert "text" in sent
@@ -270,7 +273,9 @@ def test_patch_me_does_not_resend_questionnaire_completed_when_already_marked(
             "selectedCourses": [],
             "telegramEvents": {"questionnaireCompletedAt": "2026-01-01T00:00:00Z"},
             "profileForm": {
+                "aboutMe": None,
                 "telegram": None,
+                "socialLinks": [],
                 "socialUrl": None,
                 "experienceLevel": None,
                 "notes": None,
@@ -317,6 +322,7 @@ def test_patch_me_accepts_preferred_currency_pln(monkeypatch):
     response = client.patch("/api/me", json={"preferredCurrency": "PLN"})
     assert response.status_code == 200
     payload = response.json()
+    assert payload["level"] == 1
     assert payload["preferredCurrency"] == "PLN"
     assert users["u1"]["preferredCurrency"] == "PLN"
 
@@ -363,7 +369,9 @@ def test_patch_me_rejects_invalid_stored_status(monkeypatch):
     app.dependency_overrides.clear()
 
 
-def test_patch_me_blocks_onboarding_finalize_for_non_active(monkeypatch):
+def test_patch_me_allows_subscription_selection_during_incomplete_onboarding_for_non_active(
+    monkeypatch,
+):
     users = {
         "u1": {
             "displayName": "User One",
@@ -377,10 +385,40 @@ def test_patch_me_blocks_onboarding_finalize_for_non_active(monkeypatch):
     client = TestClient(app)
 
     response = client.patch("/api/me", json={"subscriptionSelected": True})
-    assert response.status_code == 403
-    payload = response.json()["error"]
-    assert payload["code"] == "status_blocked"
-    assert payload["message"] == "Account disabled"
+    assert response.status_code == 200
+    assert users["u1"]["subscriptionSelected"] is True
+
+    app.dependency_overrides.clear()
+
+
+def test_patch_me_allows_subscription_selection_for_non_active_after_onboarding(
+    monkeypatch,
+):
+    users = {
+        "u1": {
+            "displayName": "User One",
+            "email": "u1@example.com",
+            "status": "disabled",
+            "selectedGoalId": "goal-1",
+            "selectedCourses": ["course-a"],
+            "profileForm": {
+                "aboutMe": "Ready to go",
+                "telegram": None,
+                "socialLinks": [],
+                "socialUrl": None,
+                "experienceLevel": None,
+                "notes": "Ready to go",
+            },
+        }
+    }
+    fake_db = FakeFirestore(users)
+    monkeypatch.setattr(auth, "get_firestore_client", lambda: fake_db)
+    app.dependency_overrides[auth_deps.get_current_user] = _override_user_disabled
+    client = TestClient(app)
+
+    response = client.patch("/api/me", json={"subscriptionSelected": True})
+    assert response.status_code == 200
+    assert users["u1"]["subscriptionSelected"] is True
 
     app.dependency_overrides.clear()
 

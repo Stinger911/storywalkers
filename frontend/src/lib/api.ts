@@ -1,3 +1,4 @@
+import { onAuthStateChanged } from 'firebase/auth'
 import { auth } from './firebase'
 
 let unauthorizedHandler: (() => void) | null = null
@@ -6,7 +7,39 @@ export function setUnauthorizedHandler(handler: () => void) {
   unauthorizedHandler = handler
 }
 
+async function waitForAuthReady(timeoutMs = 5000) {
+  if (auth.currentUser) return
+
+  let timeout: ReturnType<typeof setTimeout> | null = null
+  try {
+    if (typeof auth.authStateReady === 'function') {
+      await Promise.race<void | null>([
+        auth.authStateReady(),
+        new Promise<null>((resolve) => {
+          timeout = setTimeout(() => resolve(null), timeoutMs)
+        }),
+      ])
+      return
+    }
+
+    await Promise.race<void | null>([
+      new Promise<void>((resolve) => {
+        const unsubscribe = onAuthStateChanged(auth, () => {
+          unsubscribe()
+          resolve()
+        })
+      }),
+      new Promise<null>((resolve) => {
+        timeout = setTimeout(() => resolve(null), timeoutMs)
+      }),
+    ])
+  } finally {
+    if (timeout) clearTimeout(timeout)
+  }
+}
+
 async function getIdTokenWithTimeout(timeoutMs = 5000) {
+  await waitForAuthReady(timeoutMs)
   const user = auth.currentUser
   if (!user) return null
   let timeout: ReturnType<typeof setTimeout> | null = null

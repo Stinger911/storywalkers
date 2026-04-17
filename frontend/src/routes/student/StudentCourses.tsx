@@ -11,9 +11,11 @@ import {
   type Course,
 } from "../../lib/coursesApi";
 import { getFxRates } from "../../lib/fxApi";
+import { useI18n } from "../../lib/i18n";
 
 export function StudentCourses() {
   const auth = useAuth();
+  const { t } = useI18n();
   const [loading, setLoading] = createSignal(true);
   const [saving, setSaving] = createSignal(false);
   const [error, setError] = createSignal<string | null>(null);
@@ -77,7 +79,7 @@ export function StudentCourses() {
 
   const startCheckout = async () => {
     if (selectedCourseIds().length === 0) {
-      setError("Select at least one course.");
+      setError(t("student.courses.selectAtLeastOne"));
       return;
     }
     setSaving(true);
@@ -103,20 +105,20 @@ export function StudentCourses() {
   return (
     <section class="space-y-6">
       <SectionCard
-        title="Buy additional courses"
-        description="Select extra courses to add to your learning plan after payment activation."
+        title={t("student.courses.title")}
+        description={t("student.courses.description")}
       >
-        <Show when={!loading()} fallback={<div class="text-sm text-muted-foreground">Loading courses…</div>}>
+        <Show when={!loading()} fallback={<div class="text-sm text-muted-foreground">{t("student.courses.loading")}</div>}>
           <Show when={!error()} fallback={<div class="rounded-xl border border-error/40 bg-error/10 p-4 text-sm text-error-foreground">{error()}</div>}>
             <div class="space-y-4">
               <Show
                 when={availableCourses().length > 0}
-                fallback={<div class="text-sm text-muted-foreground">No additional courses are available right now.</div>}
+                fallback={<div class="text-sm text-muted-foreground">{t("student.courses.emptyAvailable")}</div>}
               >
                 <div class="grid gap-3 md:grid-cols-2">
                   <For each={availableCourses()}>
                     {(course) => (
-                      <label class="rounded-[var(--radius-lg)] border border-border/70 bg-card p-4 shadow-rail">
+                      <label class="student-list-card rounded-[calc(var(--radius-lg)+2px)] border border-border/70 bg-card p-4 shadow-none">
                         <div class="flex items-start justify-between gap-3">
                           <div class="space-y-1">
                             <div class="text-sm font-semibold">{course.title}</div>
@@ -136,7 +138,7 @@ export function StudentCourses() {
 
                 <div class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/70 bg-muted/30 px-4 py-3">
                   <div class="text-sm text-muted-foreground">
-                    {selectedCourseIds().length} selected
+                    {t("student.courses.selectedCount", { count: selectedCourseIds().length })}
                   </div>
                   <div class="text-lg font-semibold">
                     {formatCents(totalPrice(), preferredCurrency())}
@@ -144,7 +146,7 @@ export function StudentCourses() {
                 </div>
 
                 <Button onClick={() => void startCheckout()} disabled={saving() || selectedCourseIds().length === 0}>
-                  Create payment instructions
+                  {t("student.courses.createPaymentInstructions")}
                 </Button>
               </Show>
             </div>
@@ -153,7 +155,7 @@ export function StudentCourses() {
       </SectionCard>
 
       <Show when={ownedCourses().length > 0}>
-        <SectionCard title="Your courses">
+        <SectionCard title={t("student.courses.ownedTitle")}>
           <div class="flex flex-wrap gap-2">
             <For each={ownedCourses()}>
               {(course) => (
@@ -168,22 +170,24 @@ export function StudentCourses() {
 
       <Show when={checkout()}>
         {(result) => (
-          <SectionCard title="Payment instructions">
+          <SectionCard title={t("student.courses.paymentInstructionsTitle")}>
             <div class="space-y-3 text-sm">
               <div class="rounded-xl border border-border/70 bg-card p-4">
-                <div class="text-xs font-semibold uppercase text-muted-foreground">Activation code</div>
+                <div class="text-xs font-semibold uppercase text-muted-foreground">{t("student.courses.activationCode")}</div>
                 <div class="mt-2 font-mono text-lg">{result().activationCode}</div>
               </div>
               <div class="text-muted-foreground">{result().instructionsText}</div>
               <div class="text-muted-foreground">
-                Amount: {formatCents(result().amount, result().currency)}
+                {t("student.courses.amount", {
+                  amount: formatCents(result().amount, result().currency),
+                })}
               </div>
               <div class="flex flex-wrap gap-2">
                 <Button as="a" href={result().redirectUrl} target="_blank" rel="noopener noreferrer">
-                  Open payment page
+                  {t("student.courses.openPaymentPage")}
                 </Button>
                 <Button variant="outline" onClick={() => void load()}>
-                  Refresh courses
+                  {t("student.courses.refreshCourses")}
                 </Button>
               </div>
             </div>

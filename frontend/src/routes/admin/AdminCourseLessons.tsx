@@ -393,7 +393,7 @@ export function AdminCourseLessons() {
       </Show>
 
       <Show when={error()}>
-        <div class="rounded-2xl border border-error bg-error/10 p-4 text-sm text-error-foreground">
+        <div class="admin-callout admin-callout--error text-sm">
           {error()}
         </div>
       </Show>
