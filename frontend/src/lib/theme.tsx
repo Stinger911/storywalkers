@@ -2,7 +2,6 @@ import {
   createContext,
   createEffect,
   createSignal,
-  onCleanup,
   useContext,
   type JSX,
 } from "solid-js";
@@ -21,18 +20,7 @@ const STORAGE_KEY = "theme";
 const isThemeMode = (value: string): value is ThemeMode =>
   value === "light" || value === "dark";
 
-const getInitialTheme = (): ThemeMode => {
-  if (typeof localStorage !== "undefined") {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored && isThemeMode(stored)) return stored;
-  }
-  if (typeof window !== "undefined" && window.matchMedia) {
-    return window.matchMedia("(prefers-color-scheme: dark)").matches
-      ? "dark"
-      : "light";
-  }
-  return "light";
-};
+const FORCED_THEME: ThemeMode = "light";
 
 const applyTheme = (theme: ThemeMode) => {
   if (typeof document === "undefined") return;
@@ -41,31 +29,21 @@ const applyTheme = (theme: ThemeMode) => {
 };
 
 export function ThemeProvider(props: { children: JSX.Element }) {
-  const [theme, setThemeSignal] = createSignal<ThemeMode>(getInitialTheme());
+  const [theme] = createSignal<ThemeMode>(FORCED_THEME);
 
   createEffect(() => {
-    const current = theme();
-    applyTheme(current);
+    applyTheme(FORCED_THEME);
     if (typeof localStorage !== "undefined") {
-      localStorage.setItem(STORAGE_KEY, current);
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored && isThemeMode(stored) && stored !== FORCED_THEME) {
+        localStorage.removeItem(STORAGE_KEY);
+      }
+      localStorage.setItem(STORAGE_KEY, FORCED_THEME);
     }
   });
 
-  createEffect(() => {
-    if (typeof window === "undefined" || !window.matchMedia) return;
-    const media = window.matchMedia("(prefers-color-scheme: dark)");
-    const onChange = () => {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored && isThemeMode(stored)) return;
-      setThemeSignal(media.matches ? "dark" : "light");
-    };
-    media.addEventListener("change", onChange);
-    onCleanup(() => media.removeEventListener("change", onChange));
-  });
-
-  const setTheme = (next: ThemeMode) => setThemeSignal(next);
-  const toggleTheme = () =>
-    setThemeSignal((current) => (current === "dark" ? "light" : "dark"));
+  const setTheme = (_next: ThemeMode) => undefined;
+  const toggleTheme = () => undefined;
 
   return (
     <ThemeContext.Provider value={{ theme, setTheme, toggleTheme }}>
