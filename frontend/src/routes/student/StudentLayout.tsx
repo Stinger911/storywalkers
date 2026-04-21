@@ -44,62 +44,8 @@ export function StudentLayout(props: StudentLayoutProps) {
     return typeof rawLevel === "number" && rawLevel > 0 ? Math.floor(rawLevel) : 1;
   });
 
-  const themeStyles = () =>
-    theme() === "dark"
-      ? {
-          "--background": "214 24% 10%",
-          "--foreground": "210 40% 96%",
-          "--muted": "214 22% 18%",
-          "--muted-foreground": "214 16% 72%",
-          "--popover": "214 26% 12%",
-          "--popover-foreground": "210 40% 96%",
-          "--border": "214 18% 22%",
-          "--input": "214 20% 18%",
-          "--card": "214 24% 13%",
-          "--card-foreground": "210 40% 96%",
-          "--primary": "209 52% 66%",
-          "--primary-foreground": "214 26% 12%",
-          "--secondary": "212 90% 68%",
-          "--secondary-foreground": "214 26% 12%",
-          "--accent": "214 20% 18%",
-          "--accent-foreground": "210 40% 96%",
-          "--ring": "209 52% 66%",
-          "--radius": "0.5rem",
-          "--radius-lg": "1.5rem",
-          "--radius-md": "0.875rem",
-          "--shadow-card": "0 20px 40px rgba(0, 0, 0, 0.28)",
-          "--shadow-rail": "0 12px 28px rgba(0, 0, 0, 0.24)",
-        }
-      : {
-          "--background": "220 44% 98%",
-          "--foreground": "210 35% 11%",
-          "--muted": "214 48% 95%",
-          "--muted-foreground": "217 9% 33%",
-          "--popover": "0 0% 100%",
-          "--popover-foreground": "210 35% 11%",
-          "--border": "217 27% 87%",
-          "--input": "215 45% 91%",
-          "--card": "0 0% 100%",
-          "--card-foreground": "210 35% 11%",
-          "--primary": "209 50% 37%",
-          "--primary-foreground": "0 0% 100%",
-          "--secondary": "212 100% 37%",
-          "--secondary-foreground": "0 0% 100%",
-          "--accent": "214 48% 95%",
-          "--accent-foreground": "210 35% 11%",
-          "--ring": "209 50% 37%",
-          "--radius": "0.5rem",
-          "--radius-lg": "1.5rem",
-          "--radius-md": "0.875rem",
-          "--shadow-card": "0 20px 40px rgba(18, 29, 38, 0.05)",
-          "--shadow-rail": "0 12px 28px rgba(18, 29, 38, 0.05)",
-        };
-
   const shell = (
-    <div
-      class="student-shell min-h-screen bg-background text-foreground [font-family:Manrope,'Space_Grotesk',system-ui,sans-serif]"
-      style={themeStyles()}
-    >
+    <div class="student-shell min-h-screen bg-background text-foreground [font-family:Manrope,'Space_Grotesk',system-ui,sans-serif]">
       <AppShell
         title={t("student.layout.title")}
         roleLabel={t("student.layout.roleLabel")}
@@ -109,7 +55,10 @@ export function StudentLayout(props: StudentLayoutProps) {
           <div class="flex items-center gap-8">
             <A
               href="/student"
-              class="text-xl font-extrabold tracking-[-0.04em] text-[#1f3b67]"
+              class={cn(
+                "text-xl font-extrabold tracking-[-0.04em]",
+                theme() === "dark" ? "text-primary" : "text-[#1f3b67]",
+              )}
             >
               {t("student.layout.brand")}
             </A>
@@ -124,7 +73,14 @@ export function StudentLayout(props: StudentLayoutProps) {
         )}
         centerSlot={
           <div class="hidden md:flex flex-1 justify-center">
-            <div class="flex w-full max-w-xs items-center gap-2 rounded-[var(--radius-md)] bg-[rgba(223,233,247,0.8)] px-4 py-2.5 text-muted-foreground">
+            <div
+              class={cn(
+                "flex w-full max-w-xs items-center gap-2 rounded-[var(--radius-md)] px-4 py-2.5 text-muted-foreground",
+                theme() === "dark"
+                  ? "border border-border/70 bg-[rgba(18,29,38,0.9)]"
+                  : "bg-[rgba(223,233,247,0.8)]",
+              )}
+            >
               <span class="material-symbols-outlined text-[18px]">search</span>
               <input
                 type="search"
@@ -145,8 +101,22 @@ export function StudentLayout(props: StudentLayoutProps) {
                   {t("student.layout.levelLabel", { level: studentLevel() })}
                 </p>
               </div>
-              <Avatar class="h-10 w-10 rounded-[var(--radius-md)] bg-[rgba(217,227,241,0.95)]">
-                <AvatarFallback class="bg-[rgba(217,227,241,0.95)] text-xs font-bold text-primary">
+              <Avatar
+                class={cn(
+                  "h-10 w-10 rounded-[var(--radius-md)]",
+                  theme() === "dark"
+                    ? "border border-border/70 bg-[rgba(22,33,42,0.96)]"
+                    : "bg-[rgba(217,227,241,0.95)]",
+                )}
+              >
+                <AvatarFallback
+                  class={cn(
+                    "text-xs font-bold text-primary",
+                    theme() === "dark"
+                      ? "bg-[rgba(22,33,42,0.96)]"
+                      : "bg-[rgba(217,227,241,0.95)]",
+                  )}
+                >
                   {userInitials()}
                 </AvatarFallback>
               </Avatar>
@@ -163,7 +133,12 @@ export function StudentLayout(props: StudentLayoutProps) {
           <aside class="hidden md:flex md:min-h-[calc(100vh-8rem)] md:flex-col md:justify-between px-2 py-4">
             <div class="space-y-7">
               <div class="px-2">
-                <div class="text-[1.05rem] font-extrabold tracking-[-0.03em] text-[#1f3b67]">
+                <div
+                  class={cn(
+                    "text-[1.05rem] font-extrabold tracking-[-0.03em]",
+                    theme() === "dark" ? "text-primary" : "text-[#1f3b67]",
+                  )}
+                >
                   {t("student.layout.workspaceTitle")}
                 </div>
                 <div class="text-[10px] font-bold uppercase tracking-[0.14em] text-secondary">
@@ -175,9 +150,12 @@ export function StudentLayout(props: StudentLayoutProps) {
                   <A
                     href={item.href}
                     class={cn(
-                      "flex items-center gap-3 px-3 py-3 text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground transition-all duration-300 hover:bg-white/60 hover:text-primary",
+                      "flex items-center gap-3 px-3 py-3 text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground transition-all duration-300 hover:text-primary",
+                      theme() === "dark" ? "hover:bg-white/5" : "hover:bg-white/60",
                       isActive(item.href)
-                        ? "border-r-4 border-secondary bg-[rgba(237,244,255,0.7)] text-secondary"
+                        ? theme() === "dark"
+                          ? "border-r-4 border-secondary bg-[rgba(18,29,38,0.9)] text-secondary"
+                          : "border-r-4 border-secondary bg-[rgba(237,244,255,0.7)] text-secondary"
                         : "",
                     )}
                   >
@@ -191,7 +169,14 @@ export function StudentLayout(props: StudentLayoutProps) {
             </div>
 
             <div class="space-y-3 px-2">
-              <div class="rounded-[var(--radius-lg)] bg-[rgba(223,233,247,0.82)] p-4">
+              <div
+                class={cn(
+                  "rounded-[var(--radius-lg)] p-4",
+                  theme() === "dark"
+                    ? "border border-border/70 bg-[rgba(18,29,38,0.9)]"
+                    : "bg-[rgba(223,233,247,0.82)]",
+                )}
+              >
                 <p class="text-[10px] font-bold uppercase tracking-[0.14em] text-secondary">
                   {t("student.layout.tipTitle")}
                 </p>
@@ -201,7 +186,10 @@ export function StudentLayout(props: StudentLayoutProps) {
               </div>
               <Button
                 variant="outline"
-                class="w-full justify-center rounded-[var(--radius-md)] border-border/60 bg-white/80"
+                class={cn(
+                  "w-full justify-center rounded-[var(--radius-md)] border-border/60",
+                  theme() === "dark" ? "bg-transparent" : "bg-white/80",
+                )}
                 onClick={() => {
                   void auth.logout();
                   window.location.href = "/";
@@ -215,7 +203,14 @@ export function StudentLayout(props: StudentLayoutProps) {
         </div>
       </AppShell>
 
-      <nav class="fixed inset-x-0 bottom-0 z-40 flex h-20 items-center justify-around bg-white/90 px-4 backdrop-blur-xl md:hidden">
+      <nav
+        class={cn(
+          "fixed inset-x-0 bottom-0 z-40 flex h-20 items-center justify-around px-4 backdrop-blur-xl md:hidden",
+          theme() === "dark"
+            ? "border-t border-border/70 bg-[rgba(9,20,29,0.92)]"
+            : "bg-white/90",
+        )}
+      >
         {studentNavItems().map((item) => (
           <A
             href={item.href}

@@ -2,6 +2,7 @@ import {
   createContext,
   createEffect,
   createSignal,
+  onMount,
   useContext,
   type JSX,
 } from "solid-js";
@@ -20,30 +21,38 @@ const STORAGE_KEY = "theme";
 const isThemeMode = (value: string): value is ThemeMode =>
   value === "light" || value === "dark";
 
-const FORCED_THEME: ThemeMode = "light";
-
 const applyTheme = (theme: ThemeMode) => {
   if (typeof document === "undefined") return;
   document.documentElement.dataset.kbTheme = theme;
   document.documentElement.classList.toggle("dark", theme === "dark");
+  document.documentElement.style.colorScheme = theme;
 };
 
 export function ThemeProvider(props: { children: JSX.Element }) {
-  const [theme] = createSignal<ThemeMode>(FORCED_THEME);
+  const [theme, setThemeSignal] = createSignal<ThemeMode>("light");
 
-  createEffect(() => {
-    applyTheme(FORCED_THEME);
-    if (typeof localStorage !== "undefined") {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored && isThemeMode(stored) && stored !== FORCED_THEME) {
-        localStorage.removeItem(STORAGE_KEY);
-      }
-      localStorage.setItem(STORAGE_KEY, FORCED_THEME);
+  onMount(() => {
+    if (typeof localStorage === "undefined") return;
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored && isThemeMode(stored)) {
+      setThemeSignal(stored);
+      return;
     }
+
+    applyTheme(theme());
+    localStorage.setItem(STORAGE_KEY, theme());
   });
 
-  const setTheme = (_next: ThemeMode) => undefined;
-  const toggleTheme = () => undefined;
+  createEffect(() => {
+    const nextTheme = theme();
+    applyTheme(nextTheme);
+    if (typeof localStorage === "undefined") return;
+    localStorage.setItem(STORAGE_KEY, nextTheme);
+  });
+
+  const setTheme = (next: ThemeMode) => setThemeSignal(next);
+  const toggleTheme = () =>
+    setThemeSignal((current) => (current === "dark" ? "light" : "dark"));
 
   return (
     <ThemeContext.Provider value={{ theme, setTheme, toggleTheme }}>

@@ -46,63 +46,9 @@ export function AdminLayout(props: AdminLayoutProps) {
       .map((part) => part[0]?.toUpperCase() ?? "")
       .join("");
 
-  const themeStyles = () =>
-    theme() === "dark"
-      ? {
-          "--background": "214 24% 10%",
-          "--foreground": "210 40% 96%",
-          "--muted": "214 22% 18%",
-          "--muted-foreground": "214 16% 72%",
-          "--popover": "214 26% 12%",
-          "--popover-foreground": "210 40% 96%",
-          "--border": "214 18% 22%",
-          "--input": "214 20% 18%",
-          "--card": "214 24% 13%",
-          "--card-foreground": "210 40% 96%",
-          "--primary": "209 52% 66%",
-          "--primary-foreground": "214 26% 12%",
-          "--secondary": "212 90% 68%",
-          "--secondary-foreground": "214 26% 12%",
-          "--accent": "214 20% 18%",
-          "--accent-foreground": "210 40% 96%",
-          "--ring": "209 52% 66%",
-          "--radius": "0.5rem",
-          "--radius-lg": "1.5rem",
-          "--radius-md": "0.875rem",
-          "--shadow-card": "0 20px 40px rgba(0, 0, 0, 0.28)",
-          "--shadow-rail": "0 12px 28px rgba(0, 0, 0, 0.24)",
-        }
-      : {
-          "--background": "220 44% 98%",
-          "--foreground": "210 35% 11%",
-          "--muted": "214 48% 95%",
-          "--muted-foreground": "217 9% 33%",
-          "--popover": "0 0% 100%",
-          "--popover-foreground": "210 35% 11%",
-          "--border": "217 27% 87%",
-          "--input": "215 45% 91%",
-          "--card": "0 0% 100%",
-          "--card-foreground": "210 35% 11%",
-          "--primary": "209 50% 37%",
-          "--primary-foreground": "0 0% 100%",
-          "--secondary": "212 100% 37%",
-          "--secondary-foreground": "0 0% 100%",
-          "--accent": "214 48% 95%",
-          "--accent-foreground": "210 35% 11%",
-          "--ring": "209 50% 37%",
-          "--radius": "0.5rem",
-          "--radius-lg": "1.5rem",
-          "--radius-md": "0.875rem",
-          "--shadow-card": "0 20px 40px rgba(18, 29, 38, 0.05)",
-          "--shadow-rail": "0 12px 28px rgba(18, 29, 38, 0.05)",
-        };
-
   return (
     <RequireAuth role="staff">
-      <div
-        class="admin-shell min-h-screen bg-background text-foreground [font-family:Manrope,'Space_Grotesk',system-ui,sans-serif]"
-        style={themeStyles()}
-      >
+      <div class="admin-shell min-h-screen bg-background text-foreground [font-family:Manrope,'Space_Grotesk',system-ui,sans-serif]">
         <AppShell
           title="StoryWalkers Club"
           roleLabel="Admin Console"
@@ -114,7 +60,14 @@ export function AdminLayout(props: AdminLayoutProps) {
           mainClass="max-w-[1400px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8"
           centerSlot={
             <div class="hidden lg:flex flex-1 justify-center">
-              <div class="flex w-full max-w-sm items-center gap-2 rounded-[var(--radius-md)] bg-[rgba(223,233,247,0.8)] px-4 py-2.5 text-muted-foreground">
+              <div
+                class={cn(
+                  "flex w-full max-w-sm items-center gap-2 rounded-[var(--radius-md)] px-4 py-2.5 text-muted-foreground",
+                  theme() === "dark"
+                    ? "border border-border/70 bg-[rgba(18,29,38,0.9)]"
+                    : "bg-[rgba(223,233,247,0.8)]",
+                )}
+              >
                 <span class="material-symbols-outlined text-[18px]">search</span>
                 <input
                   type="search"
@@ -149,7 +102,14 @@ export function AdminLayout(props: AdminLayoutProps) {
           }}
         >
           <div class="grid gap-8 md:grid-cols-[220px_minmax(0,1fr)] lg:gap-10">
-            <aside class="hidden md:flex md:min-h-[calc(100vh-8rem)] md:flex-col md:justify-between rounded-[calc(var(--radius-lg)+6px)] bg-[linear-gradient(180deg,rgba(237,244,255,0.92)_0%,rgba(247,249,255,0.86)_100%)] px-4 py-5">
+            <aside
+              class={cn(
+                "hidden md:flex md:min-h-[calc(100vh-8rem)] md:flex-col md:justify-between rounded-[calc(var(--radius-lg)+6px)] px-4 py-5",
+                theme() === "dark"
+                  ? "border border-border/70 bg-[linear-gradient(180deg,rgba(18,29,38,0.96)_0%,rgba(22,33,42,0.92)_100%)]"
+                  : "bg-[linear-gradient(180deg,rgba(237,244,255,0.92)_0%,rgba(247,249,255,0.86)_100%)]",
+              )}
+            >
               <div class="space-y-6">
                 <div class="px-2">
                   <div class="flex items-center gap-3">
@@ -176,9 +136,12 @@ export function AdminLayout(props: AdminLayoutProps) {
                     <A
                       href="/admin/home"
                       class={cn(
-                        "flex items-center gap-3 rounded-[var(--radius-md)] px-4 py-3 text-sm font-semibold uppercase tracking-[0.05em] text-muted-foreground transition-all duration-300 hover:bg-white/70 hover:text-primary",
+                        "flex items-center gap-3 rounded-[var(--radius-md)] px-4 py-3 text-sm font-semibold uppercase tracking-[0.05em] text-muted-foreground transition-all duration-300 hover:text-primary",
+                        theme() === "dark" ? "hover:bg-white/5" : "hover:bg-white/70",
                         currentPath() === "/admin" || currentPath() === "/admin/home"
-                          ? "translate-x-1 bg-white text-secondary shadow-rail"
+                          ? theme() === "dark"
+                            ? "translate-x-1 bg-[rgba(22,33,42,0.96)] text-secondary shadow-rail"
+                            : "translate-x-1 bg-white text-secondary shadow-rail"
                           : "",
                       )}
                     >
@@ -191,9 +154,12 @@ export function AdminLayout(props: AdminLayoutProps) {
                       <A
                         href={item.href}
                         class={cn(
-                          "flex items-center gap-3 rounded-[var(--radius-md)] px-4 py-3 text-sm font-semibold uppercase tracking-[0.05em] text-muted-foreground transition-all duration-300 hover:bg-white/70 hover:text-primary",
+                          "flex items-center gap-3 rounded-[var(--radius-md)] px-4 py-3 text-sm font-semibold uppercase tracking-[0.05em] text-muted-foreground transition-all duration-300 hover:text-primary",
+                          theme() === "dark" ? "hover:bg-white/5" : "hover:bg-white/70",
                           isActive(item.href)
-                            ? "translate-x-1 bg-white text-secondary shadow-rail"
+                            ? theme() === "dark"
+                              ? "translate-x-1 bg-[rgba(22,33,42,0.96)] text-secondary shadow-rail"
+                              : "translate-x-1 bg-white text-secondary shadow-rail"
                             : "",
                         )}
                       >
@@ -219,7 +185,10 @@ export function AdminLayout(props: AdminLayoutProps) {
                 </a>
                 <Button
                   variant="outline"
-                  class="w-full justify-center rounded-[var(--radius-md)] border-border/60 bg-white/80"
+                  class={cn(
+                    "w-full justify-center rounded-[var(--radius-md)] border-border/60",
+                    theme() === "dark" ? "bg-transparent" : "bg-white/80",
+                  )}
                   onClick={() => {
                     void auth.logout();
                     window.location.href = "/";

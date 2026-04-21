@@ -4,29 +4,29 @@
 
 @layer base {
   :root {
-    --background: 220 20% 96%;
-    --foreground: 240 10% 3.9%;
+    --background: 220 44% 98%;
+    --foreground: 210 35% 11%;
 
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
+    --muted: 214 48% 95%;
+    --muted-foreground: 217 9% 33%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 3.9%;
+    --popover-foreground: 210 35% 11%;
 
-    --border: 220 14% 90%;
-    --input: 220 14% 90%;
+    --border: 217 27% 87%;
+    --input: 215 45% 91%;
 
     --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
+    --card-foreground: 210 35% 11%;
 
-    --primary: 240 5.9% 10%;
+    --primary: 209 50% 37%;
     --primary-foreground: 0 0% 98%;
 
-    --secondary: 240 4.8% 95.9%;
-    --secondary-foreground: 240 5.9% 10%;
+    --secondary: 212 100% 37%;
+    --secondary-foreground: 0 0% 100%;
 
-    --accent: 240 4.8% 95.9%;
-    --accent-foreground: 240 5.9% 10%;
+    --accent: 214 48% 95%;
+    --accent-foreground: 210 35% 11%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
@@ -43,40 +43,40 @@
     --error: 0 93% 94%;
     --error-foreground: 0 84% 60%;
 
-    --ring: 240 5.9% 10%;
+    --ring: 209 50% 37%;
 
     --radius: 0.5rem;
-    --radius-lg: 1.25rem;
-    --radius-md: 0.75rem;
-    --shadow-card: 0 14px 34px rgba(15, 23, 42, 0.08);
-    --shadow-rail: 0 10px 24px rgba(15, 23, 42, 0.06);
+    --radius-lg: 1.5rem;
+    --radius-md: 0.875rem;
+    --shadow-card: 0 20px 40px rgba(18, 29, 38, 0.05);
+    --shadow-rail: 0 12px 28px rgba(18, 29, 38, 0.05);
   }
 
   .dark,
   [data-kb-theme="dark"] {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
+    --background: 208 54% 7%;
+    --foreground: 209 42% 89%;
 
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
+    --muted: 209 39% 13%;
+    --muted-foreground: 216 12% 79%;
 
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 0 0% 98%;
+    --accent: 209 39% 13%;
+    --accent-foreground: 209 42% 89%;
 
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 0 0% 98%;
+    --popover: 209 39% 10%;
+    --popover-foreground: 209 42% 89%;
 
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
+    --border: 213 11% 22%;
+    --input: 210 37% 14%;
 
-    --card: 240 10% 3.9%;
-    --card-foreground: 0 0% 98%;
+    --card: 209 39% 12%;
+    --card-foreground: 209 42% 89%;
 
-    --primary: 0 0% 98%;
-    --primary-foreground: 240 5.9% 10%;
+    --primary: 209 100% 81%;
+    --primary-foreground: 205 100% 17%;
 
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
+    --secondary: 126 47% 71%;
+    --secondary-foreground: 144 100% 11%;
 
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
@@ -90,16 +90,16 @@
     --warning: 48 96% 89%;
     --warning-foreground: 25 95% 53%;
 
-    --error: 0 93% 94%;
-    --error-foreground: 0 84% 60%;
+    --error: 6 100% 83%;
+    --error-foreground: 0 100% 21%;
 
-    --ring: 240 4.9% 83.9%;
+    --ring: 209 100% 81%;
 
     --radius: 0.5rem;
-    --radius-lg: 1.25rem;
-    --radius-md: 0.75rem;
-    --shadow-card: 0 14px 34px rgba(15, 23, 42, 0.16);
-    --shadow-rail: 0 10px 24px rgba(15, 23, 42, 0.12);
+    --radius-lg: 1.5rem;
+    --radius-md: 0.875rem;
+    --shadow-card: 0 20px 40px rgba(0, 0, 0, 0.28);
+    --shadow-rail: 0 12px 28px rgba(0, 0, 0, 0.24);
   }
 }
 
@@ -234,6 +234,50 @@
     transform: translateY(-1px);
   }
 
+  .dark .admin-shell [data-section-card],
+  [data-kb-theme="dark"] .admin-shell [data-section-card] {
+    background: hsl(var(--card));
+    border-color: rgba(66, 71, 79, 0.72);
+  }
+
+  .dark .admin-shell main input:not([type="search"]),
+  .dark .admin-shell main select,
+  .dark .admin-shell main textarea,
+  [data-kb-theme="dark"] .admin-shell main input:not([type="search"]),
+  [data-kb-theme="dark"] .admin-shell main select,
+  [data-kb-theme="dark"] .admin-shell main textarea {
+    background: rgba(18, 29, 38, 0.92);
+    border-color: rgba(66, 71, 79, 0.72);
+    color: hsl(var(--foreground));
+  }
+
+  .dark .admin-shell main input:not([type="search"]):focus,
+  .dark .admin-shell main select:focus,
+  .dark .admin-shell main textarea:focus,
+  [data-kb-theme="dark"] .admin-shell main input:not([type="search"]):focus,
+  [data-kb-theme="dark"] .admin-shell main select:focus,
+  [data-kb-theme="dark"] .admin-shell main textarea:focus {
+    box-shadow: 0 0 0 2px rgba(157, 202, 255, 0.35);
+    background: rgba(22, 33, 42, 0.96);
+  }
+
+  .dark .admin-shell .admin-callout--error,
+  [data-kb-theme="dark"] .admin-shell .admin-callout--error {
+    background: rgba(147, 0, 10, 0.85);
+    color: #ffdad6;
+  }
+
+  .dark .admin-shell .admin-list-card,
+  [data-kb-theme="dark"] .admin-shell .admin-list-card {
+    border-color: rgba(66, 71, 79, 0.72);
+    background: rgba(18, 29, 38, 0.92);
+  }
+
+  .dark .admin-shell .admin-list-card:hover,
+  [data-kb-theme="dark"] .admin-shell .admin-list-card:hover {
+    border-color: rgba(157, 202, 255, 0.4);
+  }
+
   .student-shell [data-section-card] {
     background: rgba(255, 255, 255, 0.94);
     border-color: rgba(194, 199, 208, 0.16);
@@ -313,6 +357,62 @@
     background: rgba(237, 244, 255, 0.72);
     border-color: rgba(47, 95, 141, 0.14);
     transform: translateY(-1px);
+  }
+
+  .dark .student-shell [data-section-card],
+  [data-kb-theme="dark"] .student-shell [data-section-card] {
+    background: hsl(var(--card));
+    border-color: rgba(66, 71, 79, 0.72);
+    box-shadow: none;
+  }
+
+  .dark .student-shell .student-stat-card,
+  [data-kb-theme="dark"] .student-shell .student-stat-card {
+    background: rgba(18, 29, 38, 0.88);
+  }
+
+  .dark .student-shell main input:not([type="search"]),
+  .dark .student-shell main select,
+  .dark .student-shell main textarea,
+  [data-kb-theme="dark"] .student-shell main input:not([type="search"]),
+  [data-kb-theme="dark"] .student-shell main select,
+  [data-kb-theme="dark"] .student-shell main textarea {
+    background: rgba(18, 29, 38, 0.92);
+    border-color: rgba(66, 71, 79, 0.72);
+    color: hsl(var(--foreground));
+  }
+
+  .dark .student-shell main input:not([type="search"]):focus,
+  .dark .student-shell main select:focus,
+  .dark .student-shell main textarea:focus,
+  [data-kb-theme="dark"] .student-shell main input:not([type="search"]):focus,
+  [data-kb-theme="dark"] .student-shell main select:focus,
+  [data-kb-theme="dark"] .student-shell main textarea:focus {
+    box-shadow: 0 0 0 2px rgba(157, 202, 255, 0.35);
+    background: rgba(22, 33, 42, 0.96);
+  }
+
+  .dark .student-shell .student-callout--error,
+  [data-kb-theme="dark"] .student-shell .student-callout--error {
+    background: rgba(147, 0, 10, 0.85);
+    color: #ffdad6;
+  }
+
+  .dark .student-shell .student-list-card,
+  [data-kb-theme="dark"] .student-shell .student-list-card {
+    border-color: rgba(66, 71, 79, 0.72);
+    background: rgba(18, 29, 38, 0.92);
+  }
+
+  .dark .student-shell .student-list-card:hover,
+  [data-kb-theme="dark"] .student-shell .student-list-card:hover {
+    border-color: rgba(157, 202, 255, 0.4);
+  }
+
+  .dark .student-shell .student-resource-item:hover,
+  [data-kb-theme="dark"] .student-shell .student-resource-item:hover {
+    background: rgba(22, 33, 42, 0.92);
+    border-color: rgba(157, 202, 255, 0.32);
   }
 }
 
