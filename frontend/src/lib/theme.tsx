@@ -2,7 +2,7 @@ import {
   createContext,
   createEffect,
   createSignal,
-  onCleanup,
+  onMount,
   useContext,
   type JSX,
 } from "solid-js";
@@ -21,46 +21,33 @@ const STORAGE_KEY = "theme";
 const isThemeMode = (value: string): value is ThemeMode =>
   value === "light" || value === "dark";
 
-const getInitialTheme = (): ThemeMode => {
-  if (typeof localStorage !== "undefined") {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored && isThemeMode(stored)) return stored;
-  }
-  if (typeof window !== "undefined" && window.matchMedia) {
-    return window.matchMedia("(prefers-color-scheme: dark)").matches
-      ? "dark"
-      : "light";
-  }
-  return "light";
-};
-
 const applyTheme = (theme: ThemeMode) => {
   if (typeof document === "undefined") return;
   document.documentElement.dataset.kbTheme = theme;
   document.documentElement.classList.toggle("dark", theme === "dark");
+  document.documentElement.style.colorScheme = theme;
 };
 
 export function ThemeProvider(props: { children: JSX.Element }) {
-  const [theme, setThemeSignal] = createSignal<ThemeMode>(getInitialTheme());
+  const [theme, setThemeSignal] = createSignal<ThemeMode>("light");
 
-  createEffect(() => {
-    const current = theme();
-    applyTheme(current);
-    if (typeof localStorage !== "undefined") {
-      localStorage.setItem(STORAGE_KEY, current);
+  onMount(() => {
+    if (typeof localStorage === "undefined") return;
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored && isThemeMode(stored)) {
+      setThemeSignal(stored);
+      return;
     }
+
+    applyTheme(theme());
+    localStorage.setItem(STORAGE_KEY, theme());
   });
 
   createEffect(() => {
-    if (typeof window === "undefined" || !window.matchMedia) return;
-    const media = window.matchMedia("(prefers-color-scheme: dark)");
-    const onChange = () => {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored && isThemeMode(stored)) return;
-      setThemeSignal(media.matches ? "dark" : "light");
-    };
-    media.addEventListener("change", onChange);
-    onCleanup(() => media.removeEventListener("change", onChange));
+    const nextTheme = theme();
+    applyTheme(nextTheme);
+    if (typeof localStorage === "undefined") return;
+    localStorage.setItem(STORAGE_KEY, nextTheme);
   });
 
   const setTheme = (next: ThemeMode) => setThemeSignal(next);
