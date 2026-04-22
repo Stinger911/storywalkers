@@ -50,7 +50,6 @@ export function StudentCourses() {
           (sum, course) =>
             sum + convertUsdCentsToCurrencyCents(course.priceUsdCents, currencyRate()),
           0,
-          0,
         ),
   );
 
