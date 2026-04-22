@@ -23,6 +23,7 @@ export function StudentCourses() {
   const [selectedCourseIds, setSelectedCourseIds] = createSignal<string[]>([]);
   const [fxRates, setFxRates] = createSignal<Record<string, number>>({ USD: 1 });
   const [checkout, setCheckout] = createSignal<CheckoutIntentResponse | null>(null);
+  const isFirstHundred = createMemo(() => auth.me()?.isFirstHundred === true);
 
   const ownedCourseIds = createMemo(
     () => new Set(auth.me()?.selectedCourses?.filter((value) => typeof value === "string") ?? []),
@@ -43,11 +44,14 @@ export function StudentCourses() {
     return availableCourses().filter((course) => selected.has(course.id));
   });
   const totalPrice = createMemo(() =>
-    selectedCourses().reduce(
-      (sum, course) =>
-        sum + convertUsdCentsToCurrencyCents(course.priceUsdCents, currencyRate()),
-      0,
-    ),
+    isFirstHundred()
+      ? 0
+      : selectedCourses().reduce(
+          (sum, course) =>
+            sum + convertUsdCentsToCurrencyCents(course.priceUsdCents, currencyRate()),
+          0,
+          0,
+        ),
   );
 
   const load = async () => {
@@ -102,6 +106,13 @@ export function StudentCourses() {
       preferredCurrency(),
     );
 
+  const FreePrice = (props: { usdCents: number }) => (
+    <div class="text-sm font-medium">
+      <span class="text-muted-foreground line-through">{formatPrice(props.usdCents)}</span>
+      <span class="ml-2">{formatCents(0, preferredCurrency())}</span>
+    </div>
+  );
+
   return (
     <section class="space-y-6">
       <SectionCard
@@ -123,7 +134,12 @@ export function StudentCourses() {
                           <div class="space-y-1">
                             <div class="text-sm font-semibold">{course.title}</div>
                             <div class="text-xs text-muted-foreground">{course.shortDescription}</div>
-                            <div class="text-sm font-medium">{formatPrice(course.priceUsdCents)}</div>
+                            <Show
+                              when={isFirstHundred()}
+                              fallback={<div class="text-sm font-medium">{formatPrice(course.priceUsdCents)}</div>}
+                            >
+                              <FreePrice usdCents={course.priceUsdCents} />
+                            </Show>
                           </div>
                           <input
                             type="checkbox"
@@ -144,6 +160,11 @@ export function StudentCourses() {
                     {formatCents(totalPrice(), preferredCurrency())}
                   </div>
                 </div>
+                <Show when={isFirstHundred()}>
+                  <div class="text-sm text-muted-foreground">
+                    {t("student.courses.freeAccessHint")}
+                  </div>
+                </Show>
 
                 <Button onClick={() => void startCheckout()} disabled={saving() || selectedCourseIds().length === 0}>
                   {t("student.courses.createPaymentInstructions")}
@@ -183,9 +204,11 @@ export function StudentCourses() {
                 })}
               </div>
               <div class="flex flex-wrap gap-2">
-                <Button as="a" href={result().redirectUrl} target="_blank" rel="noopener noreferrer">
-                  {t("student.courses.openPaymentPage")}
-                </Button>
+                <Show when={result().amount > 0}>
+                  <Button as="a" href={result().redirectUrl} target="_blank" rel="noopener noreferrer">
+                    {t("student.courses.openPaymentPage")}
+                  </Button>
+                </Show>
                 <Button variant="outline" onClick={() => void load()}>
                   {t("student.courses.refreshCourses")}
                 </Button>

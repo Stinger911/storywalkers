@@ -5,6 +5,8 @@ import { Loading } from "../../components/Loading";
 import { StudentLayout } from "../student/StudentLayout";
 import { useAuth } from "../../lib/auth";
 import { useI18n } from "../../lib/i18n";
+import { useTheme } from "../../lib/theme";
+import { cn } from "../../lib/utils";
 import {
   getNextOnboardingStep,
   onboardingPath,
@@ -22,8 +24,16 @@ type OnboardingLayoutProps = {
 
 function OnboardingStepper(props: { currentStep: OnboardingStep }) {
   const { t } = useI18n();
+  const { theme } = useTheme();
   return (
-    <div class="rounded-[calc(var(--radius-lg)+6px)] border border-border/70 bg-[linear-gradient(180deg,rgba(237,244,255,0.86)_0%,rgba(255,255,255,0.94)_100%)] p-5 shadow-card">
+    <div
+      class={cn(
+        "rounded-[calc(var(--radius-lg)+6px)] border border-border/70 p-5 shadow-card",
+        theme() === "dark"
+          ? "bg-[linear-gradient(180deg,rgba(18,29,38,0.96)_0%,rgba(22,33,42,0.92)_100%)]"
+          : "bg-[linear-gradient(180deg,rgba(237,244,255,0.86)_0%,rgba(255,255,255,0.94)_100%)]",
+      )}
+    >
       <div class="mb-4 text-[11px] font-extrabold uppercase tracking-[0.16em] text-secondary">
         {t("student.onboarding.stepperTitle")}
       </div>
@@ -35,22 +45,32 @@ function OnboardingStepper(props: { currentStep: OnboardingStep }) {
           const label = t(`student.onboarding.steps.${step}`);
           return (
             <div
-              class={`flex items-center gap-3 rounded-[var(--radius-md)] px-3 py-3 text-xs font-semibold uppercase tracking-[0.08em] ${
+              class={cn(
+                "flex items-center gap-3 rounded-[var(--radius-md)] px-3 py-3 text-xs font-semibold uppercase tracking-[0.08em]",
                 isCurrent
-                  ? "bg-white text-primary shadow-rail"
+                  ? theme() === "dark"
+                    ? "bg-[rgba(22,33,42,0.96)] text-primary shadow-rail"
+                    : "bg-white text-primary shadow-rail"
                   : isDone
-                    ? "bg-[#eef7f0] text-[#2a683a]"
-                    : "bg-[rgba(217,227,241,0.72)] text-muted-foreground"
-              }`}
+                    ? theme() === "dark"
+                      ? "bg-[rgba(16,82,38,0.92)] text-[#b0f2b7]"
+                      : "bg-[#eef7f0] text-[#2a683a]"
+                    : theme() === "dark"
+                      ? "bg-[rgba(32,43,53,0.92)] text-muted-foreground"
+                      : "bg-[rgba(217,227,241,0.72)] text-muted-foreground",
+              )}
             >
               <span
-                class={`inline-flex h-6 w-6 items-center justify-center rounded-full text-[11px] ${
+                class={cn(
+                  "inline-flex h-6 w-6 items-center justify-center rounded-full text-[11px]",
                   isCurrent
                     ? "bg-primary text-primary-foreground"
                     : isDone
                       ? "bg-emerald-600 text-white"
-                      : "bg-white text-foreground"
-                }`}
+                      : theme() === "dark"
+                        ? "bg-[rgba(9,20,29,0.96)] text-foreground"
+                        : "bg-white text-foreground",
+                )}
               >
                 {index + 1}
               </span>
@@ -66,6 +86,7 @@ function OnboardingStepper(props: { currentStep: OnboardingStep }) {
 export function OnboardingLayout(props: OnboardingLayoutProps) {
   const auth = useAuth();
   const { t } = useI18n();
+  const { theme } = useTheme();
   const location = useLocation();
   const navigate = useNavigate();
   const [resumeChecked, setResumeChecked] = createSignal(false);
@@ -94,7 +115,14 @@ export function OnboardingLayout(props: OnboardingLayoutProps) {
       >
         <StudentLayout>
           <section class="mx-auto max-w-5xl space-y-6">
-            <header class="space-y-3 rounded-[calc(var(--radius-lg)+8px)] border border-border/70 bg-white px-6 py-7 shadow-card sm:px-8">
+            <header
+              class={cn(
+                "space-y-3 rounded-[calc(var(--radius-lg)+8px)] border border-border/70 px-6 py-7 shadow-card sm:px-8",
+                theme() === "dark"
+                  ? "bg-[linear-gradient(180deg,rgba(18,29,38,0.96)_0%,rgba(22,33,42,0.92)_100%)]"
+                  : "bg-white",
+              )}
+            >
               <div class="text-[11px] font-extrabold uppercase tracking-[0.18em] text-secondary">
                 {t("student.onboarding.eyebrow")}
               </div>

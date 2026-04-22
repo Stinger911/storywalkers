@@ -130,6 +130,7 @@ describe("Login linking", () => {
     fireEvent.input(screen.getByLabelText("Password"), {
       target: { value: "secret123" },
     });
+    fireEvent.click(screen.getByRole("button", { name: "Register" }));
     fireEvent.click(screen.getByText("Create account (email/password)"));
 
     await waitFor(() => {
@@ -207,6 +208,31 @@ describe("Login linking", () => {
       await screen.findByText(
         "Password reset email sent. Check your inbox for next steps.",
       ),
+    ).toBeInTheDocument();
+  });
+
+  it("switches between sign-in and registration modes", async () => {
+    isSignInWithEmailLinkMock.mockReturnValue(false);
+
+    render(() => (
+      <I18nProvider>
+        <Login />
+      </I18nProvider>
+    ));
+
+    expect(screen.getByText("Welcome back")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Send sign-in link (passwordless)" }),
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Register" }));
+
+    expect(await screen.findByText("Create your account")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Send sign-in link (passwordless)" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Already have an account? Sign in" }),
     ).toBeInTheDocument();
   });
 });

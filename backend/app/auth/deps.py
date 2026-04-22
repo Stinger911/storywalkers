@@ -59,6 +59,10 @@ def _normalize_preferred_currency(value: object) -> str | None:
     return None
 
 
+def _normalize_first_hundred(value: object) -> bool:
+    return bool(value) if isinstance(value, bool) else False
+
+
 def _normalize_level(value: object) -> int:
     if isinstance(value, bool):
         return 1
@@ -110,6 +114,7 @@ def _build_user_payload(uid: str, decoded: dict, profile: dict | None) -> dict:
         "roleRaw": role_raw,
         "level": _normalize_level(profile.get("level")),
         "selectedGoalId": _sanitize_optional_text(profile.get("selectedGoalId")),
+        "selectedGoalTitle": _sanitize_optional_text(profile.get("selectedGoalTitle")),
         "profileForm": {
             "aboutMe": _sanitize_optional_text(profile_form.get("aboutMe"))
             or _sanitize_optional_text(profile_form.get("notes")),
@@ -126,6 +131,7 @@ def _build_user_payload(uid: str, decoded: dict, profile: dict | None) -> dict:
             profile.get("preferredCurrency")
         )
         or "USD",
+        "isFirstHundred": _normalize_first_hundred(profile.get("isFirstHundred")),
         "subscriptionSelected": (
             profile.get("subscriptionSelected")
             if isinstance(profile.get("subscriptionSelected"), bool)
@@ -184,6 +190,7 @@ async def get_current_user(
             "role": "student",
             "status": DEFAULT_NEW_USER_STATUS,
             "level": 1,
+            "isFirstHundred": False,
             "email": decoded.get("email", ""),
             "displayName": decoded.get("name", decoded.get("email", "")),
             "createdAt": datetime.now(timezone.utc),
@@ -216,6 +223,16 @@ async def get_current_user(
 
     profile = doc.to_dict() or {}
     ensure_user_status_with_migration(user_ref, profile)
+
+    selected_goal_id = _sanitize_optional_text(profile.get("selectedGoalId"))
+    selected_goal_title = None
+    if selected_goal_id:
+        goal_ref = firestore.collection("goals").document(selected_goal_id)
+        goal_snap = goal_ref.get()
+        if goal_snap.exists:
+            goal_data = goal_snap.to_dict() or {}
+            selected_goal_title = _sanitize_optional_text(goal_data.get("title"))
+    profile["selectedGoalTitle"] = selected_goal_title
 
     request.state.uid = uid
     return _build_user_payload(uid, decoded, profile)

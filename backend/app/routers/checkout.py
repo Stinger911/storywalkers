@@ -15,7 +15,7 @@ from app.schemas.payments import PaymentStatus
 router = APIRouter(prefix="/api", tags=["Checkout"])
 logger = get_logger("app")
 
-_REDIRECT_URL = "https://boosty.to/storywalkers"
+_REDIRECT_URL = "https://boosty.to/taveren_ru/purchase/3755394?ssource=DIRECT&share=subscription_link"
 _PAYMENT_PROVIDER = "boosty"
 _PAYMENT_INSTRUCTIONS = (
     "Complete payment on Boosty, then contact support with this activation code."
@@ -63,6 +63,10 @@ class CheckoutIntentResponse(BaseModel):
     currency: str
     activationCode: str
     instructionsText: str
+
+
+def _has_free_courses(user: dict[str, Any]) -> bool:
+    return bool(user.get("isFirstHundred") is True)
 
 
 def _resolve_currency(user: dict[str, Any]) -> str:
@@ -196,12 +200,15 @@ async def create_checkout_intent(
             status_code=400,
             details={"invalidCourseIds": invalid_course_ids},
         )
-    if total_usd_cents <= 0:
+    if total_usd_cents < 0:
         raise AppError(
             code="validation_error",
-            message="Total amount must be greater than zero",
+            message="Total amount must not be negative",
             status_code=400,
         )
+
+    if _has_free_courses(user):
+        total_usd_cents = 0
 
     currency = _resolve_currency(user)
     fx_rate = _get_fx_rate(db, currency)

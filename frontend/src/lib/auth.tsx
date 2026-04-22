@@ -25,6 +25,7 @@ export type MeProfile = {
   roleRaw?: 'student' | 'admin' | 'expert'
   level?: number
   selectedGoalId?: string | null
+  selectedGoalTitle?: string | null
   profileForm?: {
     aboutMe?: string | null
     telegram?: string | null
@@ -35,12 +36,14 @@ export type MeProfile = {
   }
   selectedCourses?: string[]
   preferredCurrency?: "USD" | "EUR" | "PLN" | "RUB"
+  isFirstHundred?: boolean
   subscriptionSelected?: boolean | null
 }
 
 export type PatchMePayload = {
   displayName?: string
   selectedGoalId?: string | null
+  selectedGoalTitle?: string | null
   profileForm?: {
     aboutMe?: string | null
     telegram?: string | null
@@ -51,6 +54,7 @@ export type PatchMePayload = {
   }
   selectedCourses?: string[]
   preferredCurrency?: "USD" | "EUR" | "PLN" | "RUB"
+  isFirstHundred?: boolean
   subscriptionSelected?: boolean | null
 }
 

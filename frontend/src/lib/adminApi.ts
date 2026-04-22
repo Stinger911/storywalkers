@@ -102,6 +102,7 @@ type Student = {
   role?: string
   status?: string
   boostyUserId?: string | null
+  isFirstHundred?: boolean
   progressPercent?: number
   stepsDone?: number
   stepsTotal?: number
@@ -418,6 +419,7 @@ export async function updateStudent(
     status?: string
     role?: string
     boostyUserId?: string | null
+    isFirstHundred?: boolean
   },
 ) {
   const response = await apiFetch(`/api/admin/students/${uid}`, {

@@ -1,17 +1,20 @@
 import { fireEvent, render, screen, waitFor } from "@solidjs/testing-library";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+let meState = {
+  uid: "u1",
+  email: "u1@example.com",
+  displayName: "User One",
+  role: "student" as const,
+  status: "active" as const,
+  selectedCourses: ["course-1"],
+  preferredCurrency: "USD" as const,
+  isFirstHundred: false,
+};
+
 vi.mock("../../src/lib/auth", () => ({
   useAuth: () => ({
-    me: () => ({
-      uid: "u1",
-      email: "u1@example.com",
-      displayName: "User One",
-      role: "student",
-      status: "active",
-      selectedCourses: ["course-1"],
-      preferredCurrency: "USD",
-    }),
+    me: () => meState,
   }),
 }));
 
@@ -41,6 +44,16 @@ import { StudentCourses } from "../../src/routes/student/StudentCourses";
 
 describe("StudentCourses", () => {
   beforeEach(() => {
+    meState = {
+      uid: "u1",
+      email: "u1@example.com",
+      displayName: "User One",
+      role: "student",
+      status: "active",
+      selectedCourses: ["course-1"],
+      preferredCurrency: "USD",
+      isFirstHundred: false,
+    };
     vi.mocked(listCourses).mockReset();
     vi.mocked(getFxRates).mockReset();
     vi.mocked(createCheckoutIntent).mockReset();
@@ -102,5 +115,37 @@ describe("StudentCourses", () => {
       "href",
       "https://boosty.example/pay",
     );
+  });
+
+  it("shows free pricing and hides payment link for first hundred students", async () => {
+    meState = {
+      ...meState,
+      isFirstHundred: true,
+    };
+    vi.mocked(createCheckoutIntent).mockResolvedValue({
+      paymentId: "p1",
+      redirectUrl: "https://boosty.example/pay",
+      amount: 0,
+      currency: "USD",
+      activationCode: "SW-FREE100",
+      instructionsText: "No payment required.",
+    });
+
+    render(() => (
+      <I18nProvider>
+        <StudentCourses />
+      </I18nProvider>
+    ));
+
+    expect(await screen.findByText("New course")).toBeInTheDocument();
+    expect(screen.getByText("You are in the first 100 students cohort. No payment is required for these courses.")).toBeInTheDocument();
+    expect(screen.getByText("$40.00")).toHaveClass("line-through");
+    expect(screen.getAllByText("$0.00").length).toBeGreaterThan(0);
+
+    fireEvent.click(screen.getByRole("checkbox"));
+    fireEvent.click(screen.getByRole("button", { name: "Create payment instructions" }));
+
+    expect(await screen.findByText("SW-FREE100")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Open payment page" })).not.toBeInTheDocument();
   });
 });

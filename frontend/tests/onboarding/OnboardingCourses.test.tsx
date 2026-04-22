@@ -8,6 +8,24 @@ import { getFxRates } from "../../src/lib/fxApi";
 
 const patchMeMock = vi.fn();
 const navigateMock = vi.fn();
+let meState = {
+  uid: "u1",
+  email: "u1@example.com",
+  displayName: "User One",
+  role: "student" as const,
+  status: "active" as const,
+  selectedGoalId: "goal-1",
+  profileForm: {
+    aboutMe: "About me",
+    telegram: "@alice",
+    socialUrl: null,
+    experienceLevel: "beginner" as const,
+    notes: null,
+  },
+  selectedCourses: [],
+  subscriptionSelected: null,
+  isFirstHundred: false,
+};
 
 vi.mock("@solidjs/router", () => ({
   A: (props: { href: string; children: unknown; class?: string }) => (
@@ -20,23 +38,7 @@ vi.mock("@solidjs/router", () => ({
 
 vi.mock("../../src/lib/auth", () => ({
   useAuth: () => ({
-    me: () => ({
-      uid: "u1",
-      email: "u1@example.com",
-      displayName: "User One",
-      role: "student",
-      status: "active",
-      selectedGoalId: "goal-1",
-      profileForm: {
-        aboutMe: "About me",
-        telegram: "@alice",
-        socialUrl: null,
-        experienceLevel: "beginner",
-        notes: null,
-      },
-      selectedCourses: [],
-      subscriptionSelected: null,
-    }),
+    me: () => meState,
     patchMe: patchMeMock,
   }),
 }));
@@ -61,13 +63,31 @@ vi.mock("../../src/routes/onboarding/OnboardingLayout", () => ({
 
 describe("OnboardingCourses", () => {
   beforeEach(() => {
+    meState = {
+      uid: "u1",
+      email: "u1@example.com",
+      displayName: "User One",
+      role: "student",
+      status: "active",
+      selectedGoalId: "goal-1",
+      profileForm: {
+        aboutMe: "About me",
+        telegram: "@alice",
+        socialUrl: null,
+        experienceLevel: "beginner",
+        notes: null,
+      },
+      selectedCourses: [],
+      subscriptionSelected: null,
+      isFirstHundred: false,
+    };
     vi.mocked(listCourses).mockReset();
     vi.mocked(getFxRates).mockReset();
     patchMeMock.mockReset();
     navigateMock.mockReset();
     vi.mocked(getFxRates).mockResolvedValue({
       base: "USD",
-      rates: { USD: 1, EUR: 0.9, PLN: 4.0 },
+      rates: { USD: 1, EUR: 0.9, PLN: 4.0, RUB: 90 },
       updatedAt: null,
     });
   });
@@ -109,7 +129,7 @@ describe("OnboardingCourses", () => {
 
     fireEvent.click(screen.getByText("Course One"));
     await waitFor(() => {
-      expect(screen.getByText("$59.00")).toBeInTheDocument();
+      expect(screen.getByText("$62.22")).toBeInTheDocument();
     });
 
     fireEvent.click(screen.getByRole("button", { name: "Next" }));
@@ -167,6 +187,43 @@ describe("OnboardingCourses", () => {
         selectedCourses: ["course-1"],
         subscriptionSelected: true,
       });
+    });
+  });
+
+  it("keeps community paid for first hundred students", async () => {
+    meState = {
+      ...meState,
+      isFirstHundred: true,
+    };
+    vi.mocked(listCourses).mockResolvedValue({
+      items: [
+        {
+          id: "course-1",
+          title: "Course One",
+          shortDescription: "Desc one",
+          priceUsdCents: 4000,
+          isActive: true,
+          goalIds: ["goal-1"],
+          lessonCount: 6,
+        },
+      ],
+    });
+
+    render(() => (
+      <I18nProvider>
+        <OnboardingCourses />
+      </I18nProvider>
+    ));
+
+    expect(await screen.findByText("Course One")).toBeInTheDocument();
+    expect(screen.getByText("$40.00")).toHaveClass("line-through");
+    expect(screen.getAllByText("$0.00").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("$22.22")).toHaveLength(2);
+    expect(screen.getAllByText("$22.22")[0]).not.toHaveClass("line-through");
+
+    fireEvent.click(screen.getByText("Course One"));
+    await waitFor(() => {
+      expect(screen.getAllByText("$22.22")).toHaveLength(2);
     });
   });
 });

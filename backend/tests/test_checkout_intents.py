@@ -124,6 +124,7 @@ def _student(status: str):
         "status": status,
         "roleRaw": "student",
         "preferredCurrency": "USD",
+        "isFirstHundred": False,
     }
 
 
@@ -142,6 +143,29 @@ def test_checkout_intent_allows_active_students(monkeypatch):
     assert response.status_code == 201
     assert response.json()["amount"] == 1200
     assert fake_db._payments["doc_1"]["selectedCourses"] == ["c1"]
+
+    app.dependency_overrides.clear()
+
+
+def test_checkout_intent_zeroes_amount_for_first_hundred_students(monkeypatch):
+    fake_db = FakeFirestore(
+        courses={
+            "c1": {"priceUsdCents": 1200, "isActive": True},
+        }
+    )
+    monkeypatch.setattr(checkout, "get_firestore_client", lambda: fake_db)
+    app.dependency_overrides[auth_deps.get_current_user] = lambda: {
+        **_student("active"),
+        "isFirstHundred": True,
+    }
+    monkeypatch.setattr(checkout, "_generate_activation_code", lambda: "SW-FREE100")
+    client = TestClient(app)
+
+    response = client.post("/api/checkout/intents", json={"selectedCourses": ["c1"]})
+
+    assert response.status_code == 201
+    assert response.json()["amount"] == 0
+    assert fake_db._payments["doc_1"]["amount"] == 0
 
     app.dependency_overrides.clear()
 

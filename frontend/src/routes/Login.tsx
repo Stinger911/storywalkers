@@ -65,6 +65,8 @@ function friendlyAuthError(
     case "auth/invalid-email":
       return t("login.errors.invalidEmail");
 
+    case "auth/invalid-credential":
+    case "auth/invalid-login-credentials":
     case "auth/user-not-found":
     case "auth/wrong-password":
       return t("login.errors.wrongPassword");
@@ -75,6 +77,9 @@ function friendlyAuthError(
     case "auth/missing-email":
       return t("login.errors.missingEmail");
 
+    case "auth/missing-password":
+      return t("login.errors.missingPassword");
+
     case "auth/email-already-in-use":
       return t("login.errors.emailAlreadyInUse");
 
@@ -82,14 +87,13 @@ function friendlyAuthError(
       return t("login.errors.weakPassword");
 
     default:
-      return e.message
-        ? t("login.errors.genericWithMessage", { message: e.message })
-        : t("login.errors.generic");
+      return t("login.errors.generic");
   }
 }
 
 export function Login() {
   const { t, locale, setLocale } = useI18n();
+  const [mode, setMode] = createSignal<"sign-in" | "sign-up">("sign-in");
   const [email, setEmail] = createSignal("");
   const [password, setPassword] = createSignal("");
   const [busy, setBusy] = createSignal(false);
@@ -310,6 +314,8 @@ export function Login() {
     void tryCompleteEmailLinkSignIn();
   });
 
+  const isSignUpMode = () => mode() === "sign-up";
+
   return (
     <div
       class="min-h-screen bg-background text-foreground [font-family:Manrope,'Space_Grotesk',system-ui,sans-serif]"
@@ -417,16 +423,46 @@ export function Login() {
         <div class="relative z-0 flex flex-1 items-center justify-center px-4 py-10 sm:px-6 sm:py-12">
           <Card class="w-full max-w-[30rem] rounded-[2rem] border border-white/60 bg-white/95 shadow-card backdrop-blur-sm">
             <CardHeader class="space-y-0 px-7 pb-0 pt-8 text-center sm:px-10 sm:pt-10">
-              <div class="space-y-3">
+              <div class="space-y-5">
                 <span class="text-[11px] font-extrabold uppercase tracking-[0.12em] text-secondary">
-                  Welcome Back
+                  {isSignUpMode() ? "Join StoryWalkers" : "Welcome Back"}
                 </span>
+                <div class="grid grid-cols-2 gap-2 rounded-[var(--radius-lg)] bg-[rgba(223,233,247,0.7)] p-1">
+                  <button
+                    type="button"
+                    onClick={() => setMode("sign-in")}
+                    class={`rounded-[calc(var(--radius-lg)-0.35rem)] px-4 py-3 text-xs font-extrabold uppercase tracking-[0.12em] transition-all duration-300 ${
+                      !isSignUpMode()
+                        ? "bg-white text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                    aria-pressed={!isSignUpMode()}
+                  >
+                    {t("login.modeSignIn")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMode("sign-up")}
+                    class={`rounded-[calc(var(--radius-lg)-0.35rem)] px-4 py-3 text-xs font-extrabold uppercase tracking-[0.12em] transition-all duration-300 ${
+                      isSignUpMode()
+                        ? "bg-white text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                    aria-pressed={isSignUpMode()}
+                  >
+                    {t("login.modeSignUp")}
+                  </button>
+                </div>
                 <div class="space-y-2">
                   <CardTitle class="text-[2rem] font-extrabold tracking-[-0.04em] text-foreground sm:text-[2.125rem]">
-                    {t("login.title")}
+                    {isSignUpMode()
+                      ? t("login.signUpTitle")
+                      : t("login.signInTitle")}
                   </CardTitle>
                   <CardDescription class="mx-auto max-w-xs text-sm leading-6 text-muted-foreground">
-                    {t("login.subtitle")}
+                    {isSignUpMode()
+                      ? t("login.signUpSubtitle")
+                      : t("login.signInSubtitle")}
                   </CardDescription>
                 </div>
               </div>
@@ -474,14 +510,16 @@ export function Login() {
                     >
                       {t("login.passwordLabel")}
                     </TextFieldLabel>
-                    <button
-                      type="button"
-                      class="text-xs font-semibold text-secondary transition-colors duration-300 hover:underline disabled:opacity-50"
-                      disabled={busy()}
-                      onClick={onPasswordReset}
-                    >
-                      {t("login.forgotPassword")}
-                    </button>
+                    <Show when={!isSignUpMode()}>
+                      <button
+                        type="button"
+                        class="text-xs font-semibold text-secondary transition-colors duration-300 hover:underline disabled:opacity-50"
+                        disabled={busy()}
+                        onClick={onPasswordReset}
+                      >
+                        {t("login.forgotPassword")}
+                      </button>
+                    </Show>
                   </div>
                   <TextFieldInput
                     id="password"
@@ -491,19 +529,32 @@ export function Login() {
                     onInput={(e: { currentTarget: { value: any } }) =>
                       setPassword(e.currentTarget.value)
                     }
-                    autocomplete="current-password"
+                    autocomplete={isSignUpMode() ? "new-password" : "current-password"}
                     class="h-14 rounded-[var(--radius-md)] border-0 bg-[hsl(var(--input))] px-4 text-base shadow-none transition-all duration-300 placeholder:text-[#99a4b3] focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:ring-offset-0"
                   />
                 </TextField>
               </div>
 
-              <Button
-                disabled={busy()}
-                onClick={onEmailPasswordLogin}
-                class="h-14 rounded-[var(--radius-lg)] bg-[linear-gradient(135deg,#2f5f8d_0%,#4a78a7_100%)] text-base font-bold text-white shadow-card transition-transform duration-300 hover:scale-[1.01] hover:opacity-100 active:scale-[0.98]"
+              <Show
+                when={!isSignUpMode()}
+                fallback={
+                  <Button
+                    disabled={busy()}
+                    onClick={onEmailPasswordRegister}
+                    class="h-14 rounded-[var(--radius-lg)] bg-[linear-gradient(135deg,#2f5f8d_0%,#4a78a7_100%)] text-base font-bold text-white shadow-card transition-transform duration-300 hover:scale-[1.01] hover:opacity-100 active:scale-[0.98]"
+                  >
+                    {t("login.createAccount")}
+                  </Button>
+                }
               >
-                {t("login.signInPassword")}
-              </Button>
+                <Button
+                  disabled={busy()}
+                  onClick={onEmailPasswordLogin}
+                  class="h-14 rounded-[var(--radius-lg)] bg-[linear-gradient(135deg,#2f5f8d_0%,#4a78a7_100%)] text-base font-bold text-white shadow-card transition-transform duration-300 hover:scale-[1.01] hover:opacity-100 active:scale-[0.98]"
+                >
+                  {t("login.signInPassword")}
+                </Button>
+              </Show>
 
               <div class="relative my-1">
                 <div class="absolute inset-0 flex items-center">
@@ -520,7 +571,7 @@ export function Login() {
                 <Button
                   disabled={busy()}
                   variant="outline"
-                  onClick={onGoogleLogin}
+                  onClick={isSignUpMode() ? onGoogleLogin : onGoogleLogin}
                   class="h-12 rounded-[var(--radius-lg)] border border-[rgba(194,199,208,0.75)] bg-white text-sm font-bold text-foreground shadow-none transition-colors duration-300 hover:bg-[rgba(237,244,255,0.85)]"
                 >
                   <svg aria-hidden="true" viewBox="0 0 24 24" class="size-5">
@@ -544,23 +595,37 @@ export function Login() {
                   {t("login.continueGoogle")}
                 </Button>
 
-                <Button
-                  disabled={busy()}
-                  variant="secondary"
-                  onClick={onSendEmailLink}
-                  class="h-11 rounded-[var(--radius-lg)] border-0 bg-[rgba(223,233,247,0.55)] text-sm font-bold text-secondary shadow-none transition-colors duration-300 hover:bg-[rgba(223,233,247,0.85)]"
+                <Show
+                  when={!isSignUpMode()}
+                  fallback={
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => setMode("sign-in")}
+                      class="h-11 rounded-[var(--radius-lg)] border border-secondary/10 bg-secondary/5 text-sm font-bold text-secondary shadow-none transition-colors duration-300 hover:bg-secondary/10"
+                    >
+                      {t("login.switchToSignIn")}
+                    </Button>
+                  }
                 >
-                  {t("login.sendLink")}
-                </Button>
+                  <Button
+                    disabled={busy()}
+                    variant="secondary"
+                    onClick={onSendEmailLink}
+                    class="h-11 rounded-[var(--radius-lg)] border-0 bg-[rgba(223,233,247,0.55)] text-sm font-bold text-secondary shadow-none transition-colors duration-300 hover:bg-[rgba(223,233,247,0.85)]"
+                  >
+                    {t("login.sendLink")}
+                  </Button>
 
-                <Button
-                  disabled={busy()}
-                  variant="outline"
-                  onClick={onEmailPasswordRegister}
-                  class="h-11 rounded-[var(--radius-lg)] border border-secondary/20 bg-white text-sm font-bold text-secondary shadow-none transition-colors duration-300 hover:bg-secondary/5"
-                >
-                  {t("login.createAccount")}
-                </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setMode("sign-up")}
+                    class="h-11 rounded-[var(--radius-lg)] border border-secondary/20 bg-white text-sm font-bold text-secondary shadow-none transition-colors duration-300 hover:bg-secondary/5"
+                  >
+                    {t("login.switchToSignUp")}
+                  </Button>
+                </Show>
               </div>
             </CardContent>
           </Card>

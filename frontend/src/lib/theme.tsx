@@ -2,6 +2,7 @@ import {
   createContext,
   createEffect,
   createSignal,
+  onCleanup,
   onMount,
   useContext,
   type JSX,
@@ -21,6 +22,13 @@ const STORAGE_KEY = "theme";
 const isThemeMode = (value: string): value is ThemeMode =>
   value === "light" || value === "dark";
 
+const getSystemTheme = (): ThemeMode => {
+  if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+    return "light";
+  }
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+};
+
 const applyTheme = (theme: ThemeMode) => {
   if (typeof document === "undefined") return;
   document.documentElement.dataset.kbTheme = theme;
@@ -29,30 +37,56 @@ const applyTheme = (theme: ThemeMode) => {
 };
 
 export function ThemeProvider(props: { children: JSX.Element }) {
-  const [theme, setThemeSignal] = createSignal<ThemeMode>("light");
+  const [theme, setThemeSignal] = createSignal<ThemeMode>(getSystemTheme());
+  const [hasStoredPreference, setHasStoredPreference] = createSignal(false);
 
   onMount(() => {
+    if (typeof window !== "undefined" && typeof window.matchMedia === "function") {
+      const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+      const handleChange = () => {
+        if (!hasStoredPreference()) {
+          setThemeSignal(mediaQuery.matches ? "dark" : "light");
+        }
+      };
+
+      if (typeof mediaQuery.addEventListener === "function") {
+        mediaQuery.addEventListener("change", handleChange);
+        onCleanup(() => mediaQuery.removeEventListener("change", handleChange));
+      } else {
+        mediaQuery.addListener(handleChange);
+        onCleanup(() => mediaQuery.removeListener(handleChange));
+      }
+    }
+
     if (typeof localStorage === "undefined") return;
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored && isThemeMode(stored)) {
+      setHasStoredPreference(true);
       setThemeSignal(stored);
       return;
     }
 
-    applyTheme(theme());
-    localStorage.setItem(STORAGE_KEY, theme());
+    setHasStoredPreference(false);
+    setThemeSignal(getSystemTheme());
   });
 
   createEffect(() => {
     const nextTheme = theme();
     applyTheme(nextTheme);
     if (typeof localStorage === "undefined") return;
-    localStorage.setItem(STORAGE_KEY, nextTheme);
+    if (hasStoredPreference()) {
+      localStorage.setItem(STORAGE_KEY, nextTheme);
+      return;
+    }
+    localStorage.removeItem(STORAGE_KEY);
   });
 
-  const setTheme = (next: ThemeMode) => setThemeSignal(next);
+  const setTheme = (next: ThemeMode) => {
+    setHasStoredPreference(true);
+    setThemeSignal(next);
+  };
   const toggleTheme = () =>
-    setThemeSignal((current) => (current === "dark" ? "light" : "dark"));
+    setTheme(theme() === "dark" ? "light" : "dark");
 
   return (
     <ThemeContext.Provider value={{ theme, setTheme, toggleTheme }}>

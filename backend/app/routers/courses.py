@@ -1,14 +1,20 @@
+import json
+from datetime import datetime, timedelta, timezone
 from typing import Any
+from urllib.request import urlopen
 
 from fastapi import APIRouter, Depends, Query
 from google.cloud import firestore
 
 from app.auth.deps import get_current_user
+from app.core.config import get_settings
 from app.core.errors import AppError
+from app.core.logging import get_logger
 from app.db.firestore import get_firestore_client
 from app.repositories.courses import list_active_courses
 
 router = APIRouter(prefix="/api", tags=["Courses"])
+logger = get_logger("app.fx")
 
 DEFAULT_FX_BASE = "USD"
 DEFAULT_FX_RATES = {
@@ -19,12 +25,36 @@ DEFAULT_FX_RATES = {
 }
 FX_DOC_COLLECTION = "config"
 FX_DOC_ID = "fx_rates"
+FX_REFRESH_INTERVAL = timedelta(hours=12)
 
 
 def _as_string(value: object, default: str = "") -> str:
     if isinstance(value, str):
         return value
     return default
+
+
+def _as_datetime(value: object) -> datetime | None:
+    if isinstance(value, datetime):
+        return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+    if isinstance(value, str):
+        text = value.strip()
+        if not text:
+            return None
+        try:
+            if text.endswith("Z"):
+                text = text[:-1] + "+00:00"
+            parsed = datetime.fromisoformat(text)
+        except ValueError:
+            return None
+        return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
+    return None
+
+
+def _to_iso8601(value: datetime | None) -> str | None:
+    if value is None:
+        return None
+    return value.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
 def _as_bool(value: object, default: bool = False) -> bool:
@@ -107,7 +137,7 @@ async def list_courses(
 @router.get("/fx/rates")
 async def get_fx_rates(user: dict = Depends(get_current_user)):
     _ = user
-    payload = _get_or_bootstrap_fx_rates(get_firestore_client())
+    payload = _get_or_refresh_fx_rates(get_firestore_client())
     return {
         "base": payload["base"],
         "rates": payload["rates"],
@@ -119,16 +149,23 @@ def _get_or_bootstrap_fx_rates(db: firestore.Client) -> dict[str, Any]:
     doc_ref = db.collection(FX_DOC_COLLECTION).document(FX_DOC_ID)
     snap = doc_ref.get()
     if not snap.exists:
+        now = datetime.now(timezone.utc)
         bootstrap = {
             "base": DEFAULT_FX_BASE,
             "rates": DEFAULT_FX_RATES,
+            "asOf": None,
+            "fetchedAt": _to_iso8601(now),
         }
         doc_ref.set(bootstrap)
         data = bootstrap
-        as_of = None
+        as_of = bootstrap["asOf"]
+        fetched_at = bootstrap["fetchedAt"]
+        source = "bootstrap"
     else:
         data = snap.to_dict() or {}
         as_of = data.get("asOf") or data.get("updatedAt")
+        fetched_at = data.get("fetchedAt") or data.get("updatedAt")
+        source = "firestore"
 
     base = _as_string(data.get("base"), default=DEFAULT_FX_BASE).upper()
     raw_rates = data.get("rates")
@@ -146,14 +183,102 @@ def _get_or_bootstrap_fx_rates(db: firestore.Client) -> dict[str, Any]:
         "base": base,
         "rates": rates,
         "asOf": as_of,
-        "source": "firestore",
+        "fetchedAt": fetched_at,
+        "source": source,
     }
+
+
+def _get_or_refresh_fx_rates(db: firestore.Client) -> dict[str, Any]:
+    payload = _get_or_bootstrap_fx_rates(db)
+    fetched_at = _as_datetime(payload.get("fetchedAt"))
+    now = datetime.now(timezone.utc)
+    should_refresh = (
+        payload.get("source") == "bootstrap"
+        or fetched_at is None
+        or now - fetched_at >= FX_REFRESH_INTERVAL
+    )
+    if not should_refresh:
+        return payload
+
+    try:
+        live_payload = _fetch_live_fx_rates()
+    except Exception:
+        logger.warning(
+            "fx_rates_refresh_failed",
+            extra={
+                "event": "fx_rates_refresh_failed",
+                "cachedSource": payload.get("source"),
+                "cachedFetchedAt": payload.get("fetchedAt"),
+            },
+            exc_info=True,
+        )
+        return payload
+
+    _store_fx_rates(db, live_payload)
+    return live_payload
+
+
+def _fetch_live_fx_rates() -> dict[str, Any]:
+    settings = get_settings()
+    with urlopen(
+        settings.FX_RATES_URL,
+        timeout=settings.FX_RATES_TIMEOUT_SECONDS,
+    ) as response:
+        payload = json.loads(response.read().decode("utf-8"))
+
+    rates_raw = payload.get("rates")
+    if not isinstance(rates_raw, dict):
+        raise AppError(
+            code="fx_rates_invalid",
+            message="FX provider returned invalid rates payload",
+            status_code=502,
+        )
+
+    base = _as_string(payload.get("base_code"), default=DEFAULT_FX_BASE).upper()
+    rates: dict[str, float] = {}
+    for key, value in rates_raw.items():
+        if not isinstance(key, str):
+            continue
+        if isinstance(value, (int, float)) and value > 0:
+            rates[key.upper()] = float(value)
+    for currency, rate in DEFAULT_FX_RATES.items():
+        rates.setdefault(currency, rate)
+
+    fetched_at = datetime.now(timezone.utc)
+    provider_as_of = _provider_as_of(payload)
+    return {
+        "base": base or DEFAULT_FX_BASE,
+        "rates": rates,
+        "asOf": _to_iso8601(provider_as_of),
+        "fetchedAt": _to_iso8601(fetched_at),
+        "source": "live",
+    }
+
+
+def _provider_as_of(payload: dict[str, Any]) -> datetime | None:
+    timestamp = payload.get("time_last_update_unix")
+    if isinstance(timestamp, (int, float)) and timestamp > 0:
+        return datetime.fromtimestamp(float(timestamp), tz=timezone.utc)
+    return None
+
+
+def _store_fx_rates(db: firestore.Client, payload: dict[str, Any]) -> None:
+    doc_ref = db.collection(FX_DOC_COLLECTION).document(FX_DOC_ID)
+    doc_ref.set(
+        {
+            "base": payload["base"],
+            "rates": payload["rates"],
+            "asOf": payload["asOf"],
+            "fetchedAt": payload["fetchedAt"],
+            "updatedAt": payload["fetchedAt"],
+        }
+    )
 
 
 @router.get("/fx-rates")
 async def get_fx_rates_v2(user: dict = Depends(get_current_user)):
     _ = user
-    return _get_or_bootstrap_fx_rates(get_firestore_client())
+    return _get_or_refresh_fx_rates(get_firestore_client())
 
 
 @router.get("/courses/{course_id}/lessons")

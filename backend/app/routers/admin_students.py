@@ -40,6 +40,7 @@ class PatchStudentRequest(BaseModel):
     status: UserStatus | None = None
     role: str | None = None
     boostyUserId: str | None = None
+    isFirstHundred: bool | None = None
 
     model_config = {"extra": "forbid"}
 
@@ -405,6 +406,7 @@ async def create_student(
         "displayName": payload.displayName,
         "role": role,
         "status": DEFAULT_NEW_USER_STATUS,
+        "isFirstHundred": False,
         "stepsDone": 0,
         "stepsTotal": 0,
         "progressPercent": 0,
@@ -590,6 +592,7 @@ async def assign_plan(
     db = get_firestore_client()
     _ensure_user_exists(db, uid)
 
+    user_ref = db.collection("users").document(uid)
     plan_ref = db.collection("student_plans").document(uid)
     snap = plan_ref.get()
     now = firestore.SERVER_TIMESTAMP
@@ -637,6 +640,14 @@ async def assign_plan(
 
         batch = db.batch()
         batch.set(plan_ref, plan_data)
+        batch.set(
+            user_ref,
+            {
+                "selectedGoalId": payload.goalId,
+                "updatedAt": now,
+            },
+            merge=True,
+        )
         for snap in existing_steps:
             batch.delete(snap.reference)
         for order, step in enumerate(template_steps):
@@ -684,6 +695,13 @@ async def assign_plan(
                 }
             )
             _sync_user_progress(db, uid, absolute_done=0, absolute_total=0)
+        user_ref.set(
+            {
+                "selectedGoalId": payload.goalId,
+                "updatedAt": now,
+            },
+            merge=True,
+        )
 
         plan = _doc_or_404(plan_ref)
 

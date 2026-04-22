@@ -16,6 +16,7 @@ import {
 import { Skeleton } from "../../components/ui/skeleton";
 import { useAuth } from "../../lib/auth";
 import {
+  convertRubCentsToCurrencyCents,
   convertUsdCentsToCurrencyCents,
   formatCents,
   listCourseLessons,
@@ -31,7 +32,7 @@ const COMMUNITY_CARD = {
   id: "community",
   titleKey: "student.onboarding.courses.communityTitle",
   descKey: "student.onboarding.courses.communityDescription",
-  priceUsdCents: 1900,
+  priceRubCents: 200000,
 } as const;
 
 type CurrencyOption = {
@@ -50,6 +51,7 @@ export function OnboardingCourses() {
   const auth = useAuth();
   const { t } = useI18n();
   const navigate = useNavigate();
+  const isFirstHundred = createMemo(() => auth.me()?.isFirstHundred === true);
 
   const [loading, setLoading] = createSignal(true);
   const [loadError, setLoadError] = createSignal<string | null>(null);
@@ -99,18 +101,35 @@ export function OnboardingCourses() {
       displayCurrency(),
     );
 
+  const communityPriceCents = createMemo(() =>
+    convertRubCentsToCurrencyCents(
+      COMMUNITY_CARD.priceRubCents,
+      fxRates(),
+      displayCurrency(),
+    ),
+  );
+
   const totalPriceCents = createMemo(() => {
     const selected = new Set(selectedCourses());
     const coursesTotalUsdCents = courses()
       .filter((course) => course.isActive)
       .filter((course) => selected.has(course.id))
       .reduce((sum, course) => sum + course.priceUsdCents, 0);
-    const communityUsdCents = communitySelected() ? COMMUNITY_CARD.priceUsdCents : 0;
+    const communityCents = communitySelected() ? communityPriceCents() : 0;
     return convertUsdCentsToCurrencyCents(
-      coursesTotalUsdCents + communityUsdCents,
+      isFirstHundred() ? 0 : coursesTotalUsdCents,
       currencyRate(),
-    );
+    ) + communityCents;
   });
+
+  const FreePrice = (props: { usdCents: number }) => (
+    <span class="inline-flex items-center gap-2">
+      <span class="text-muted-foreground line-through">
+        {formatPrice(props.usdCents)}
+      </span>
+      <span>{formatCents(0, displayCurrency())}</span>
+    </span>
+  );
 
   const activeCourses = createMemo(() => courses().filter((course) => course.isActive));
   const inactiveCourses = createMemo(() =>
@@ -288,7 +307,12 @@ export function OnboardingCourses() {
 
           <div class="flex flex-col items-start gap-3 lg:items-end">
             <div class="text-lg font-semibold text-foreground">
-              {formatPrice(props.course.priceUsdCents)}
+              <Show
+                when={isFirstHundred()}
+                fallback={formatPrice(props.course.priceUsdCents)}
+              >
+                <FreePrice usdCents={props.course.priceUsdCents} />
+              </Show>
             </div>
             <button
               type="button"
@@ -468,7 +492,7 @@ export function OnboardingCourses() {
                   </div>
                 </div>
                 <div class="text-sm font-semibold">
-                  {formatPrice(COMMUNITY_CARD.priceUsdCents)}
+                  {formatCents(communityPriceCents(), displayCurrency())}
                 </div>
               </div>
               <div class="mt-3 text-xs text-muted-foreground">

@@ -44,13 +44,16 @@ class FakeCollection:
 
 
 class FakeFirestore:
-    def __init__(self, users):
+    def __init__(self, users, goals=None):
         self._users = users
+        self._goals = goals or {}
 
     def collection(self, name):
-        if name != "users":
-            raise ValueError("only users collection supported in tests")
-        return FakeCollection(self._users)
+        if name == "users":
+            return FakeCollection(self._users)
+        if name == "goals":
+            return FakeCollection(self._goals)
+        raise ValueError("only users and goals collections supported in tests")
 
 
 def _normalize(data):
@@ -170,7 +173,7 @@ def test_patch_me_updates_onboarding_fields(monkeypatch):
             },
         }
     }
-    fake_db = FakeFirestore(users)
+    fake_db = FakeFirestore(users, goals={"goal-1": {"title": "Goal One"}})
     monkeypatch.setattr(auth, "get_firestore_client", lambda: fake_db)
     app.dependency_overrides[auth_deps.get_current_user] = _override_user
     client = TestClient(app)
@@ -192,6 +195,7 @@ def test_patch_me_updates_onboarding_fields(monkeypatch):
     payload = response.json()
     assert payload["level"] == 1
     assert payload["selectedGoalId"] == "goal-1"
+    assert payload["selectedGoalTitle"] == "Goal One"
     assert payload["selectedCourses"] == ["course-a", "course-b"]
     assert payload["preferredCurrency"] == "EUR"
     assert payload["subscriptionSelected"] is True

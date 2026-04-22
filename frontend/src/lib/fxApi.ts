@@ -7,6 +7,8 @@ export type FxRatesResponse = {
 };
 
 let cachedFxRates: FxRatesResponse | null = null;
+let cachedFxRatesAt: number | null = null;
+const FX_CACHE_TTL_MS = 12 * 60 * 60 * 1000;
 
 async function handleJson<T>(response: Response): Promise<T> {
   if (!response.ok) {
@@ -17,7 +19,13 @@ async function handleJson<T>(response: Response): Promise<T> {
 }
 
 export async function getFxRates(options?: { force?: boolean }) {
-  if (!options?.force && cachedFxRates) {
+  const now = Date.now();
+  if (
+    !options?.force &&
+    cachedFxRates &&
+    cachedFxRatesAt !== null &&
+    now - cachedFxRatesAt < FX_CACHE_TTL_MS
+  ) {
     return cachedFxRates;
   }
   const response = await apiFetch("/api/fx-rates");
@@ -30,9 +38,11 @@ export async function getFxRates(options?: { force?: boolean }) {
   if (!cachedFxRates.rates.USD) {
     cachedFxRates.rates.USD = 1;
   }
+  cachedFxRatesAt = now;
   return cachedFxRates;
 }
 
 export function resetFxRatesCacheForTests() {
   cachedFxRates = null;
+  cachedFxRatesAt = null;
 }
