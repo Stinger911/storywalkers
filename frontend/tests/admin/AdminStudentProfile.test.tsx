@@ -177,6 +177,7 @@ describe("AdminStudentProfile", () => {
         role: "expert",
         status: "active",
         boostyUserId: null,
+        isFirstHundred: false,
       });
     });
   });
@@ -215,6 +216,7 @@ describe("AdminStudentProfile", () => {
         role: "student",
         status: "disabled",
         boostyUserId: null,
+        isFirstHundred: false,
       });
     });
   });
@@ -258,6 +260,48 @@ describe("AdminStudentProfile", () => {
         role: "student",
         status: "active",
         boostyUserId: "43061401",
+        isFirstHundred: false,
+      });
+    });
+  });
+
+  it("updates first hundred flag via access controls", async () => {
+    getStudentMock.mockResolvedValue({
+      uid: "u1",
+      displayName: "Student One",
+      email: "s1@x.com",
+      role: "student",
+      status: "active",
+      isFirstHundred: false,
+    });
+    getStudentPlanMock.mockRejectedValue(new Error("no plan"));
+    getStudentPlanStepsMock.mockResolvedValue({ items: [] });
+    listGoalsMock.mockResolvedValue({
+      items: [{ id: "goal-42", title: "Portrait Creator" }],
+    });
+    updateStudentMock.mockResolvedValue({
+      role: "student",
+      status: "active",
+      boostyUserId: null,
+      isFirstHundred: true,
+    });
+
+    renderWithShell();
+
+    const freeFlag = await screen.findByLabelText(
+      "First 100 students: courses are free",
+    );
+    fireEvent.click(freeFlag);
+
+    const saveButton = screen.getByText("Save access");
+    fireEvent.click(saveButton);
+
+    await waitFor(() => {
+      expect(updateStudentMock).toHaveBeenCalledWith("u1", {
+        role: "student",
+        status: "active",
+        boostyUserId: null,
+        isFirstHundred: true,
       });
     });
   });
@@ -406,6 +450,63 @@ describe("AdminStudentProfile", () => {
         resetStepsFromGoalTemplate: true,
         confirm: "RESET_STEPS",
       });
+    });
+  });
+
+  it("keeps the saved goal selected after reloading the profile", async () => {
+    getStudentMock
+      .mockResolvedValueOnce({
+        uid: "u1",
+        displayName: "Student One",
+        email: "s1@x.com",
+        role: "student",
+        selectedGoalId: null,
+      })
+      .mockResolvedValueOnce({
+        uid: "u1",
+        displayName: "Student One",
+        email: "s1@x.com",
+        role: "student",
+        selectedGoalId: "goal-42",
+      });
+    getStudentPlanMock
+      .mockResolvedValueOnce({ goalId: "" })
+      .mockResolvedValueOnce({ goalId: "goal-42" });
+    getStudentPlanStepsMock.mockResolvedValue({ items: [] });
+    listGoalsMock.mockResolvedValue({
+      items: [{ id: "goal-42", title: "Portrait Creator" }],
+    });
+    assignPlanMock.mockResolvedValue({ planId: "u1", goalId: "goal-42" });
+
+    renderWithShell();
+
+    await screen.findByText("Portrait Creator");
+
+    const goalSelects = await screen.findAllByTestId("goal-select");
+    const goalSelect = goalSelects.find((select) =>
+      Array.from((select as HTMLSelectElement).options).some(
+        (option) => option.value === "goal-42",
+      ),
+    );
+    if (!goalSelect) {
+      throw new Error("Goal select not found");
+    }
+
+    expect(goalSelect).toHaveValue("");
+
+    fireEvent.change(goalSelect, { target: { value: "goal-42" } });
+    fireEvent.click(screen.getByText("Save goal"));
+
+    await waitFor(() => {
+      expect(assignPlanMock).toHaveBeenCalledWith("u1", "goal-42");
+    });
+
+    await waitFor(() => {
+      expect(getStudentPlanMock).toHaveBeenCalledTimes(2);
+    });
+
+    await waitFor(() => {
+      expect(goalSelect).toHaveValue("goal-42");
     });
   });
 

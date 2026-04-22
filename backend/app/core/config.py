@@ -30,6 +30,8 @@ class Settings(BaseSettings):
     JOB_TOKEN: str | None = None
     PAYMENT_REJECT_NOTIFY: bool = True
     PAYMENT_AUTO_ACTIVATE_NOTIFY: bool = True
+    FX_RATES_URL: str = "https://open.er-api.com/v6/latest/USD"
+    FX_RATES_TIMEOUT_SECONDS: float = 10.0
 
 
 @lru_cache(maxsize=1)

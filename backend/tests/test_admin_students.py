@@ -557,6 +557,21 @@ def test_patch_student_status_updates_with_new_enum(monkeypatch):
     app.dependency_overrides.clear()
 
 
+def test_patch_student_updates_first_hundred_flag(monkeypatch):
+    users = {"s1": {"role": "student", "status": "active", "email": "s1@x.com"}}
+    fake_db = FakeFirestore(users)
+    monkeypatch.setattr(admin_students, "get_firestore_client", lambda: fake_db)
+    app.dependency_overrides[get_current_user] = _override_staff
+    client = TestClient(app)
+
+    response = client.patch("/api/admin/students/s1", json={"isFirstHundred": True})
+    assert response.status_code == 200
+    assert response.json()["isFirstHundred"] is True
+    assert users["s1"]["isFirstHundred"] is True
+
+    app.dependency_overrides.clear()
+
+
 def test_patch_student_status_change_logs_and_emits_hook(monkeypatch):
     users = {"s1": {"role": "student", "status": "active", "email": "s1@x.com"}}
     fake_db = FakeFirestore(users)

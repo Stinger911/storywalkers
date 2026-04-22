@@ -1,4 +1,5 @@
 from fastapi.testclient import TestClient
+from datetime import datetime, timedelta, timezone
 
 from app.auth import deps as auth_deps
 from app.main import app
@@ -189,12 +190,14 @@ def test_list_courses_requires_auth():
 
 
 def test_fx_rates_happy_path_reads_from_config_doc(monkeypatch):
+    fresh_time = (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat()
     fake_db = FakeFirestore(
         config_data={
             "fx_rates": {
                 "base": "USD",
                 "rates": {"USD": 1, "EUR": 0.91},
                 "asOf": "2026-02-20T12:00:00Z",
+                "fetchedAt": fresh_time,
             }
         }
     )
@@ -211,6 +214,7 @@ def test_fx_rates_happy_path_reads_from_config_doc(monkeypatch):
     assert payload["rates"]["EUR"] == 0.91
     assert payload["asOf"] == "2026-02-20T12:00:00Z"
     assert payload["source"] == "firestore"
+    assert payload["fetchedAt"] == fresh_time
 
     app.dependency_overrides.clear()
 
@@ -218,6 +222,17 @@ def test_fx_rates_happy_path_reads_from_config_doc(monkeypatch):
 def test_fx_rates_bootstraps_missing_doc(monkeypatch):
     fake_db = FakeFirestore(config_data={})
     monkeypatch.setattr(courses, "get_firestore_client", lambda: fake_db)
+    monkeypatch.setattr(
+        courses,
+        "_fetch_live_fx_rates",
+        lambda: {
+            "base": "USD",
+            "rates": {"USD": 1.0, "EUR": 0.92, "PLN": 3.8, "RUB": 81.0},
+            "asOf": "2026-02-20T12:00:00Z",
+            "fetchedAt": "2026-02-20T13:00:00Z",
+            "source": "live",
+        },
+    )
     app.dependency_overrides[auth_deps.get_current_user] = _student
     client = TestClient(app)
 
@@ -228,19 +243,121 @@ def test_fx_rates_bootstraps_missing_doc(monkeypatch):
     assert payload["base"] == "USD"
     assert payload["rates"] == {
         "USD": 1.0,
-        "EUR": 0.88,
-        "PLN": 3.79,
-        "RUB": 82.0,
+        "EUR": 0.92,
+        "PLN": 3.8,
+        "RUB": 81.0,
     }
-    assert payload["asOf"] is None
-    assert payload["source"] == "firestore"
+    assert payload["asOf"] == "2026-02-20T12:00:00Z"
+    assert payload["source"] == "live"
     assert fake_db._config["fx_rates"]["base"] == "USD"
     assert fake_db._config["fx_rates"]["rates"] == {
         "USD": 1.0,
-        "EUR": 0.88,
-        "PLN": 3.79,
-        "RUB": 82.0,
+        "EUR": 0.92,
+        "PLN": 3.8,
+        "RUB": 81.0,
     }
+    assert fake_db._config["fx_rates"]["fetchedAt"] == "2026-02-20T13:00:00Z"
+
+    app.dependency_overrides.clear()
+
+
+def test_fx_rates_refreshes_stale_doc(monkeypatch):
+    stale_time = (datetime.now(timezone.utc) - timedelta(hours=13)).isoformat()
+    fake_db = FakeFirestore(
+        config_data={
+            "fx_rates": {
+                "base": "USD",
+                "rates": {"USD": 1, "EUR": 0.91},
+                "asOf": "2026-02-20T12:00:00Z",
+                "fetchedAt": stale_time,
+            }
+        }
+    )
+    monkeypatch.setattr(courses, "get_firestore_client", lambda: fake_db)
+    monkeypatch.setattr(
+        courses,
+        "_fetch_live_fx_rates",
+        lambda: {
+            "base": "USD",
+            "rates": {"USD": 1.0, "EUR": 0.95, "PLN": 4.1, "RUB": 80.0},
+            "asOf": "2026-02-21T10:00:00Z",
+            "fetchedAt": "2026-02-21T10:05:00Z",
+            "source": "live",
+        },
+    )
+    app.dependency_overrides[auth_deps.get_current_user] = _student
+    client = TestClient(app)
+
+    response = client.get("/api/fx-rates")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["rates"]["EUR"] == 0.95
+    assert payload["source"] == "live"
+    assert fake_db._config["fx_rates"]["fetchedAt"] == "2026-02-21T10:05:00Z"
+
+    app.dependency_overrides.clear()
+
+
+def test_fx_rates_does_not_refresh_recent_doc(monkeypatch):
+    fresh_time = (datetime.now(timezone.utc) - timedelta(hours=2)).isoformat()
+    fake_db = FakeFirestore(
+        config_data={
+            "fx_rates": {
+                "base": "USD",
+                "rates": {"USD": 1, "EUR": 0.91},
+                "asOf": "2026-02-20T12:00:00Z",
+                "fetchedAt": fresh_time,
+            }
+        }
+    )
+    monkeypatch.setattr(courses, "get_firestore_client", lambda: fake_db)
+
+    def _unexpected_fetch():
+        raise AssertionError("unexpected live FX refresh")
+
+    monkeypatch.setattr(courses, "_fetch_live_fx_rates", _unexpected_fetch)
+    app.dependency_overrides[auth_deps.get_current_user] = _student
+    client = TestClient(app)
+
+    response = client.get("/api/fx-rates")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["rates"]["EUR"] == 0.91
+    assert payload["source"] == "firestore"
+
+    app.dependency_overrides.clear()
+
+
+def test_fx_rates_falls_back_to_cached_doc_when_live_refresh_fails(monkeypatch):
+    stale_time = (datetime.now(timezone.utc) - timedelta(hours=13)).isoformat()
+    fake_db = FakeFirestore(
+        config_data={
+            "fx_rates": {
+                "base": "USD",
+                "rates": {"USD": 1, "EUR": 0.91},
+                "asOf": "2026-02-20T12:00:00Z",
+                "fetchedAt": stale_time,
+            }
+        }
+    )
+    monkeypatch.setattr(courses, "get_firestore_client", lambda: fake_db)
+
+    def _failing_fetch():
+        raise RuntimeError("provider unavailable")
+
+    monkeypatch.setattr(courses, "_fetch_live_fx_rates", _failing_fetch)
+    app.dependency_overrides[auth_deps.get_current_user] = _student
+    client = TestClient(app)
+
+    response = client.get("/api/fx-rates")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["rates"]["EUR"] == 0.91
+    assert payload["source"] == "firestore"
+    assert fake_db._config["fx_rates"]["fetchedAt"] == stale_time
 
     app.dependency_overrides.clear()
 

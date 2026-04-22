@@ -33,8 +33,12 @@ class FakeDoc:
     def get(self):
         return FakeSnap(self, self._store.get(self.id))
 
-    def set(self, data):
-        self._store[self.id] = _normalize(data)
+    def set(self, data, merge=False):
+        normalized = _normalize(data)
+        if merge and self.id in self._store:
+            self._store[self.id].update(normalized)
+            return
+        self._store[self.id] = normalized
 
     def update(self, data):
         if self.id not in self._store:
@@ -101,16 +105,16 @@ class FakeBatch:
     def __init__(self):
         self._ops = []
 
-    def set(self, doc_ref, data):
-        self._ops.append(("set", doc_ref, data))
+    def set(self, doc_ref, data, merge=False):
+        self._ops.append(("set", doc_ref, data, merge))
 
     def delete(self, doc_ref):
-        self._ops.append(("delete", doc_ref, None))
+        self._ops.append(("delete", doc_ref, None, False))
 
     def commit(self):
-        for op, doc_ref, data in self._ops:
+        for op, doc_ref, data, merge in self._ops:
             if op == "set":
-                doc_ref.set(data)
+                doc_ref.set(data, merge=merge)
             elif op == "delete":
                 doc_ref.delete()
 
@@ -256,6 +260,7 @@ def test_assign_reset_replaces_steps(monkeypatch):
         },
     )
     assert response.status_code == 200
+    assert fake_db._users["u1"]["selectedGoalId"] == "g1"
 
     steps_store = fake_db._plan_steps.get("u1", {})
     assert len(steps_store) == 2
@@ -285,6 +290,7 @@ def test_assign_non_reset_preserves_steps(monkeypatch):
         json={"goalId": "g1"},
     )
     assert response.status_code == 200
+    assert fake_db._users["u1"]["selectedGoalId"] == "g1"
     assert fake_db._plan_steps["u1"]["s1"]["isDone"] is True
 
     app.dependency_overrides.clear()

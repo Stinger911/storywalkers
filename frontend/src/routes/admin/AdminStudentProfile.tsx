@@ -64,6 +64,7 @@ type StudentProfile = {
   role?: string;
   status?: string;
   boostyUserId?: string | null;
+  isFirstHundred?: boolean;
   selectedGoalId?: string | null;
   onboardingStep?: string | null;
   profileForm?: {
@@ -126,6 +127,7 @@ export function AdminStudentProfile() {
   const [roleDraft, setRoleDraft] = createSignal("student");
   const [statusDraft, setStatusDraft] = createSignal("active");
   const [boostyUserIdDraft, setBoostyUserIdDraft] = createSignal("");
+  const [isFirstHundredDraft, setIsFirstHundredDraft] = createSignal(false);
   const [selectedCourseIdsToAppend, setSelectedCourseIdsToAppend] = createSignal<string[]>([]);
   const [previewOpen, setPreviewOpen] = createSignal(false);
   const [previewLoading, setPreviewLoading] = createSignal(false);
@@ -195,6 +197,10 @@ export function AdminStudentProfile() {
   createEffect(() => {
     const currentBoostyUserId = student()?.boostyUserId || "";
     setBoostyUserIdDraft(currentBoostyUserId);
+  });
+
+  createEffect(() => {
+    setIsFirstHundredDraft(student()?.isFirstHundred === true);
   });
 
   createEffect(() => {
@@ -395,6 +401,7 @@ export function AdminStudentProfile() {
         role: roleDraft(),
         status: statusDraft(),
         boostyUserId: boostyUserIdDraft().trim() || null,
+        isFirstHundred: isFirstHundredDraft(),
       });
       await load();
     } catch (err) {
@@ -716,6 +723,16 @@ export function AdminStudentProfile() {
                 <div class="text-xs text-muted-foreground">
                   Leave empty to clear the saved Boosty user id.
                 </div>
+                <label class="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={isFirstHundredDraft()}
+                    onChange={(event) =>
+                      setIsFirstHundredDraft(event.currentTarget.checked)
+                    }
+                  />
+                  <span>First 100 students: courses are free</span>
+                </label>
               </div>
               <Button
                 onClick={() => void saveProfile()}

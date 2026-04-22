@@ -48,6 +48,12 @@ type RawDictionary = {
   login: {
     title: string;
     subtitle: string;
+    modeSignIn: string;
+    modeSignUp: string;
+    signInTitle: string;
+    signInSubtitle: string;
+    signUpTitle: string;
+    signUpSubtitle: string;
     emailLabel: string;
     emailPlaceholder: string;
     passwordLabel: string;
@@ -58,6 +64,8 @@ type RawDictionary = {
     sendLink: string;
     or: string;
     continueGoogle: string;
+    switchToSignIn: string;
+    switchToSignUp: string;
     messages: {
       signedIn: string;
       accountCreated: string;
@@ -77,6 +85,7 @@ type RawDictionary = {
       wrongPassword: string;
       tooManyRequests: string;
       missingEmail: string;
+      missingPassword: string;
       emailAlreadyInUse: string;
       weakPassword: string;
       missingEmailForLink: string;
@@ -427,6 +436,13 @@ const dictionaries: Record<Locale, RawDictionary> = {
     login: {
       title: "Sign in",
       subtitle: "Email/Password, Email link, or Google",
+      modeSignIn: "Sign in",
+      modeSignUp: "Register",
+      signInTitle: "Welcome back",
+      signInSubtitle: "Use password, email link, or Google to continue.",
+      signUpTitle: "Create your account",
+      signUpSubtitle:
+        "Register with email and password or continue with Google.",
       emailLabel: "Email",
       emailPlaceholder: "you@example.com",
       passwordLabel: "Password",
@@ -437,6 +453,8 @@ const dictionaries: Record<Locale, RawDictionary> = {
       sendLink: "Send sign-in link (passwordless)",
       or: "or",
       continueGoogle: "Continue with Google",
+      switchToSignIn: "Already have an account? Sign in",
+      switchToSignUp: "Need an account? Register",
       messages: {
         signedIn: "Signed in successfully.",
         accountCreated: "Account created and signed in.",
@@ -455,22 +473,29 @@ const dictionaries: Record<Locale, RawDictionary> = {
       },
       errors: {
         unauthorizedDomain:
-          "Google login is not available for this domain. Add the current domain (e.g., localhost) in Firebase Console → Authentication → Settings → Authorized domains.",
+          "Google sign-in is not available right now. Please use email login for the moment or try again a bit later.",
         accountExists:
-          "An account with this email already exists with a different sign-in method. Use that method first, then link Google in profile settings.",
-        popupClosed: "The sign-in window was closed. Please try again.",
-        invalidEmail: "Invalid email.",
-        wrongPassword: "Incorrect email or password.",
-        tooManyRequests: "Too many attempts. Please wait and try again.",
-        missingEmail: "Enter your email.",
-        emailAlreadyInUse: "An account with this email already exists.",
-        weakPassword: "Password is too weak (minimum 6 characters).",
+          "This email is already linked to another sign-in method. Try the method you used before, then you can connect the others later.",
+        popupClosed: "The sign-in window was closed before completion. Try again when you're ready.",
+        invalidEmail: "That email does not look right. Please check it and try again.",
+        wrongPassword: "We couldn't sign you in with that email and password. Check them and try again.",
+        tooManyRequests: "There were too many attempts in a short time. Please wait a little and try again.",
+        missingEmail: "Please enter your email first.",
+        missingPassword: "Please enter your password first.",
+        emailAlreadyInUse:
+          "An account with this email already exists. Try signing in instead of registering.",
+        weakPassword:
+          "Choose a stronger password. It should be at least 6 characters long.",
         missingEmailForLink:
-          "Enter the email that received the link (no saved email found in this browser).",
-        profileMissing: "Could not load user profile after sign-in.",
-        roleMissing: "Invalid user role.",
-        generic: "Sign-in failed. Please try again.",
-        genericWithMessage: "Sign-in error: {{ message }}",
+          "Please enter the email address where you received the sign-in link.",
+        profileMissing:
+          "You signed in, but we couldn't finish loading your profile. Please try again in a moment.",
+        roleMissing:
+          "We couldn't determine access for this account yet. Please contact support if this keeps happening.",
+        generic:
+          "Something went wrong during sign-in. Please try again in a moment.",
+        genericWithMessage:
+          "Something went wrong during sign-in. Please try again in a moment.",
       },
     },
     blocked: {
@@ -685,6 +710,8 @@ const dictionaries: Record<Locale, RawDictionary> = {
         openPaymentPage: "Open payment page",
         refreshCourses: "Refresh courses",
         selectAtLeastOne: "Select at least one course.",
+        freeAccessHint:
+          "You are in the first 100 students cohort. No payment is required for these courses.",
       },
     onboarding: {
       eyebrow: "Onboarding",
@@ -778,6 +805,8 @@ const dictionaries: Record<Locale, RawDictionary> = {
           afterPaymentTitle: "After payment",
           afterPaymentManual:
             "Activation is manual after human review. Please wait for confirmation from the team.",
+          afterPaymentFree:
+            "You are in the first 100 students cohort. No payment is required. The team will confirm access manually.",
           afterPaymentContactLabel: "If you have paid, message support:",
         },
       },
@@ -824,6 +853,13 @@ const dictionaries: Record<Locale, RawDictionary> = {
     login: {
       title: "Вход",
       subtitle: "Email/Пароль, ссылка или Google",
+      modeSignIn: "Вход",
+      modeSignUp: "Регистрация",
+      signInTitle: "С возвращением",
+      signInSubtitle: "Войдите по паролю, ссылке из письма или через Google.",
+      signUpTitle: "Создайте аккаунт",
+      signUpSubtitle:
+        "Зарегистрируйтесь по email и паролю или продолжите через Google.",
       emailLabel: "Email",
       emailPlaceholder: "you@example.com",
       passwordLabel: "Пароль",
@@ -834,6 +870,8 @@ const dictionaries: Record<Locale, RawDictionary> = {
       sendLink: "Отправить ссылку для входа",
       or: "или",
       continueGoogle: "Продолжить с Google",
+      switchToSignIn: "Уже есть аккаунт? Войти",
+      switchToSignUp: "Нужен аккаунт? Зарегистрироваться",
       messages: {
         signedIn: "Вход выполнен.",
         accountCreated: "Аккаунт создан и выполнен вход.",
@@ -852,22 +890,31 @@ const dictionaries: Record<Locale, RawDictionary> = {
       },
       errors: {
         unauthorizedDomain:
-          "Google вход недоступен для этого домена. Добавьте текущий домен (например, localhost) в Firebase Console → Authentication → Settings → Authorized domains.",
+          "Сейчас вход через Google недоступен. Попробуйте войти по email или повторите попытку чуть позже.",
         accountExists:
-          "Аккаунт с этим email уже существует, но использует другой способ входа. Войдите тем способом, который использовали ранее, затем привяжите Google в профиле.",
-        popupClosed: "Окно входа было закрыто. Попробуйте ещё раз.",
-        invalidEmail: "Некорректный email.",
-        wrongPassword: "Неверный email или пароль.",
-        tooManyRequests: "Слишком много попыток. Подождите и попробуйте снова.",
-        missingEmail: "Укажите email.",
-        emailAlreadyInUse: "Аккаунт с таким email уже существует.",
-        weakPassword: "Слишком простой пароль (минимум 6 символов).",
+          "Этот email уже связан с другим способом входа. Попробуйте тот способ, которым входили раньше, а затем при необходимости привяжете остальные.",
+        popupClosed: "Окно входа закрылось раньше времени. Попробуйте ещё раз.",
+        invalidEmail: "Похоже, email введён с ошибкой. Проверьте его и попробуйте снова.",
+        wrongPassword:
+          "Не удалось войти с этим email и паролем. Проверьте данные и попробуйте ещё раз.",
+        tooManyRequests:
+          "Слишком много попыток за короткое время. Немного подождите и попробуйте снова.",
+        missingEmail: "Сначала укажите email.",
+        missingPassword: "Сначала введите пароль.",
+        emailAlreadyInUse:
+          "Аккаунт с таким email уже есть. Попробуйте войти, а не создавать новый.",
+        weakPassword:
+          "Придумайте пароль посильнее. Нужны минимум 6 символов.",
         missingEmailForLink:
-          "Введите email, на который пришла ссылка (сохранённый email не найден).",
-        profileMissing: "Не удалось получить профиль пользователя после входа.",
-        roleMissing: "Неверная роль пользователя.",
-        generic: "Не удалось выполнить вход. Попробуйте ещё раз.",
-        genericWithMessage: "Ошибка входа: {{ message }}",
+          "Введите email, на который пришла ссылка для входа.",
+        profileMissing:
+          "Войти удалось, но профиль пока не загрузился. Попробуйте ещё раз через минуту.",
+        roleMissing:
+          "Не удалось определить доступ для этого аккаунта. Если ошибка повторится, напишите в поддержку.",
+        generic:
+          "Что-то пошло не так при входе. Попробуйте ещё раз чуть позже.",
+        genericWithMessage:
+          "Что-то пошло не так при входе. Попробуйте ещё раз чуть позже.",
       },
     },
     blocked: {
@@ -1083,6 +1130,8 @@ const dictionaries: Record<Locale, RawDictionary> = {
         openPaymentPage: "Открыть страницу оплаты",
         refreshCourses: "Обновить курсы",
         selectAtLeastOne: "Выберите хотя бы один курс.",
+        freeAccessHint:
+          "Вы входите в первую сотню студентов. Оплата за эти курсы не требуется.",
       },
     onboarding: {
       eyebrow: "Онбординг",
@@ -1177,6 +1226,8 @@ const dictionaries: Record<Locale, RawDictionary> = {
           afterPaymentTitle: "После оплаты",
           afterPaymentManual:
             "Активация выполняется вручную после проверки человеком. Пожалуйста, дождитесь подтверждения от команды.",
+          afterPaymentFree:
+            "Вы входите в первую сотню студентов. Оплата не требуется. Команда подтвердит доступ вручную.",
           afterPaymentContactLabel: "Если вы оплатили, напишите в поддержку:",
         },
       },

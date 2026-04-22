@@ -4,8 +4,8 @@ import { createMemo, createSignal, For, onMount, Show } from "solid-js";
 import { Button } from "../../components/ui/button";
 import { SectionCard } from "../../components/ui/section-card";
 import { useAuth } from "../../lib/auth";
-import { listGoals } from "../../lib/adminApi";
 import {
+  convertRubCentsToCurrencyCents,
   convertUsdCentsToCurrencyCents,
   formatCents,
   listCourses,
@@ -15,9 +15,10 @@ import { getFxRates } from "../../lib/fxApi";
 import { useI18n } from "../../lib/i18n";
 import { OnboardingLayout } from "./OnboardingLayout";
 
-const COMMUNITY_PRICE_USD_CENTS = 1900;
+const COMMUNITY_PRICE_RUB_CENTS = 200000;
 const BOOSTY_URL =
-  import.meta.env.VITE_BOOSTY_URL ?? "https://boosty.to/storywalkers";
+  import.meta.env.VITE_BOOSTY_URL ??
+  "https://boosty.to/taveren_ru/purchase/3755394?ssource=DIRECT&share=subscription_link";
 const SUPPORT_TELEGRAM_URL =
   import.meta.env.VITE_SUPPORT_TELEGRAM_URL ??
   "https://t.me/storywalkers_support_bot";
@@ -33,6 +34,7 @@ export function OnboardingCheckout() {
     USD: 1,
   });
   const me = () => auth.me();
+  const isFirstHundred = createMemo(() => me()?.isFirstHundred === true);
   const preferredCurrency = createMemo(() => me()?.preferredCurrency || "USD");
   const currencyRate = createMemo(() => {
     const rate = fxRates()[preferredCurrency()];
@@ -50,6 +52,14 @@ export function OnboardingCheckout() {
       preferredCurrency(),
     );
 
+  const communityPriceCents = createMemo(() =>
+    convertRubCentsToCurrencyCents(
+      COMMUNITY_PRICE_RUB_CENTS,
+      fxRates(),
+      preferredCurrency(),
+    ),
+  );
+
   const selectedCourseItems = createMemo(() =>
     selectedCourseIds().map((id) => {
       const course = coursesById()[id];
@@ -66,23 +76,20 @@ export function OnboardingCheckout() {
       (sum, item) => sum + item.priceUsdCents,
       0,
     );
-    return convertUsdCentsToCurrencyCents(
-      coursesTotal + (communitySelected() ? COMMUNITY_PRICE_USD_CENTS : 0),
-      currencyRate(),
+    return (
+      convertUsdCentsToCurrencyCents(
+        isFirstHundred() ? 0 : coursesTotal,
+        currencyRate(),
+      ) + (communitySelected() ? communityPriceCents() : 0)
     );
   });
 
   onMount(() => {
     void (async () => {
+      const selectedGoalTitle = me()?.selectedGoalTitle;
       const selectedGoalId = me()?.selectedGoalId;
-      if (selectedGoalId) {
-        try {
-          const goals = await listGoals();
-          const match = goals.items.find((goal) => goal.id === selectedGoalId);
-          setGoalTitle(match?.title || selectedGoalId);
-        } catch {
-          setGoalTitle(selectedGoalId);
-        }
+      if (selectedGoalTitle || selectedGoalId) {
+        setGoalTitle(selectedGoalTitle || selectedGoalId || null);
       }
 
       try {
@@ -105,8 +112,18 @@ export function OnboardingCheckout() {
   const goalSummary = createMemo(
     () =>
       goalTitle() ||
+      me()?.selectedGoalTitle ||
       me()?.selectedGoalId ||
       t("student.onboarding.checkout.goalEmpty"),
+  );
+
+  const FreePrice = (props: { usdCents: number }) => (
+    <span class="flex items-center gap-2 font-medium">
+      <span class="text-muted-foreground line-through">
+        {formatPrice(props.usdCents)}
+      </span>
+      <span>{formatCents(0, preferredCurrency())}</span>
+    </span>
   );
 
   return (
@@ -140,9 +157,16 @@ export function OnboardingCheckout() {
                   {(course) => (
                     <div class="flex items-center justify-between rounded-md border border-border/70 bg-card px-3 py-2">
                       <span>{course.title}</span>
-                      <span class="font-medium">
-                        {formatPrice(course.priceUsdCents)}
-                      </span>
+                      <Show
+                        when={isFirstHundred()}
+                        fallback={
+                          <span class="font-medium">
+                            {formatPrice(course.priceUsdCents)}
+                          </span>
+                        }
+                      >
+                        <FreePrice usdCents={course.priceUsdCents} />
+                      </Show>
                     </div>
                   )}
                 </For>
@@ -152,7 +176,7 @@ export function OnboardingCheckout() {
                       {t("student.onboarding.checkout.communityLabel")}
                     </span>
                     <span class="font-medium">
-                      {formatPrice(COMMUNITY_PRICE_USD_CENTS)}
+                      {formatCents(communityPriceCents(), preferredCurrency())}
                     </span>
                   </div>
                 </Show>
@@ -171,14 +195,16 @@ export function OnboardingCheckout() {
             <Button as={A} href="/onboarding/courses" variant="outline">
               {t("student.onboarding.profile.back")}
             </Button>
-            <Button
-              as="a"
-              href={BOOSTY_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              {t("student.onboarding.checkout.boostyCta")}
-            </Button>
+            <Show when={totalPrice() > 0}>
+              <Button
+                as="a"
+                href={BOOSTY_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {t("student.onboarding.checkout.boostyCta")}
+              </Button>
+            </Show>
           </div>
         </div>
       </SectionCard>
@@ -186,7 +212,9 @@ export function OnboardingCheckout() {
       <SectionCard title={t("student.onboarding.checkout.afterPaymentTitle")}>
         <div class="space-y-3 text-sm">
           <p class="text-muted-foreground">
-            {t("student.onboarding.checkout.afterPaymentManual")}
+            {isFirstHundred()
+              ? t("student.onboarding.checkout.afterPaymentFree")
+              : t("student.onboarding.checkout.afterPaymentManual")}
           </p>
           <p class="text-muted-foreground">
             {t("student.onboarding.checkout.afterPaymentContactLabel")}{" "}

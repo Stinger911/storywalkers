@@ -201,9 +201,11 @@ class MeResponse(BaseModel):
     roleRaw: str | None = None
     level: int = 1
     selectedGoalId: str | None = None
+    selectedGoalTitle: str | None = None
     profileForm: ProfileFormModel = Field(default_factory=ProfileFormModel)
     selectedCourses: list[str] = Field(default_factory=list)
     preferredCurrency: PreferredCurrency = "USD"
+    isFirstHundred: bool = False
     subscriptionSelected: bool | None = None
 
 
@@ -458,6 +460,14 @@ async def patch_me(
     doc_ref.update(updates)
 
     response_data = {**current, **updates}
+    selected_goal_id = _sanitize_optional_text(response_data.get("selectedGoalId"))
+    selected_goal_title = None
+    if selected_goal_id:
+        goal_ref = db.collection("goals").document(selected_goal_id)
+        goal_snap = goal_ref.get()
+        if goal_snap.exists:
+            goal_data = goal_snap.to_dict() or {}
+            selected_goal_title = _sanitize_optional_text(goal_data.get("title"))
     role_raw = current.get("role") or user.get("roleRaw") or "student"
     role = "staff" if role_raw in {"admin", "expert"} else "student"
     me_response = {
@@ -475,6 +485,7 @@ async def patch_me(
             else 1
         ),
         "selectedGoalId": _sanitize_optional_text(response_data.get("selectedGoalId")),
+        "selectedGoalTitle": selected_goal_title,
         "profileForm": _sanitize_profile_form(
             response_data.get("profileForm")
             if isinstance(response_data.get("profileForm"), dict)
@@ -489,6 +500,11 @@ async def patch_me(
         "preferredCurrency": response_data.get("preferredCurrency")
         if response_data.get("preferredCurrency") in {"USD", "EUR", "PLN", "RUB"}
         else "USD",
+        "isFirstHundred": (
+            response_data.get("isFirstHundred")
+            if isinstance(response_data.get("isFirstHundred"), bool)
+            else False
+        ),
         "subscriptionSelected": (
             response_data.get("subscriptionSelected")
             if isinstance(response_data.get("subscriptionSelected"), bool)

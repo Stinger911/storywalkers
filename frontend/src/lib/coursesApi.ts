@@ -194,6 +194,31 @@ export function convertUsdCentsToCurrencyCents(
   return Math.max(0, Math.round(usdCents * safeRate));
 }
 
+export function convertRubCentsToCurrencyCents(
+  rubCents: number,
+  rates: Record<string, number> | null | undefined,
+  targetCurrency: string | null | undefined,
+) {
+  if (!Number.isFinite(rubCents)) return 0;
+  const safeCurrency =
+    typeof targetCurrency === "string" && targetCurrency ? targetCurrency : "USD";
+  if (safeCurrency === "RUB") {
+    return Math.max(0, Math.round(rubCents));
+  }
+  const rubRate = rates?.RUB;
+  const targetRate = safeCurrency === "USD" ? 1 : rates?.[safeCurrency];
+  if (
+    typeof rubRate !== "number" ||
+    rubRate <= 0 ||
+    typeof targetRate !== "number" ||
+    targetRate <= 0
+  ) {
+    return 0;
+  }
+  const usdCents = rubCents / rubRate;
+  return Math.max(0, Math.round(usdCents * targetRate));
+}
+
 export function formatCents(cents: number, currency: string) {
   const safeCents = Number.isFinite(cents) ? Math.max(0, cents) : 0;
   const safeCurrency = typeof currency === "string" && currency ? currency : "USD";

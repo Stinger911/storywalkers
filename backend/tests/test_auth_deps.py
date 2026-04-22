@@ -45,11 +45,14 @@ class _FakeCollection:
 class _FakeFirestore:
     def __init__(self):
         self._users = {}
+        self._goals = {}
 
     def collection(self, name):
-        if name != "users":
-            raise ValueError("unsupported collection")
-        return _FakeCollection(self._users)
+        if name == "users":
+            return _FakeCollection(self._users)
+        if name == "goals":
+            return _FakeCollection(self._goals)
+        raise ValueError("unsupported collection")
 
 
 class _Settings:
@@ -73,13 +76,14 @@ def test_build_user_payload_includes_onboarding_fields():
             "notes": " note ",
         },
         "selectedCourses": [" c1 ", "", "c2"],
+        "isFirstHundred": True,
         "subscriptionSelected": True,
     }
-
-    payload = _build_user_payload("u1", decoded, profile)
+    payload = _build_user_payload("u1", decoded, {**profile, "selectedGoalTitle": "Goal One"})
 
     assert payload["level"] == 4
     assert payload["selectedGoalId"] == "goal-1"
+    assert payload["selectedGoalTitle"] == "Goal One"
     assert payload["profileForm"]["aboutMe"] == "about me"
     assert payload["profileForm"]["telegram"] == "@name"
     assert payload["profileForm"]["socialLinks"] == [
@@ -90,6 +94,7 @@ def test_build_user_payload_includes_onboarding_fields():
     assert payload["profileForm"]["experienceLevel"] == "intermediate"
     assert payload["profileForm"]["notes"] == "note"
     assert payload["selectedCourses"] == ["c1", "c2"]
+    assert payload["isFirstHundred"] is True
     assert payload["subscriptionSelected"] is True
 
 
@@ -100,6 +105,7 @@ def test_build_user_payload_defaults_missing_onboarding_fields():
 
     assert payload["level"] == 1
     assert payload["selectedGoalId"] is None
+    assert payload["selectedGoalTitle"] is None
     assert payload["profileForm"] == {
         "aboutMe": None,
         "telegram": None,
@@ -109,6 +115,7 @@ def test_build_user_payload_defaults_missing_onboarding_fields():
         "notes": None,
     }
     assert payload["selectedCourses"] == []
+    assert payload["isFirstHundred"] is False
     assert payload["subscriptionSelected"] is None
 
 
@@ -142,3 +149,38 @@ def test_get_current_user_sends_registration_when_profile_bootstrapped(monkeypat
     assert "🆕 Registration" in sent["text"]
     assert "uid: u1" in sent["text"]
     assert "email: u1@example.com" in sent["text"]
+
+
+def test_get_current_user_resolves_selected_goal_title(monkeypatch):
+    fake_db = _FakeFirestore()
+    fake_db._users["u1"] = {
+        "email": "u1@example.com",
+        "displayName": "User One",
+        "role": "student",
+        "status": "active",
+        "selectedGoalId": "goal-1",
+    }
+    fake_db._goals["goal-1"] = {"title": "Goal One"}
+    monkeypatch.setattr(auth_deps, "get_firestore_client", lambda: fake_db)
+    monkeypatch.setattr(auth_deps, "get_settings", lambda: _Settings())
+    monkeypatch.setattr(
+        auth_deps,
+        "verify_id_token",
+        lambda _token: {
+            "uid": "u1",
+            "email": "u1@example.com",
+            "name": "User One",
+        },
+    )
+
+    async def _fake_send_admin_message(_text: str):
+        return True, None
+
+    monkeypatch.setattr(auth_deps, "send_admin_message", _fake_send_admin_message)
+
+    request = Request({"type": "http", "headers": []})
+    creds = HTTPAuthorizationCredentials(scheme="Bearer", credentials="token")
+    payload = asyncio.run(auth_deps.get_current_user(request, creds))
+
+    assert payload["selectedGoalId"] == "goal-1"
+    assert payload["selectedGoalTitle"] == "Goal One"
