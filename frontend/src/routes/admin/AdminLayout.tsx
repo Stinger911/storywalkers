@@ -2,7 +2,6 @@ import type { JSX } from "solid-js";
 import { A, useLocation } from "@solidjs/router";
 import { AppShell } from "../../components/AppShell";
 import { Avatar, AvatarFallback } from "../../components/ui/avatar";
-import { Button } from "../../components/ui/button";
 import { useAuth } from "../../lib/auth";
 import { useTheme } from "../../lib/theme";
 import { RequireAuth } from "../RequireAuth";
@@ -172,7 +171,7 @@ export function AdminLayout(props: AdminLayoutProps) {
                   </nav>
                 </div>
               </div>
-              <div class="space-y-3 px-2">
+              <div class="px-2">
                 <a
                   href="https://github.com/Stinger911/storywalkers/issues/new"
                   target="blank"
@@ -183,19 +182,6 @@ export function AdminLayout(props: AdminLayoutProps) {
                   </span>
                   <span>Report a bug</span>
                 </a>
-                <Button
-                  variant="outline"
-                  class={cn(
-                    "w-full justify-center rounded-[var(--radius-md)] border-border/60",
-                    theme() === "dark" ? "bg-transparent" : "bg-white/80",
-                  )}
-                  onClick={() => {
-                    void auth.logout();
-                    window.location.href = "/";
-                  }}
-                >
-                  Log out
-                </Button>
               </div>
             </aside>
             <div class="min-w-0">{props.children}</div>

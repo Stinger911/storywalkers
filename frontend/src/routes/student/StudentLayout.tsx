@@ -1,8 +1,7 @@
 import { A, useLocation } from "@solidjs/router";
-import { createMemo, type JSX } from "solid-js";
+import { Show, createMemo, type JSX } from "solid-js";
 import { AppShell } from "../../components/AppShell";
 import { Avatar, AvatarFallback } from "../../components/ui/avatar";
-import { Button } from "../../components/ui/button";
 import { useAuth } from "../../lib/auth";
 import { useI18n } from "../../lib/i18n";
 import { useTheme } from "../../lib/theme";
@@ -141,9 +140,11 @@ export function StudentLayout(props: StudentLayoutProps) {
                 >
                   {t("student.layout.workspaceTitle")}
                 </div>
-                <div class="text-[10px] font-bold uppercase tracking-[0.14em] text-secondary">
-                  {t("student.layout.workspaceSubtitle")}
-                </div>
+                <Show when={t("student.layout.workspaceSubtitle")}>
+                  <div class="text-[10px] font-bold uppercase tracking-[0.14em] text-secondary">
+                    {t("student.layout.workspaceSubtitle")}
+                  </div>
+                </Show>
               </div>
               <nav class="grid gap-1">
                 {studentNavItems().map((item) => (
@@ -168,36 +169,6 @@ export function StudentLayout(props: StudentLayoutProps) {
               </nav>
             </div>
 
-            <div class="space-y-3 px-2">
-              <div
-                class={cn(
-                  "rounded-[var(--radius-lg)] p-4",
-                  theme() === "dark"
-                    ? "border border-border/70 bg-[rgba(18,29,38,0.9)]"
-                    : "bg-[rgba(223,233,247,0.82)]",
-                )}
-              >
-                <p class="text-[10px] font-bold uppercase tracking-[0.14em] text-secondary">
-                  {t("student.layout.tipTitle")}
-                </p>
-                <p class="mt-2 text-xs leading-6 text-muted-foreground">
-                  {t("student.layout.tipBody")}
-                </p>
-              </div>
-              <Button
-                variant="outline"
-                class={cn(
-                  "w-full justify-center rounded-[var(--radius-md)] border-border/60",
-                  theme() === "dark" ? "bg-transparent" : "bg-white/80",
-                )}
-                onClick={() => {
-                  void auth.logout();
-                  window.location.href = "/";
-                }}
-              >
-                {t("student.layout.logout")}
-              </Button>
-            </div>
           </aside>
           <div class="min-w-0">{props.children}</div>
         </div>
