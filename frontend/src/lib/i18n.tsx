@@ -300,6 +300,7 @@ type RawDictionary = {
       openPaymentPage: string;
       refreshCourses: string;
       selectAtLeastOne: string;
+      freeAccessHint: string;
     };
     onboarding: {
       eyebrow: string;
@@ -386,6 +387,7 @@ type RawDictionary = {
         boostyCta: string;
         afterPaymentTitle: string;
         afterPaymentManual: string;
+        afterPaymentFree: string;
         afterPaymentContactLabel: string;
       };
     };
