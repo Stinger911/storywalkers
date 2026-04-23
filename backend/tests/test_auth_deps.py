@@ -32,8 +32,41 @@ class _FakeDoc:
         self._store[self.id] = data
 
 
-class _FakeCollection:
+class _FakeQuery:
     def __init__(self, store):
+        self._store = store
+        self._filters = []
+        self._limit = None
+
+    def where(self, field, op, value):
+        self._filters.append((field, op, value))
+        return self
+
+    def limit(self, value):
+        self._limit = value
+        return self
+
+    def stream(self):
+        items = []
+        for doc_id, data in self._store.items():
+            include = True
+            for field, op, value in self._filters:
+                if op == "==":
+                    include = data.get(field) == value
+                else:
+                    include = False
+                if not include:
+                    break
+            if include:
+                items.append(_FakeSnap(_FakeDoc(self._store, doc_id)))
+        if self._limit is not None:
+            items = items[: self._limit]
+        return items
+
+
+class _FakeCollection(_FakeQuery):
+    def __init__(self, store):
+        super().__init__(store)
         self._store = store
 
     def document(self, doc_id=None):
@@ -145,6 +178,8 @@ def test_get_current_user_sends_registration_when_profile_bootstrapped(monkeypat
     payload = asyncio.run(auth_deps.get_current_user(request, creds))
 
     assert payload["uid"] == "u1"
+    assert payload["isFirstHundred"] is True
+    assert fake_db._users["u1"]["isFirstHundred"] is True
     assert "text" in sent
     assert "🆕 Registration" in sent["text"]
     assert "uid: u1" in sent["text"]
@@ -184,3 +219,32 @@ def test_get_current_user_resolves_selected_goal_title(monkeypatch):
 
     assert payload["selectedGoalId"] == "goal-1"
     assert payload["selectedGoalTitle"] == "Goal One"
+
+
+def test_get_current_user_bootstrap_keeps_first_hundred_false_after_threshold(monkeypatch):
+    fake_db = _FakeFirestore()
+    for index in range(100):
+        fake_db._users[f"student-{index}"] = {"role": "student"}
+    monkeypatch.setattr(auth_deps, "get_firestore_client", lambda: fake_db)
+    monkeypatch.setattr(auth_deps, "get_settings", lambda: _Settings())
+    monkeypatch.setattr(
+        auth_deps,
+        "verify_id_token",
+        lambda _token: {
+            "uid": "u101",
+            "email": "u101@example.com",
+            "name": "User 101",
+        },
+    )
+
+    async def _fake_send_admin_message(_text: str):
+        return True, None
+
+    monkeypatch.setattr(auth_deps, "send_admin_message", _fake_send_admin_message)
+
+    request = Request({"type": "http", "headers": []})
+    creds = HTTPAuthorizationCredentials(scheme="Bearer", credentials="token")
+    payload = asyncio.run(auth_deps.get_current_user(request, creds))
+
+    assert payload["isFirstHundred"] is False
+    assert fake_db._users["u101"]["isFirstHundred"] is False
