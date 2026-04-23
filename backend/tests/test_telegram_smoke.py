@@ -46,9 +46,45 @@ class FakeDoc:
         return FakeCollection(per_doc[name])
 
 
-class FakeCollection:
+class FakeQuery:
     def __init__(self, store):
         self._store = store
+        self._filters = []
+        self._limit = None
+
+    def where(self, field, op, value):
+        self._filters.append((field, op, value))
+        return self
+
+    def limit(self, value):
+        self._limit = value
+        return self
+
+    def stream(self):
+        items = []
+        for doc_id, data in self._store.items():
+            if data is None:
+                continue
+            include = True
+            for field, op, value in self._filters:
+                if op == "==":
+                    include = data.get(field) == value
+                elif op == "in":
+                    include = data.get(field) in value
+                else:
+                    include = False
+                if not include:
+                    break
+            if include:
+                items.append(FakeSnap(FakeDoc(self._store, doc_id)))
+        if self._limit is not None:
+            items = items[: self._limit]
+        return items
+
+
+class FakeCollection(FakeQuery):
+    def __init__(self, store):
+        super().__init__(store)
         self._counter = 0
 
     def document(self, doc_id=None):
