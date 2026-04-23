@@ -16,7 +16,7 @@ from app.auth.user_status import (
 )
 from app.core.errors import AppError, forbidden_error
 from app.core.logging import get_logger
-from app.db.firestore import get_firestore_client
+from app.db.firestore import get_firestore_client, should_mark_first_hundred_student
 from app.services.course_plan_sync import append_courses_to_student_plan
 from app.services.goal_template_steps import list_steps
 from app.services.telegram import send_admin_message
@@ -406,7 +406,7 @@ async def create_student(
         "displayName": payload.displayName,
         "role": role,
         "status": DEFAULT_NEW_USER_STATUS,
-        "isFirstHundred": False,
+        "isFirstHundred": should_mark_first_hundred_student(db, role=role),
         "stepsDone": 0,
         "stepsTotal": 0,
         "progressPercent": 0,

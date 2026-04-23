@@ -66,7 +66,7 @@ describe("StudentHome", () => {
       </I18nProvider>
     ));
     expect(screen.getByText("Welcome back, Alex")).toBeInTheDocument();
-    expect(screen.getByText("Morning, Archivist")).toBeInTheDocument();
+    expect(screen.getByText("Morning, Student")).toBeInTheDocument();
     expect(screen.getByText("Current lesson")).toBeInTheDocument();
     expect(screen.getByText("Lessons")).toBeInTheDocument();
     expect(

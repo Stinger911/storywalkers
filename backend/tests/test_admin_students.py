@@ -448,6 +448,7 @@ def test_create_student_defaults_status_to_disabled(monkeypatch):
     assert response.status_code == 201
     assert response.json()["status"] == "disabled"
     assert users["new-u1"]["status"] == "disabled"
+    assert users["new-u1"]["isFirstHundred"] is True
 
     app.dependency_overrides.clear()
 
@@ -524,6 +525,38 @@ def test_create_student_does_not_send_registration_telegram_for_existing_user(
     )
     assert response.status_code == 201
     assert calls["count"] == 0
+
+    app.dependency_overrides.clear()
+
+
+def test_create_student_keeps_first_hundred_false_after_threshold(monkeypatch):
+    users = {
+        f"student-{index}": {
+            "email": f"student-{index}@example.com",
+            "displayName": f"Student {index}",
+            "role": "student",
+            "status": "active",
+        }
+        for index in range(100)
+    }
+    fake_db = FakeFirestore(users)
+    monkeypatch.setattr(admin_students, "get_firestore_client", lambda: fake_db)
+    monkeypatch.setattr(
+        admin_students,
+        "get_or_create_user",
+        lambda email, display_name=None: type("AuthUser", (), {"uid": "new-u101"})(),
+    )
+    app.dependency_overrides[require_staff] = _override_staff
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/admin/students",
+        json={"email": "new101@example.com", "displayName": "New Student 101"},
+    )
+
+    assert response.status_code == 201
+    assert response.json()["isFirstHundred"] is False
+    assert users["new-u101"]["isFirstHundred"] is False
 
     app.dependency_overrides.clear()
 

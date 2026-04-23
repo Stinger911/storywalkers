@@ -12,7 +12,7 @@ from app.auth.user_status import (
 from app.core.config import get_settings
 from app.core.errors import AppError, forbidden_error, unauthorized_error
 from app.core.logging import get_logger
-from app.db.firestore import get_firestore_client
+from app.db.firestore import get_firestore_client, should_mark_first_hundred_student
 from app.services.telegram import send_admin_message
 from app.services.telegram_events import fmt_registration
 
@@ -190,7 +190,9 @@ async def get_current_user(
             "role": "student",
             "status": DEFAULT_NEW_USER_STATUS,
             "level": 1,
-            "isFirstHundred": False,
+            "isFirstHundred": should_mark_first_hundred_student(
+                firestore, role="student"
+            ),
             "email": decoded.get("email", ""),
             "displayName": decoded.get("name", decoded.get("email", "")),
             "createdAt": datetime.now(timezone.utc),
