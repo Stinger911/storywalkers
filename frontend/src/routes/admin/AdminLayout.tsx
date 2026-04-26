@@ -173,7 +173,7 @@ export function AdminLayout(props: AdminLayoutProps) {
               </div>
               <div class="px-2">
                 <a
-                  href="https://github.com/Stinger911/storywalkers/issues/new"
+                  href="https://github.com/Stinger911/storywalkers/issues/new?labels=bug"
                   target="blank"
                   class="flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors duration-300 hover:text-primary"
                 >
