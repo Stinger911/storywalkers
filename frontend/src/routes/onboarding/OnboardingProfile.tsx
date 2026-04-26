@@ -113,7 +113,6 @@ export function OnboardingProfile() {
           firstName: firstName().trim() || null,
           lastName: lastName().trim() || null,
           aboutMe: aboutMe().trim(),
-          notes: aboutMe().trim(),
           telegram: normalizeTelegramInput(telegram()) || null,
           socialLinks: cleanedSocialLinks(),
           socialUrl: cleanedSocialLinks()[0] || null,

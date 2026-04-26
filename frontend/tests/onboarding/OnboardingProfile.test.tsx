@@ -110,7 +110,6 @@ describe("OnboardingProfile", () => {
           firstName: "Alice",
           lastName: "Rivera",
           aboutMe: "I want to become a better storyteller.",
-          notes: "I want to become a better storyteller.",
           telegram: "@alice",
           socialLinks: ["https://example.com/alice"],
           socialUrl: "https://example.com/alice",
