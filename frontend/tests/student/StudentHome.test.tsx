@@ -83,7 +83,7 @@ describe("StudentHome", () => {
     expect(screen.getByText("Current step")).toBeInTheDocument();
     expect(screen.getByText("Path steps")).toBeInTheDocument();
     expect(
-      screen.getByText("Your learning path is waiting. You’ve completed 0% of your weekly goal."),
+      screen.getByText("Your learning path is waiting. You’ve completed 0% of your goal."),
     ).toBeInTheDocument();
     expect(screen.getAllByText("Import footage").length).toBeGreaterThan(0);
     expect(screen.getByLabelText("Learning path map")).toBeInTheDocument();
