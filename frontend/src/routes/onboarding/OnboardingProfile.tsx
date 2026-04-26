@@ -1,5 +1,5 @@
 import { useNavigate } from "@solidjs/router";
-import { createSignal, For } from "solid-js";
+import { createEffect, createSignal, For } from "solid-js";
 
 import { Button } from "../../components/ui/button";
 import { SectionCard } from "../../components/ui/section-card";
@@ -14,6 +14,17 @@ import { useI18n } from "../../lib/i18n";
 import { OnboardingLayout } from "./OnboardingLayout";
 
 const PHONE_LIKE_RE = /^[0-9+\-\s()]+$/;
+
+function splitDisplayName(displayName: string | null | undefined) {
+  const parts = (displayName || "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  return {
+    firstName: parts[0] || "",
+    lastName: parts.slice(1).join(" "),
+  };
+}
 
 function normalizeTelegramInput(value: string) {
   const trimmed = value.trim();
@@ -31,18 +42,32 @@ export function OnboardingProfile() {
   const [saving, setSaving] = createSignal(false);
   const [error, setError] = createSignal<string | null>(null);
   const [fieldError, setFieldError] = createSignal<string | null>(null);
+  const [hydratedFromProfile, setHydratedFromProfile] = createSignal(false);
 
-  const [aboutMe, setAboutMe] = createSignal(
-    auth.me()?.profileForm?.aboutMe || auth.me()?.profileForm?.notes || "",
-  );
-  const [telegram, setTelegram] = createSignal(auth.me()?.profileForm?.telegram || "");
-  const [socialLinks, setSocialLinks] = createSignal<string[]>(
-    auth.me()?.profileForm?.socialLinks?.length
-      ? auth.me()?.profileForm?.socialLinks!
-      : auth.me()?.profileForm?.socialUrl
-        ? [auth.me()?.profileForm?.socialUrl || ""]
-        : [],
-  );
+  const [firstName, setFirstName] = createSignal("");
+  const [lastName, setLastName] = createSignal("");
+  const [aboutMe, setAboutMe] = createSignal("");
+  const [telegram, setTelegram] = createSignal("");
+  const [socialLinks, setSocialLinks] = createSignal<string[]>([]);
+
+  createEffect(() => {
+    const me = auth.me();
+    if (!me || hydratedFromProfile()) return;
+
+    const fallbackName = splitDisplayName(me.displayName);
+    setFirstName(me.profileForm?.firstName || fallbackName.firstName);
+    setLastName(me.profileForm?.lastName || fallbackName.lastName);
+    setAboutMe(me.profileForm?.aboutMe || me.profileForm?.notes || "");
+    setTelegram(me.profileForm?.telegram || "");
+    setSocialLinks(
+      me.profileForm?.socialLinks?.length
+        ? me.profileForm.socialLinks
+        : me.profileForm?.socialUrl
+          ? [me.profileForm.socialUrl || ""]
+          : [],
+    );
+    setHydratedFromProfile(true);
+  });
 
   const cleanedSocialLinks = () =>
     socialLinks()
@@ -85,6 +110,8 @@ export function OnboardingProfile() {
     try {
       await auth.patchMe({
         profileForm: {
+          firstName: firstName().trim() || null,
+          lastName: lastName().trim() || null,
           aboutMe: aboutMe().trim(),
           notes: aboutMe().trim(),
           telegram: normalizeTelegramInput(telegram()) || null,
@@ -116,10 +143,50 @@ export function OnboardingProfile() {
     >
       <SectionCard
         title={t("student.onboarding.profile.cardTitle")}
-        description={t("student.onboarding.profile.cardDescription")}
         class="rounded-[calc(var(--radius-lg)+8px)] border-0 bg-white shadow-card"
       >
         <div class="grid gap-5">
+          <div class="grid gap-5 md:grid-cols-2">
+            <TextField class="grid gap-2">
+              <TextFieldLabel for="onb-first-name">
+                {t("student.onboarding.profile.firstNameLabel")}
+              </TextFieldLabel>
+              <TextFieldInput
+                id="onb-first-name"
+                value={firstName()}
+                onInput={(event) => setFirstName(event.currentTarget.value)}
+                placeholder={t("student.onboarding.profile.firstNamePlaceholder")}
+                disabled={saving()}
+                autocomplete="given-name"
+              />
+            </TextField>
+            <TextField class="grid gap-2">
+              <TextFieldLabel for="onb-last-name">
+                {t("student.onboarding.profile.lastNameLabel")}
+              </TextFieldLabel>
+              <TextFieldInput
+                id="onb-last-name"
+                value={lastName()}
+                onInput={(event) => setLastName(event.currentTarget.value)}
+                placeholder={t("student.onboarding.profile.lastNamePlaceholder")}
+                disabled={saving()}
+                autocomplete="family-name"
+              />
+            </TextField>
+          </div>
+          <TextField class="grid gap-2">
+            <TextFieldLabel for="onb-email">
+              {t("student.onboarding.profile.emailLabel")}
+            </TextFieldLabel>
+              <TextFieldInput
+                id="onb-email"
+                type="email"
+                value={auth.me()?.email || ""}
+                readOnly
+                disabled
+                autocomplete="email"
+            />
+          </TextField>
           <TextField class="grid gap-2">
             <TextFieldLabel for="onb-about">
               {t("student.onboarding.profile.aboutMeLabel")}
@@ -195,9 +262,6 @@ export function OnboardingProfile() {
                 </div>
               )}
             </For>
-          </div>
-          <div class="rounded-[var(--radius-md)] border border-border/70 bg-muted/30 p-4 text-sm text-muted-foreground">
-            {t("student.onboarding.profile.disclaimer")}
           </div>
           <div class="flex flex-wrap gap-2">
             <Button variant="outline" onClick={() => void save()} disabled={saving()}>

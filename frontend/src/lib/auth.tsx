@@ -27,6 +27,8 @@ export type MeProfile = {
   selectedGoalId?: string | null
   selectedGoalTitle?: string | null
   profileForm?: {
+    firstName?: string | null
+    lastName?: string | null
     aboutMe?: string | null
     telegram?: string | null
     socialLinks?: string[]
@@ -45,6 +47,8 @@ export type PatchMePayload = {
   selectedGoalId?: string | null
   selectedGoalTitle?: string | null
   profileForm?: {
+    firstName?: string | null
+    lastName?: string | null
     aboutMe?: string | null
     telegram?: string | null
     socialLinks?: string[]

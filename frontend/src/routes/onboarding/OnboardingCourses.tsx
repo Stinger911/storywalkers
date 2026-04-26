@@ -80,9 +80,7 @@ export function OnboardingCourses() {
   const [selectedCourses, setSelectedCourses] = createSignal<string[]>(
     auth.me()?.selectedCourses || [],
   );
-  const [communitySelected, setCommunitySelected] = createSignal(
-    auth.me()?.subscriptionSelected ?? true,
-  );
+  const communitySelected = () => true;
 
   const hasPreferredRate = createMemo(() => {
     const next = fxRates()[preferredCurrency()];
@@ -214,7 +212,7 @@ export function OnboardingCourses() {
     try {
       await auth.patchMe({
         selectedCourses: selectedActiveCourseIds(),
-        subscriptionSelected: communitySelected() || undefined,
+        subscriptionSelected: true,
       });
       return true;
     } catch (err) {
@@ -475,18 +473,16 @@ export function OnboardingCourses() {
           </Show>
 
           <div class="rounded-xl border border-border/70 bg-card p-4">
-            <button
-              class={`w-full rounded-lg border p-4 text-left transition-colors ${
-                communitySelected()
-                  ? "border-primary bg-primary/5"
-                  : "border-border/70 hover:border-primary/50"
-              }`}
-              onClick={() => setCommunitySelected((prev) => !prev)}
-              disabled={saving() || currencySaving()}
-            >
+            <div class="w-full rounded-lg border border-primary bg-primary/5 p-4 text-left">
               <div class="flex items-start justify-between gap-3">
                 <div>
-                  <div class="font-medium">{t(COMMUNITY_CARD.titleKey)}</div>
+                  <div class="flex flex-wrap items-center gap-2">
+                    <div class="font-medium">{t(COMMUNITY_CARD.titleKey)}</div>
+                    <SmallStatBadge class="bg-background">
+                      <span class="material-symbols-outlined text-[14px]">lock</span>
+                      {t("student.onboarding.courses.communityRequiredBadge")}
+                    </SmallStatBadge>
+                  </div>
                   <div class="mt-1 text-sm text-muted-foreground">
                     {t(COMMUNITY_CARD.descKey)}
                   </div>
@@ -496,11 +492,9 @@ export function OnboardingCourses() {
                 </div>
               </div>
               <div class="mt-3 text-xs text-muted-foreground">
-                {communitySelected()
-                  ? t("student.onboarding.courses.selected")
-                  : t("student.onboarding.courses.clickToSelect")}
+                {t("student.onboarding.courses.communityIncludedByDefault")}
               </div>
-            </button>
+            </div>
           </div>
 
           <div class="rounded-xl border border-border/70 bg-muted/30 p-4">

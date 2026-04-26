@@ -101,6 +101,16 @@ components:
       type: object
       additionalProperties: false
       properties:
+        firstName:
+          type: string
+          nullable: true
+          maxLength: 60
+          example: "Alex"
+        lastName:
+          type: string
+          nullable: true
+          maxLength: 60
+          example: "Doe"
         telegram:
           type: string
           nullable: true

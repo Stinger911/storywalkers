@@ -116,6 +116,8 @@ def _build_user_payload(uid: str, decoded: dict, profile: dict | None) -> dict:
         "selectedGoalId": _sanitize_optional_text(profile.get("selectedGoalId")),
         "selectedGoalTitle": _sanitize_optional_text(profile.get("selectedGoalTitle")),
         "profileForm": {
+            "firstName": _sanitize_optional_text(profile_form.get("firstName")),
+            "lastName": _sanitize_optional_text(profile_form.get("lastName")),
             "aboutMe": _sanitize_optional_text(profile_form.get("aboutMe"))
             or _sanitize_optional_text(profile_form.get("notes")),
             "telegram": _sanitize_optional_text(profile_form.get("telegram")),

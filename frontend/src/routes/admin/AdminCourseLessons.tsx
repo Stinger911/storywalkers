@@ -643,7 +643,7 @@ export function AdminCourseLessons() {
           <DialogHeader>
             <DialogTitle>Edit content</DialogTitle>
             <DialogDescription>
-              Simple text content editor for this lesson.
+              Update the lesson content and material link.
             </DialogDescription>
           </DialogHeader>
           <TextField>
@@ -681,8 +681,8 @@ export function AdminCourseLessons() {
           if (!saving() && !open) setDeleteTarget(null);
         }}
         title="Deactivate lesson?"
-        description={`This hides "${deleteTarget()?.title || "this lesson"}" from the student course view.`}
-        acknowledgeLabel="I understand this lesson will no longer appear to students."
+        description={`This will hide "${deleteTarget()?.title || "this lesson"}" from the student course view.`}
+        acknowledgeLabel="I understand this lesson will no longer be visible to students."
         confirmKeyword="DELETE"
         confirmLabel="Confirm deactivate"
         loading={saving()}

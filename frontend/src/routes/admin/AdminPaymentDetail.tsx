@@ -192,7 +192,7 @@ export function AdminPaymentDetail() {
   return (
     <Page
       title="Payment detail"
-      subtitle="Inspect payment metadata and activation evidence."
+      subtitle="Review payment details and activation evidence."
       breadcrumb={
         <Breadcrumb>
           <BreadcrumbList>
@@ -237,7 +237,7 @@ export function AdminPaymentDetail() {
           <Card>
             <CardHeader>
               <CardTitle>Payment</CardTitle>
-              <CardDescription>Core payment metadata.</CardDescription>
+              <CardDescription>Core payment information.</CardDescription>
             </CardHeader>
             <CardContent class="space-y-3 text-sm">
               <div class="flex items-center justify-between gap-3">
@@ -294,7 +294,7 @@ export function AdminPaymentDetail() {
           <Card>
             <CardHeader>
               <CardTitle>User</CardTitle>
-              <CardDescription>Linked account information.</CardDescription>
+              <CardDescription>Linked account details.</CardDescription>
             </CardHeader>
             <CardContent class="space-y-3 text-sm">
               <div class="flex items-center justify-between gap-3">
@@ -332,14 +332,14 @@ export function AdminPaymentDetail() {
           <Card>
             <CardHeader>
               <CardTitle>Evidence</CardTitle>
-              <CardDescription>Parsed email evidence from Gmail webhook.</CardDescription>
+              <CardDescription>Parsed evidence from the payment email.</CardDescription>
             </CardHeader>
             <CardContent class="space-y-3 text-sm">
               <Show
                 when={Object.keys(evidence()).length > 0}
                 fallback={
                   <div class="rounded-md border border-border/70 p-3 text-muted-foreground">
-                    No evidence recorded.
+                    No evidence has been recorded yet.
                   </div>
                 }
               >
@@ -371,17 +371,17 @@ export function AdminPaymentDetail() {
           </Card>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Actions</CardTitle>
-            <CardDescription>Manual payment moderation actions.</CardDescription>
+          <Card>
+            <CardHeader>
+              <CardTitle>Actions</CardTitle>
+            <CardDescription>Manual moderation actions for this payment.</CardDescription>
           </CardHeader>
           <CardContent class="grid gap-4 md:grid-cols-2">
             <div class="space-y-3 rounded-xl border border-border/70 p-4">
               <div>
                 <div class="text-sm font-medium">Activate</div>
                 <p class="text-xs text-muted-foreground">
-                  Type <code>ACTIVATE</code> to confirm and activate this user.
+                  Type <code>ACTIVATE</code> to confirm this payment and activate the user.
                 </p>
               </div>
               <input
@@ -403,7 +403,7 @@ export function AdminPaymentDetail() {
               <div>
                 <div class="text-sm font-medium">Reject</div>
                 <p class="text-xs text-muted-foreground">
-                  Optionally provide a rejection reason for audit history.
+                  You can add an optional reason for the audit history.
                 </p>
               </div>
               <textarea
@@ -426,7 +426,7 @@ export function AdminPaymentDetail() {
         </Card>
 
         <A href="/admin/payments" class="inline-block text-sm text-primary underline">
-          Back to payments
+          Back to payment records
         </A>
       </Show>
     </Page>

@@ -32,10 +32,25 @@ const showToastMock = vi.mocked(showToast);
 describe("StudentHome", () => {
   let markStepDoneMock: ReturnType<typeof vi.fn>;
   let completeStepMock: ReturnType<typeof vi.fn>;
+  let openMaterialMock: ReturnType<typeof vi.fn>;
+
+  const makeStep = (overrides: Record<string, unknown> = {}) => ({
+    id: "s1",
+    title: "Import footage",
+    description: "Bring clips into the editor",
+    materialUrl: "",
+    order: 0,
+    isDone: false,
+    isLocked: false,
+    doneComment: null,
+    doneLink: null,
+    ...overrides,
+  });
 
   beforeEach(() => {
     markStepDoneMock = vi.fn();
     completeStepMock = vi.fn();
+    openMaterialMock = vi.fn();
     useMeMock.mockReturnValue({
       me: () => ({
         displayName: "Alex Rivera",
@@ -46,15 +61,13 @@ describe("StudentHome", () => {
     useMyPlanMock.mockReturnValue({
       plan: () => ({ studentUid: "u1", goalId: "g1" }),
       goal: () => ({ title: "Video Editing Basics", description: "Learn the workflow." }),
-      steps: () => [
-        { id: "s1", title: "Import footage", description: "Bring clips into the editor", isDone: false },
-      ],
+      steps: () => [makeStep()],
       loading: () => false,
       error: () => null,
       progress: () => ({ total: 1, done: 0, percent: 0 }),
       markStepDone: markStepDoneMock,
       completeStep: completeStepMock,
-      openMaterial: vi.fn(),
+      openMaterial: openMaterialMock,
     });
     showToastMock.mockReset();
   });
@@ -66,34 +79,27 @@ describe("StudentHome", () => {
       </I18nProvider>
     ));
     expect(screen.getByText("Welcome back, Alex")).toBeInTheDocument();
-    expect(screen.getByText("Morning, Student")).toBeInTheDocument();
-    expect(screen.getByText("Current lesson")).toBeInTheDocument();
-    expect(screen.getByText("Lessons")).toBeInTheDocument();
+    expect(screen.getByText("Your learning space")).toBeInTheDocument();
+    expect(screen.getByText("Current step")).toBeInTheDocument();
+    expect(screen.getByText("Path steps")).toBeInTheDocument();
     expect(
-      screen.getByText("Your narrative path is waiting. You've completed 0% of your weekly goal."),
+      screen.getByText("Your learning path is waiting. You’ve completed 0% of your goal."),
     ).toBeInTheDocument();
     expect(screen.getAllByText("Import footage").length).toBeGreaterThan(0);
+    expect(screen.getByLabelText("Learning path map")).toBeInTheDocument();
   });
 
   it("embeds official youtube lesson links in the current lesson card", () => {
     useMyPlanMock.mockReturnValue({
       plan: () => ({ studentUid: "u1", goalId: "g1" }),
       goal: () => ({ title: "Video Editing Basics", description: "Learn the workflow." }),
-      steps: () => [
-        {
-          id: "s1",
-          title: "Import footage",
-          description: "Bring clips into the editor",
-          isDone: false,
-          materialUrl: "https://youtu.be/dQw4w9WgXcQ",
-        },
-      ],
+      steps: () => [makeStep({ materialUrl: "https://youtu.be/dQw4w9WgXcQ" })],
       loading: () => false,
       error: () => null,
       progress: () => ({ total: 1, done: 0, percent: 0 }),
       markStepDone: markStepDoneMock,
       completeStep: completeStepMock,
-      openMaterial: vi.fn(),
+      openMaterial: openMaterialMock,
     });
 
     render(() => (
@@ -114,21 +120,13 @@ describe("StudentHome", () => {
     useMyPlanMock.mockReturnValue({
       plan: () => ({ studentUid: "u1", goalId: "g1" }),
       goal: () => ({ title: "Video Editing Basics", description: "Learn the workflow." }),
-      steps: () => [
-        {
-          id: "s1",
-          title: "Import footage",
-          description: "**Bold** with [link](https://example.com)",
-          isDone: false,
-          materialUrl: "",
-        },
-      ],
+      steps: () => [makeStep({ description: "**Bold** with [link](https://example.com)" })],
       loading: () => false,
       error: () => null,
       progress: () => ({ total: 1, done: 0, percent: 0 }),
       markStepDone: markStepDoneMock,
       completeStep: completeStepMock,
-      openMaterial: vi.fn(),
+      openMaterial: openMaterialMock,
     });
 
     render(() => (
@@ -149,21 +147,13 @@ describe("StudentHome", () => {
     useMyPlanMock.mockReturnValue({
       plan: () => ({ studentUid: "u1", goalId: "g1" }),
       goal: () => ({ title: "Video Editing Basics", description: "Learn the workflow." }),
-      steps: () => [
-        {
-          id: "s1",
-          title: "Import footage",
-          description: "Bring clips into the editor",
-          isDone: false,
-          materialUrl: "https://example.com/lesson",
-        },
-      ],
+      steps: () => [makeStep({ materialUrl: "https://example.com/lesson" })],
       loading: () => false,
       error: () => null,
       progress: () => ({ total: 1, done: 0, percent: 0 }),
       markStepDone: markStepDoneMock,
       completeStep: completeStepMock,
-      openMaterial: vi.fn(),
+      openMaterial: openMaterialMock,
     });
 
     render(() => (
@@ -186,7 +176,7 @@ describe("StudentHome", () => {
       progress: () => ({ total: 0, done: 0, percent: 0 }),
       markStepDone: vi.fn(),
       completeStep: vi.fn(),
-      openMaterial: vi.fn(),
+      openMaterial: openMaterialMock,
     });
     render(() => (
       <I18nProvider>
@@ -209,7 +199,7 @@ describe("StudentHome", () => {
       progress: () => ({ total: 0, done: 0, percent: 0 }),
       markStepDone: vi.fn(),
       completeStep: vi.fn(),
-      openMaterial: vi.fn(),
+      openMaterial: openMaterialMock,
     });
     render(() => (
       <I18nProvider>
@@ -226,7 +216,7 @@ describe("StudentHome", () => {
       </I18nProvider>
     ));
 
-    fireEvent.click(screen.getAllByRole("button", { name: "Mark done" })[0]);
+    fireEvent.click(screen.getByRole("button", { name: "Mark as complete" }));
     expect(screen.getByText("Comment (optional)")).toBeInTheDocument();
 
     fireEvent.click(screen.getByText("Cancel"));
@@ -249,14 +239,14 @@ describe("StudentHome", () => {
       </I18nProvider>
     ));
 
-    fireEvent.click(screen.getAllByRole("button", { name: "Mark done" })[0]);
+    fireEvent.click(screen.getByRole("button", { name: "Mark as complete" }));
     fireEvent.input(screen.getByLabelText("Comment (optional)"), {
       target: { value: "comment" },
     });
     fireEvent.input(screen.getByLabelText("Link (optional)"), {
       target: { value: "https://example.com" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Complete lesson" }));
+    fireEvent.click(screen.getByRole("button", { name: "Complete step" }));
 
     expect(completeStepMock).toHaveBeenCalledWith("s1", {
       comment: "comment",
@@ -275,8 +265,8 @@ describe("StudentHome", () => {
       </I18nProvider>
     ));
 
-    fireEvent.click(screen.getAllByRole("button", { name: "Mark done" })[0]);
-    fireEvent.click(screen.getByRole("button", { name: "Complete lesson" }));
+    fireEvent.click(screen.getByRole("button", { name: "Mark as complete" }));
+    fireEvent.click(screen.getByRole("button", { name: "Complete step" }));
 
     await waitFor(() => {
       expect(showToastMock).toHaveBeenCalledWith(
@@ -293,21 +283,19 @@ describe("StudentHome", () => {
       plan: () => ({ studentUid: "u1", goalId: "g1" }),
       goal: () => ({ title: "Video Editing Basics", description: "Learn the workflow." }),
       steps: () => [
-        {
-          id: "s1",
+        makeStep({
           title: "Locked lesson",
           description: "Finish previous work first",
-          isDone: false,
           isLocked: true,
           materialUrl: "https://example.com/lesson",
-        },
+        }),
       ],
       loading: () => false,
       error: () => null,
       progress: () => ({ total: 1, done: 0, percent: 0 }),
       markStepDone: markStepDoneMock,
       completeStep: completeStepMock,
-      openMaterial: vi.fn(),
+      openMaterial: openMaterialMock,
     });
 
     render(() => (
@@ -316,9 +304,9 @@ describe("StudentHome", () => {
       </I18nProvider>
     ));
 
-    expect(screen.getAllByText("Complete previous lessons first").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Complete the previous steps first").length).toBeGreaterThan(0);
     expect(screen.getAllByRole("button", { name: "Open" }).every((button) => button.hasAttribute("disabled"))).toBe(true);
-    expect(screen.getAllByRole("button", { name: "Mark done" }).every((button) => button.hasAttribute("disabled"))).toBe(true);
+    expect(screen.getAllByRole("button", { name: "Mark as complete" }).every((button) => button.hasAttribute("disabled"))).toBe(true);
   });
 
   it("renders done comment and link only when values exist", () => {
@@ -326,29 +314,27 @@ describe("StudentHome", () => {
       plan: () => ({ studentUid: "u1", goalId: "g1" }),
       goal: () => ({ title: "Video Editing Basics", description: "Learn the workflow." }),
       steps: () => [
-        {
-          id: "s1",
-          title: "Import footage",
-          description: "Bring clips into the editor",
-          isDone: true,
+        makeStep({
           doneComment: "Готово",
           doneLink: "https://example.com/work",
-        },
-        {
+          isDone: true,
+        }),
+        makeStep({
           id: "s2",
           title: "Export",
           description: "Export final video",
-          isDone: true,
           doneComment: null,
           doneLink: null,
-        },
+          isDone: true,
+          order: 1,
+        }),
       ],
       loading: () => false,
       error: () => null,
       progress: () => ({ total: 2, done: 2, percent: 100 }),
       markStepDone: markStepDoneMock,
       completeStep: completeStepMock,
-      openMaterial: vi.fn(),
+      openMaterial: openMaterialMock,
     });
     render(() => (
       <I18nProvider>
@@ -366,5 +352,40 @@ describe("StudentHome", () => {
     const linkLabels = screen.getAllByText("Link:");
     expect(commentLabels).toHaveLength(1);
     expect(linkLabels).toHaveLength(1);
+  });
+
+  it("selects a step from the path map and toggles a completed step back to incomplete", async () => {
+    useMyPlanMock.mockReturnValue({
+      plan: () => ({ studentUid: "u1", goalId: "g1" }),
+      goal: () => ({ title: "Video Editing Basics", description: "Learn the workflow." }),
+      steps: () => [
+        makeStep({ id: "s1", title: "Import footage", isDone: true }),
+        makeStep({ id: "s2", title: "Cut selects", order: 1 }),
+      ],
+      loading: () => false,
+      error: () => null,
+      progress: () => ({ total: 2, done: 1, percent: 50 }),
+      markStepDone: markStepDoneMock,
+      completeStep: completeStepMock,
+      openMaterial: openMaterialMock,
+    });
+
+    render(() => (
+      <I18nProvider>
+        <StudentHome />
+      </I18nProvider>
+    ));
+
+    fireEvent.click(screen.getByRole("button", { name: /#02 Cut selects/i }));
+    expect(screen.getByRole("heading", { name: "Cut selects" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /#01 Import footage/i }));
+    expect(screen.getByRole("heading", { name: "Import footage" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Mark as incomplete" }));
+
+    await waitFor(() => {
+      expect(markStepDoneMock).toHaveBeenCalledWith("s1", false);
+    });
   });
 });

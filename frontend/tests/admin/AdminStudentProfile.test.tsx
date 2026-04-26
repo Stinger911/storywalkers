@@ -289,7 +289,7 @@ describe("AdminStudentProfile", () => {
     renderWithShell();
 
     const freeFlag = await screen.findByLabelText(
-      "First 100 students: courses are free",
+      "First 100 students: all courses are free",
     );
     fireEvent.click(freeFlag);
 

@@ -267,8 +267,8 @@ export function AdminStudents() {
                 fallback={
                   <div class="py-8 text-center text-sm text-muted-foreground">
                     {hasActiveFilters()
-                      ? "No students match current filters."
-                      : "No students found."}
+                      ? "No students match the current filters."
+                      : "No students found yet."}
                   </div>
                 }
               >
@@ -278,7 +278,7 @@ export function AdminStudents() {
                       <div class="flex items-start justify-between gap-4">
                         <div>
                           <div class="text-base font-semibold">
-                            {student.displayName || "Unnamed student"}
+                            {student.displayName || "Student without a name"}
                           </div>
                           <div class="text-sm text-muted-foreground">{student.email}</div>
                           <div class="text-xs text-muted-foreground">
@@ -290,7 +290,7 @@ export function AdminStudents() {
                             href={`/admin/students/${student.uid}`}
                             class="text-sm font-medium text-primary underline"
                           >
-                            Open profile
+                            Open student profile
                           </A>
                           <div class="flex flex-wrap justify-end gap-2">
                             <SmallStatBadge>{student.progressPercent ?? 0}%</SmallStatBadge>
@@ -313,8 +313,8 @@ export function AdminStudents() {
                 fallback={
                   <div class="py-8 text-center text-sm text-muted-foreground">
                     {hasActiveFilters()
-                      ? "No staff match current filters."
-                      : "No staff found."}
+                      ? "No staff members match the current filters."
+                      : "No staff members found yet."}
                   </div>
                 }
               >

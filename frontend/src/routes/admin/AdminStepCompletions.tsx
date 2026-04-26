@@ -186,7 +186,7 @@ export function AdminStepCompletions() {
   return (
     <Page
       title="Step completions"
-      subtitle="Review and edit student completion comments and links."
+      subtitle="Review and edit student completion comments, links, and statuses."
       breadcrumb={
         <Breadcrumb>
           <BreadcrumbList>
@@ -294,7 +294,7 @@ export function AdminStepCompletions() {
                           onInput={(event) =>
                             setCommentDraft(event.currentTarget.value)
                           }
-                          placeholder="Comment"
+                          placeholder="Add a comment"
                           data-testid={`edit-comment-${item.id}`}
                           disabled={isSaving()}
                         />
@@ -395,8 +395,7 @@ export function AdminStepCompletions() {
           <DialogHeader>
             <DialogTitle>Revoke completion?</DialogTitle>
             <DialogDescription>
-              This will unmark the student step and remove comment/link on the
-              step. This action cannot be undone.
+              This will unmark the student's step and remove the saved comment and link. This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
