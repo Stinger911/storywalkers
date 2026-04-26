@@ -166,6 +166,8 @@ def test_patch_me_updates_onboarding_fields(monkeypatch):
             "displayName": "User One",
             "email": "u1@example.com",
             "profileForm": {
+                "firstName": "Existing",
+                "lastName": "Name",
                 "telegram": "@old",
                 "socialUrl": None,
                 "experienceLevel": "beginner",
@@ -186,6 +188,8 @@ def test_patch_me_updates_onboarding_fields(monkeypatch):
             "preferredCurrency": "EUR",
             "subscriptionSelected": True,
             "profileForm": {
+                "firstName": "  Alice  ",
+                "lastName": "  Rivera  ",
                 "telegram": "  @new  ",
                 "experienceLevel": "advanced",
             },
@@ -199,16 +203,63 @@ def test_patch_me_updates_onboarding_fields(monkeypatch):
     assert payload["selectedCourses"] == ["course-a", "course-b"]
     assert payload["preferredCurrency"] == "EUR"
     assert payload["subscriptionSelected"] is True
+    assert payload["displayName"] == "Alice Rivera"
+    assert payload["profileForm"]["firstName"] == "Alice"
+    assert payload["profileForm"]["lastName"] == "Rivera"
     assert payload["profileForm"]["telegram"] == "@new"
     assert payload["profileForm"]["experienceLevel"] == "advanced"
     assert payload["profileForm"]["socialUrl"] is None
+    assert users["u1"]["displayName"] == "Alice Rivera"
     assert users["u1"]["selectedGoalId"] == "goal-1"
     assert users["u1"]["selectedCourses"] == ["course-a", "course-b"]
     assert users["u1"]["preferredCurrency"] == "EUR"
     assert users["u1"]["subscriptionSelected"] is True
+    assert users["u1"]["profileForm"]["firstName"] == "Alice"
+    assert users["u1"]["profileForm"]["lastName"] == "Rivera"
     assert users["u1"]["profileForm"]["telegram"] == "@new"
     assert users["u1"]["profileForm"]["experienceLevel"] == "advanced"
     assert users["u1"]["updatedAt"] == "SERVER_TIMESTAMP"
+
+    app.dependency_overrides.clear()
+
+
+def test_patch_me_clears_display_name_when_profile_names_are_removed(monkeypatch):
+    users = {
+        "u1": {
+            "displayName": "Alice Rivera",
+            "email": "u1@example.com",
+            "profileForm": {
+                "firstName": "Alice",
+                "lastName": "Rivera",
+                "aboutMe": "Existing bio",
+                "telegram": "@alice",
+                "socialLinks": [],
+                "socialUrl": None,
+                "notes": "Existing bio",
+            },
+        }
+    }
+    fake_db = FakeFirestore(users)
+    monkeypatch.setattr(auth, "get_firestore_client", lambda: fake_db)
+    app.dependency_overrides[auth_deps.get_current_user] = _override_user
+    client = TestClient(app)
+
+    response = client.patch(
+        "/api/me",
+        json={
+            "profileForm": {
+                "firstName": "   ",
+                "lastName": "   ",
+                "aboutMe": "Updated bio",
+            }
+        },
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["displayName"] == ""
+    assert payload["profileForm"]["firstName"] is None
+    assert payload["profileForm"]["lastName"] is None
+    assert users["u1"]["displayName"] == ""
 
     app.dependency_overrides.clear()
 

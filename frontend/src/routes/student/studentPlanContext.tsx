@@ -9,29 +9,17 @@ import {
   updateMyStepProgress,
   type PlanStep as ApiPlanStep,
 } from "../../lib/studentApi";
+import type { StudentPathStep } from "./studentPathTypes";
 
 type StudentPlan = {
   studentUid: string;
   goalId: string;
 };
 
-type PlanStep = {
-  id: string;
-  title: string;
-  description: string;
-  materialUrl: string;
-  order: number;
-  isDone: boolean;
-  isLocked: boolean;
-  doneAt?: { toDate?: () => Date } | null;
-  doneComment?: string | null;
-  doneLink?: string | null;
-};
-
 type StudentPlanState = {
   plan: () => StudentPlan | null;
   goal: () => Goal | null;
-  steps: () => PlanStep[];
+  steps: () => StudentPathStep[];
   loading: () => boolean;
   error: () => string | null;
   progress: () => { total: number; done: number; percent: number };
@@ -47,7 +35,7 @@ export function StudentPlanProvider(props: { children: JSX.Element }) {
   const auth = useAuth();
   const [plan, setPlan] = createSignal<StudentPlan | null>(null);
   const [goal, setGoal] = createSignal<Goal | null>(null);
-  const [steps, setSteps] = createSignal<PlanStep[]>([]);
+  const [steps, setSteps] = createSignal<StudentPathStep[]>([]);
   const [loading, setLoading] = createSignal(true);
   const [error, setError] = createSignal<string | null>(null);
 

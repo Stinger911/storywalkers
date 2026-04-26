@@ -33,6 +33,8 @@ PHONE_LIKE_RE = re.compile(r"^[0-9+\-\s()]+$")
 
 
 class ProfileFormModel(BaseModel):
+    firstName: str | None = None
+    lastName: str | None = None
     aboutMe: str | None = None
     telegram: str | None = None
     socialLinks: list[str] = Field(default_factory=list)
@@ -41,6 +43,36 @@ class ProfileFormModel(BaseModel):
     notes: str | None = None
 
     model_config = {"extra": "forbid"}
+
+    @field_validator("firstName", "lastName", mode="before")
+    @classmethod
+    def _trim_name_part(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        trimmed = value.strip()
+        return trimmed or None
+
+    @field_validator("firstName")
+    @classmethod
+    def _validate_first_name(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        if len(value) > 60:
+            raise PydanticCustomError(
+                "first_name_max_length", "firstName must be 60 characters or fewer"
+            )
+        return value
+
+    @field_validator("lastName")
+    @classmethod
+    def _validate_last_name(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        if len(value) > 60:
+            raise PydanticCustomError(
+                "last_name_max_length", "lastName must be 60 characters or fewer"
+            )
+        return value
 
     @field_validator("aboutMe", mode="before")
     @classmethod
@@ -311,7 +343,7 @@ def _sanitize_profile_form(
     merged = dict(existing or {})
     payload = incoming.model_dump(exclude_unset=True)
     for key, value in payload.items():
-        if key in {"aboutMe", "telegram", "socialUrl", "notes"}:
+        if key in {"firstName", "lastName", "aboutMe", "telegram", "socialUrl", "notes"}:
             merged[key] = _sanitize_optional_text(value)
         else:
             merged[key] = value
@@ -319,6 +351,8 @@ def _sanitize_profile_form(
     if not social_links and _sanitize_optional_text(merged.get("socialUrl")):
         social_links = [_sanitize_optional_text(merged.get("socialUrl"))]
     normalized = {
+        "firstName": _sanitize_optional_text(merged.get("firstName")),
+        "lastName": _sanitize_optional_text(merged.get("lastName")),
         "aboutMe": _sanitize_optional_text(merged.get("aboutMe"))
         or _sanitize_optional_text(merged.get("notes")),
         "telegram": _sanitize_optional_text(merged.get("telegram")),
@@ -337,6 +371,8 @@ def _sanitize_profile_form(
         return validated
     except Exception:
         return {
+            "firstName": None,
+            "lastName": None,
             "aboutMe": None,
             "telegram": None,
             "socialLinks": [],
@@ -435,6 +471,11 @@ async def patch_me(
             else None,
             payload.profileForm or ProfileFormModel(),
         )
+        first_name = _sanitize_optional_text(updates["profileForm"].get("firstName"))
+        last_name = _sanitize_optional_text(updates["profileForm"].get("lastName"))
+        updates["displayName"] = " ".join(
+            part for part in [first_name, last_name] if part
+        )
 
     before_step = _onboarding_step(current)
     next_state = {**current, **updates}
@@ -473,9 +514,11 @@ async def patch_me(
     me_response = {
         "uid": user["uid"],
         "email": user.get("email") or current.get("email") or "",
-        "displayName": response_data.get("displayName")
-        or user.get("displayName")
-        or "",
+        "displayName": (
+            response_data["displayName"]
+            if "displayName" in response_data
+            else user.get("displayName") or ""
+        ),
         "role": role,
         "status": current_status,
         "roleRaw": role_raw,

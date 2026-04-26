@@ -17,14 +17,9 @@ import { Markdown } from '../../components/ui/markdown'
 import { useMe } from '../../lib/useMe'
 import { useI18n } from '../../lib/i18n'
 import { useMyPlan } from './studentPlanContext'
+import { StudentPathVisualization } from './StudentPathVisualization'
 import { cn } from '../../lib/utils'
 import { getYouTubeEmbedUrl } from '../../lib/youtube'
-
-function clampWords(value: string, limit: number): string {
-  const words = value.trim().split(/\s+/).filter(Boolean)
-  if (words.length <= limit) return value.trim()
-  return `${words.slice(0, limit).join(' ')}...`
-}
 
 export function StudentHome() {
   const { me } = useMe()
@@ -41,21 +36,10 @@ export function StudentHome() {
   })
   const currentStep = createMemo(() => steps().find((step) => !step.isDone) ?? null)
   const currentStepEmbedUrl = createMemo(() => getYouTubeEmbedUrl(currentStep()?.materialUrl))
-  const currentStepPreview = createMemo(() =>
-    clampWords(
-      currentStep()?.description ?? goal()?.description ?? t('student.home.goalFallbackDescription'),
-      20,
-    ),
-  )
   const ownedCoursesCount = createMemo(
     () => me()?.selectedCourses?.filter((value) => typeof value === "string").length ?? 0,
   )
   const completedLessonsCount = createMemo(() => progress().done)
-  const progressSegments = createMemo(() => {
-    const total = Math.max(5, progress().total || 5)
-    const done = Math.round((progress().percent / 100) * total)
-    return Array.from({ length: 5 }, (_, index) => index < Math.max(0, Math.min(5, done)))
-  })
   const recentActivity = createMemo(() => {
     const completed = steps().filter((step) => step.isDone).slice(0, 2)
     const items = [
@@ -209,125 +193,100 @@ export function StudentHome() {
             </SectionCard>
           }
         >
-          <div class="grid gap-6 lg:grid-cols-[minmax(0,1.45fr)_320px]">
-            <Card class="overflow-hidden rounded-[calc(var(--radius-lg)+6px)] border-0 bg-white shadow-card">
-              <CardContent class="grid h-full p-0 md:grid-cols-[280px_minmax(0,1fr)]">
-                <div class="relative min-h-[20rem]">
-                  <img
-                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuDbNpOb3tFt84AITYntI1FAatWzBLHEEAV1QVEUUlhnmVukG6tS0HuwAjZseDPEyYbjl4JuH9Q55n7C9f5xZcaYfwpPGlbNYy4O0OYP3wyuFrivvpRfzyw9FRvVEYP6Zdw3NTHzvJLXssXjHlY1GSlBpSvn_5FB-IzgiB_pG2lQrQxqFVhygJHxDaaV0th-dEXEnuGJ5wF7476SbknwIuve3K5pE4YI2PV_LqpS82raEaBmIUpPQJXd2UHg56PlawnjxYwVQl5-1h3H"
-                    alt=""
-                    class="absolute inset-0 h-full w-full object-cover"
-                  />
-                  <div class="absolute inset-0 bg-[linear-gradient(180deg,rgba(8,19,28,0.18)_0%,rgba(8,19,28,0.82)_100%)]" />
-                  <div class="absolute inset-x-0 bottom-0 p-6 text-white">
-                    <span class="inline-flex rounded bg-[#2a683a] px-2 py-1 text-[10px] font-bold uppercase tracking-[0.12em]">
-                      {t('student.home.statusInProgress')}
-                    </span>
-                    <h2 class="mt-4 max-w-[12ch] text-4xl font-bold tracking-[-0.04em]">
-                      {goal()?.title ?? t('student.home.goalFallbackTitle')}
-                    </h2>
+          <SectionCard
+            title={t('student.home.stepsTitle')}
+            description={t('student.home.stepsDescription')}
+          >
+            <Show
+              when={steps().length > 0}
+              fallback={
+                <div class="flex flex-wrap items-center justify-between gap-4 text-sm text-muted-foreground">
+                  <span>{t('student.home.stepsEmpty')}</span>
+                  <div class="flex items-center gap-3">
+                    <a href="/student/questions" class="text-primary underline">
+                      {t('student.home.stepsAskQuestion')}
+                    </a>
+                    <a href="/student/library" class="text-primary underline">
+                      {t('student.home.stepsBrowseLibrary')}
+                    </a>
                   </div>
                 </div>
-                <div class="flex flex-col justify-center p-6 sm:p-8">
-                  <div class="mb-8">
-                    <div class="mb-3 flex items-end justify-between gap-3">
-                      <span class="text-[11px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
-                        {t('student.home.progressLabel')}
-                      </span>
-                      <span class="text-4xl font-extrabold tracking-[-0.04em] text-primary">
-                        {progress().percent}%
-                      </span>
-                    </div>
-                    <div class="flex gap-1.5">
-                      {progressSegments().map((filled) => (
-                        <span
-                          class={cn(
-                            "h-2 flex-1 rounded-full",
-                            filled ? "bg-[#2a683a]" : "bg-[rgba(217,227,241,0.95)]",
-                          )}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                  <p class="mb-8 text-sm leading-8 text-muted-foreground">
-                    {currentStepPreview()}
+              }
+            >
+              <StudentPathVisualization
+                steps={steps()}
+                initialStepId={currentStep()?.id ?? steps()[0]?.id ?? null}
+                ariaLabel={t('student.home.pathMapAriaLabel')}
+                openLabel={t('common.open')}
+                markDoneLabel={t('student.home.markDone')}
+                markNotDoneLabel={t('student.home.markNotDone')}
+                lockedLabel={t('student.home.stepLocked')}
+                doneCommentLabel={t('student.home.doneCommentLabel')}
+                doneLinkLabel={t('student.home.doneLinkLabel')}
+                materialLabel={t('student.home.currentStepMaterial')}
+                onOpenMaterial={openMaterial}
+                onToggleStep={(step) => {
+                  if (step.isLocked) return
+                  if (step.isDone) {
+                    void markStepDone(step.id, false)
+                    return
+                  }
+                  openCompleteDialog(step.id)
+                }}
+              />
+            </Show>
+          </SectionCard>
+
+          <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <Card class="student-stat-card border-0 shadow-none">
+              <CardContent class="flex items-center justify-between p-6">
+                <div>
+                  <p class="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
+                    {t('student.home.ongoingCourses')}
                   </p>
-                  <div class="flex flex-wrap gap-3">
-                    <Button
-                      class="h-12 rounded-[var(--radius-md)] bg-[linear-gradient(135deg,#2f5f8d_0%,#4a78a7_100%)] px-8 text-sm font-bold shadow-card"
-                      onClick={() => {
-                        document
-                          .getElementById('current-lesson-details')
-                          ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-                      }}
-                    >
-                      {t('student.home.continueJourney')}
-                    </Button>
-                    <Show when={currentStep() && !currentStep()?.isLocked}>
-                      <Button
-                        variant="outline"
-                        class="h-12 rounded-[var(--radius-md)]"
-                        onClick={() => openCompleteDialog(currentStep()!.id)}
-                      >
-                        {t('student.home.currentStepMarkDone')}
-                      </Button>
-                    </Show>
-                  </div>
+                  <p class="mt-2 text-4xl font-extrabold tracking-[-0.04em] text-foreground">
+                    {String(ownedCoursesCount()).padStart(2, "0")}
+                  </p>
                 </div>
+                <span class="material-symbols-outlined text-4xl text-primary">
+                  play_circle
+                </span>
               </CardContent>
             </Card>
 
-            <div class="space-y-4">
-              <Card class="student-stat-card border-0 shadow-none">
-                <CardContent class="flex items-center justify-between p-6">
-                  <div>
-                    <p class="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
-                      {t('student.home.ongoingCourses')}
-                    </p>
-                    <p class="mt-2 text-4xl font-extrabold tracking-[-0.04em] text-foreground">
-                      {String(ownedCoursesCount()).padStart(2, "0")}
-                    </p>
-                  </div>
-                  <span class="material-symbols-outlined text-4xl text-primary">
-                    play_circle
-                  </span>
-                </CardContent>
-              </Card>
-
-              <Card class="student-stat-card border-0 shadow-none">
-                <CardContent class="flex items-center justify-between p-6">
-                  <div>
-                    <p class="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
-                      {t('student.home.completedLessons')}
-                    </p>
-                    <p class="mt-2 text-4xl font-extrabold tracking-[-0.04em] text-foreground">
-                      {String(completedLessonsCount()).padStart(2, "0")}
-                    </p>
-                  </div>
-                  <span class="material-symbols-outlined text-4xl text-[#2a683a]">
-                    task_alt
-                  </span>
-                </CardContent>
-              </Card>
-
-              <Card class="overflow-hidden rounded-[calc(var(--radius-lg)+2px)] border-0 bg-primary text-white shadow-none">
-                <CardContent class="relative p-6">
-                  <p class="text-[10px] font-bold uppercase tracking-[0.14em] text-[rgba(209,228,255,0.95)]">
-                    {t('student.home.nextMilestone')}
+            <Card class="student-stat-card border-0 shadow-none">
+              <CardContent class="flex items-center justify-between p-6">
+                <div>
+                  <p class="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
+                    {t('student.home.completedLessons')}
                   </p>
-                  <p class="mt-2 text-2xl font-bold tracking-[-0.04em]">
-                    {currentStep()?.title ?? t('student.home.currentStepEmpty')}
+                  <p class="mt-2 text-4xl font-extrabold tracking-[-0.04em] text-foreground">
+                    {String(completedLessonsCount()).padStart(2, "0")}
                   </p>
-                  <div class="mt-4 flex items-center gap-2 text-xs text-white/85">
-                    <span class="material-symbols-outlined text-sm">flag</span>
-                    <span>{t('student.home.milestoneProgress', { done: progress().done, total: progress().total })}</span>
-                  </div>
-                  <span class="material-symbols-outlined pointer-events-none absolute -bottom-3 -right-3 text-[7rem] text-white/10">
-                    auto_stories
-                  </span>
-                </CardContent>
-              </Card>
-            </div>
+                </div>
+                <span class="material-symbols-outlined text-4xl text-[#2a683a]">
+                  task_alt
+                </span>
+              </CardContent>
+            </Card>
+
+            <Card class="overflow-hidden rounded-[calc(var(--radius-lg)+2px)] border-0 bg-primary text-white shadow-none">
+              <CardContent class="relative p-6">
+                <p class="text-[10px] font-bold uppercase tracking-[0.14em] text-[rgba(209,228,255,0.95)]">
+                  {t('student.home.nextMilestone')}
+                </p>
+                <p class="mt-2 text-2xl font-bold tracking-[-0.04em]">
+                  {currentStep()?.title ?? t('student.home.currentStepEmpty')}
+                </p>
+                <div class="mt-4 flex items-center gap-2 text-xs text-white/85">
+                  <span class="material-symbols-outlined text-sm">flag</span>
+                  <span>{t('student.home.milestoneProgress', { done: progress().done, total: progress().total })}</span>
+                </div>
+                <span class="material-symbols-outlined pointer-events-none absolute -bottom-3 -right-3 text-[7rem] text-white/10">
+                  auto_stories
+                </span>
+              </CardContent>
+            </Card>
           </div>
 
           <div class="grid gap-6 lg:grid-cols-[minmax(0,1.3fr)_360px]">
@@ -509,131 +468,6 @@ export function StudentHome() {
             </Show>
           </SectionCard>
 
-          <SectionCard
-            title={t('student.home.stepsTitle')}
-            description={t('student.home.stepsDescription')}
-          >
-            <Show
-              when={steps().length > 0}
-              fallback={
-                <div class="flex flex-wrap items-center justify-between gap-4 text-sm text-muted-foreground">
-                  <span>{t('student.home.stepsEmpty')}</span>
-                  <div class="flex items-center gap-3">
-                    <a href="/student/questions" class="text-primary underline">
-                      {t('student.home.stepsAskQuestion')}
-                    </a>
-                    <a href="/student/library" class="text-primary underline">
-                      {t('student.home.stepsBrowseLibrary')}
-                    </a>
-                  </div>
-                </div>
-              }
-            >
-              <div class="grid gap-4">
-                {steps().map((step) => (
-                  <div
-                    class={cn(
-                      'student-list-card rounded-[calc(var(--radius-md)+2px)] border border-border/70 bg-card px-4 py-4 shadow-none',
-                      step.isLocked && 'opacity-60',
-                    )}
-                  >
-                    <div class="flex items-center justify-between gap-4">
-                      <div class="flex items-center gap-3 min-w-0">
-                        <span
-                          class={cn(
-                            "material-symbols-outlined text-[22px]",
-                            step.isDone
-                              ? "text-success-foreground"
-                              : "text-muted-foreground",
-                          )}
-                        >
-                          {step.isDone ? "check_circle" : step.isLocked ? "lock" : "schedule"}
-                        </span>
-                        <div class="min-w-0 max-w-[520px]">
-                          <div
-                            class={cn(
-                              "truncate text-sm font-semibold",
-                              step.isLocked && "text-muted-foreground",
-                            )}
-                          >
-                            {step.title}
-                          </div>
-                          <Markdown
-                            class="line-clamp-2 text-xs text-muted-foreground [&_a]:text-primary [&_a]:underline [&_code]:rounded [&_code]:bg-muted [&_code]:px-1 [&_code]:py-0.5 [&_ol]:ml-4 [&_ol]:list-decimal [&_p]:m-0 [&_ul]:ml-4 [&_ul]:list-disc"
-                            content={step.description}
-                          />
-                          <Show when={step.isLocked}>
-                            <div class="mt-2 text-xs font-medium text-muted-foreground">
-                              {t('student.home.stepLocked')}
-                            </div>
-                          </Show>
-                          <Show when={step.isDone && step.doneComment}>
-                            <div class="mt-2 text-xs">
-                              <span class="font-semibold">{t('student.home.doneCommentLabel')} </span>
-                              <span class="text-muted-foreground">{step.doneComment}</span>
-                            </div>
-                          </Show>
-                          <Show when={step.isDone && step.doneLink}>
-                            <div class="mt-1 text-xs">
-                              <span class="font-semibold">{t('student.home.doneLinkLabel')} </span>
-                              <a
-                                href={step.doneLink ?? "#"}
-                                target="_blank"
-                                rel="noopener"
-                                class="text-primary underline"
-                              >
-                                {step.doneLink}
-                              </a>
-                            </div>
-                          </Show>
-                        </div>
-                      </div>
-                      <div class="flex items-center gap-2">
-                        {step.materialUrl ? (
-                          <button
-                            class={buttonVariants({ size: "sm" })}
-                            onClick={() => openMaterial(step.materialUrl)}
-                            disabled={step.isLocked}
-                          >
-                            {t('common.open')}
-                          </button>
-                        ) : (
-                          <Button size="sm" disabled>
-                            {t('common.open')}
-                          </Button>
-                        )}
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          aria-label={
-                            step.isDone
-                              ? t('student.home.markNotDone')
-                              : t('student.home.markDone')
-                          }
-                          title={
-                            step.isDone
-                              ? t('student.home.markNotDone')
-                              : t('student.home.markDone')
-                          }
-                          disabled={step.isLocked}
-                          onClick={() => {
-                            if (step.isLocked) return
-                            if (step.isDone) {
-                              void markStepDone(step.id, false)
-                              return
-                            }
-                            openCompleteDialog(step.id)
-                          }}
-                        >
-                          <span class="material-symbols-outlined text-[18px]">check</span>
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </Show>
-          </SectionCard>
         </Show>
       </Show>
 

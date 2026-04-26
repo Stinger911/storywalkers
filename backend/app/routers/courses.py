@@ -100,6 +100,13 @@ def _lesson_from_doc(snap: firestore.DocumentSnapshot) -> dict[str, Any]:
     }
 
 
+def _clamp_words(value: str, limit: int) -> str:
+    words = value.strip().split()
+    if len(words) <= limit:
+        return value.strip()
+    return " ".join(words[:limit])
+
+
 def _ensure_active_status(user: dict) -> None:
     if user.get("status") != "active":
         raise AppError(
@@ -107,6 +114,14 @@ def _ensure_active_status(user: dict) -> None:
             message="Account disabled",
             status_code=403,
         )
+
+
+def _is_restricted_student(user: dict) -> bool:
+    return user.get("role") == "student" and user.get("status") in {
+        "disabled",
+        "community_only",
+        "expired",
+    }
 
 
 @router.get("/courses")
@@ -286,7 +301,6 @@ async def list_course_lessons(
     course_id: str,
     user: dict = Depends(get_current_user),
 ):
-    _ = user
     db = get_firestore_client()
     course_ref = db.collection("courses").document(course_id)
     if not course_ref.get().exists:
@@ -296,8 +310,13 @@ async def list_course_lessons(
         course_ref.collection("lessons").where("isActive", "==", True).order_by("order")
     )
     items: list[dict[str, Any]] = []
+    restricted_student = _is_restricted_student(user)
     for snap in query.stream():
-        items.append(_lesson_from_doc(snap))
+        lesson = _lesson_from_doc(snap)
+        if restricted_student:
+            lesson["content"] = _clamp_words(lesson["content"], 20)
+            lesson["materialUrl"] = None
+        items.append(lesson)
     return {"items": items}
 
 

@@ -363,13 +363,15 @@ def test_fx_rates_falls_back_to_cached_doc_when_live_refresh_fails(monkeypatch):
 
 
 def test_onboarding_user_can_list_active_lessons(monkeypatch):
+    long_content = " ".join(f"word{i}" for i in range(1, 26))
     fake_db = FakeFirestore(
         courses_data={"c1": {"title": "Course A"}},
         lesson_data={
             "c1": {
                 "l1": {
                     "title": "Lesson 1",
-                    "content": "Text 1",
+                    "content": long_content,
+                    "materialUrl": "https://example.com/material",
                     "order": 2,
                     "isActive": True,
                 },
@@ -391,6 +393,10 @@ def test_onboarding_user_can_list_active_lessons(monkeypatch):
     assert response.status_code == 200
     payload = response.json()
     assert [item["id"] for item in payload["items"]] == ["l1"]
+    assert payload["items"][0]["content"] == " ".join(
+        f"word{i}" for i in range(1, 21)
+    )
+    assert payload["items"][0]["materialUrl"] is None
 
     app.dependency_overrides.clear()
 
@@ -403,6 +409,7 @@ def test_active_student_can_read_active_lessons(monkeypatch):
                 "l1": {
                     "title": "Lesson 1",
                     "content": "Text 1",
+                    "materialUrl": "https://example.com/material",
                     "order": 2,
                     "isActive": True,
                 },
@@ -424,6 +431,42 @@ def test_active_student_can_read_active_lessons(monkeypatch):
     assert response.status_code == 200
     payload = response.json()
     assert [item["id"] for item in payload["items"]] == ["l1"]
+    assert payload["items"][0]["content"] == "Text 1"
+    assert payload["items"][0]["materialUrl"] == "https://example.com/material"
+
+    app.dependency_overrides.clear()
+
+
+def test_community_only_student_lesson_list_is_redacted(monkeypatch):
+    long_content = " ".join(f"word{i}" for i in range(1, 23))
+    fake_db = FakeFirestore(
+        courses_data={"c1": {"title": "Course A"}},
+        lesson_data={
+            "c1": {
+                "l1": {
+                    "title": "Lesson 1",
+                    "content": long_content,
+                    "materialUrl": "https://example.com/material",
+                    "order": 1,
+                    "isActive": True,
+                }
+            }
+        },
+    )
+    monkeypatch.setattr(courses, "get_firestore_client", lambda: fake_db)
+    app.dependency_overrides[auth_deps.get_current_user] = lambda: _student(
+        "community_only"
+    )
+    client = TestClient(app)
+
+    response = client.get("/api/courses/c1/lessons")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["items"][0]["content"] == " ".join(
+        f"word{i}" for i in range(1, 21)
+    )
+    assert payload["items"][0]["materialUrl"] is None
 
     app.dependency_overrides.clear()
 
