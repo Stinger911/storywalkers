@@ -124,7 +124,9 @@ describe("OnboardingCourses", () => {
     ));
 
     expect(await screen.findByText("Course One")).toBeInTheDocument();
-    expect(screen.getByText("6 lessons")).toBeInTheDocument();
+    expect(screen.getByText("Mandatory")).toBeInTheDocument();
+    expect(screen.getByText("Included by default")).toBeInTheDocument();
+    expect(screen.getByText("6 steps")).toBeInTheDocument();
     expect(listCourses).toHaveBeenCalledWith({ goalId: "goal-1" });
 
     fireEvent.click(screen.getByText("Course One"));
@@ -174,10 +176,10 @@ describe("OnboardingCourses", () => {
       </I18nProvider>
     ));
 
-    expect(await screen.findByText("Unavailable courses")).toBeInTheDocument();
+    expect(await screen.findByText("Unavailable paths")).toBeInTheDocument();
     expect(listCourses).toHaveBeenCalledWith({ goalId: "goal-1" });
     expect(screen.getByText("Course Two")).toBeInTheDocument();
-    expect(screen.getByText("4 lessons")).toBeInTheDocument();
+    expect(screen.getByText("4 steps")).toBeInTheDocument();
 
     fireEvent.click(screen.getByText("Course One"));
     fireEvent.click(screen.getByRole("button", { name: "Next" }));
@@ -224,6 +226,47 @@ describe("OnboardingCourses", () => {
     fireEvent.click(screen.getByText("Course One"));
     await waitFor(() => {
       expect(screen.getAllByText("$22.22")).toHaveLength(2);
+    });
+  });
+
+  it("forces community to stay selected even when saved profile has it disabled", async () => {
+    meState = {
+      ...meState,
+      subscriptionSelected: false,
+    };
+    vi.mocked(listCourses).mockResolvedValue({
+      items: [
+        {
+          id: "course-1",
+          title: "Course One",
+          shortDescription: "Desc one",
+          priceUsdCents: 4000,
+          isActive: true,
+          goalIds: ["goal-1"],
+          lessonCount: 6,
+        },
+      ],
+    });
+    patchMeMock.mockResolvedValue({});
+
+    render(() => (
+      <I18nProvider>
+        <OnboardingCourses />
+      </I18nProvider>
+    ));
+
+    expect(await screen.findByText("Course One")).toBeInTheDocument();
+    expect(screen.getByText("StoryWalkers Community")).toBeInTheDocument();
+    expect(screen.getAllByText("$22.22").length).toBeGreaterThan(0);
+
+    fireEvent.click(screen.getByText("Course One"));
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+
+    await waitFor(() => {
+      expect(patchMeMock).toHaveBeenCalledWith({
+        selectedCourses: ["course-1"],
+        subscriptionSelected: true,
+      });
     });
   });
 });

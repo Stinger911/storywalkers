@@ -20,7 +20,7 @@ const adminNavItems = [
   { href: "/admin/courses", label: "Courses", icon: "school" },
   {
     href: "/admin/step-completions",
-    label: "Lesson Completions",
+    label: "Step Completions",
     icon: "fact_check",
   },
   { href: "/admin/payments", label: "Payments", icon: "payments" },
@@ -70,7 +70,7 @@ export function AdminLayout(props: AdminLayoutProps) {
                 <span class="material-symbols-outlined text-[18px]">search</span>
                 <input
                   type="search"
-                  placeholder="Search records..."
+                  placeholder="Search records"
                   class="w-full border-0 bg-transparent p-0 text-sm text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus:ring-0"
                 />
               </div>
@@ -84,7 +84,7 @@ export function AdminLayout(props: AdminLayoutProps) {
                     {auth.me()?.displayName || "Admin User"}
                   </p>
                   <p class="text-[10px] text-muted-foreground">
-                    Senior Curator
+                    Staff member
                   </p>
                 </div>
                 <Avatar class="h-9 w-9 rounded-[var(--radius-md)] border-2 border-white bg-primary/20 text-primary">
@@ -122,14 +122,14 @@ export function AdminLayout(props: AdminLayoutProps) {
                         Admin Console
                       </div>
                       <div class="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
-                        Management Portal
+                        Admin workspace
                       </div>
                     </div>
                   </div>
                 </div>
                 <div>
                   <div class="px-2 pb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground/70">
-                    Main Workspace
+                    Main navigation
                   </div>
                   <nav class="grid gap-1">
                     <A
@@ -147,7 +147,7 @@ export function AdminLayout(props: AdminLayoutProps) {
                       <span class="material-symbols-outlined text-[20px]">
                         dashboard
                       </span>
-                      <span>Console</span>
+                      <span>Overview</span>
                     </A>
                     {adminNavItems.map((item) => (
                       <A
@@ -180,7 +180,7 @@ export function AdminLayout(props: AdminLayoutProps) {
                   <span class="material-symbols-outlined text-[18px]">
                     bug_report
                   </span>
-                  <span>Report a bug</span>
+                  <span>Report bug</span>
                 </a>
               </div>
             </aside>

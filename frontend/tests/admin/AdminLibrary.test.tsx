@@ -46,7 +46,7 @@ describe("AdminLibrary", () => {
 
     render(() => <AdminLibrary />);
 
-    expect(await screen.findByRole("link", { name: "Manage" })).toHaveAttribute(
+    expect(await screen.findByRole("link", { name: "Open entry" })).toHaveAttribute(
       "href",
       "/admin/library/entry-1",
     );

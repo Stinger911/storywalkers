@@ -16,9 +16,9 @@ vi.mock("../../src/components/AppShell", () => ({
 }));
 
 describe("AdminHome", () => {
-  it("shows lesson completions entry label", () => {
+  it("shows step completions entry label", () => {
     render(() => <AdminHome />);
 
-    expect(screen.getByText("Lesson Completions")).toBeInTheDocument();
+    expect(screen.getByText("Step Completions")).toBeInTheDocument();
   });
 });

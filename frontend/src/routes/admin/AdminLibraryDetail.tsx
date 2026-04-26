@@ -149,7 +149,7 @@ export function AdminLibraryDetail() {
   return (
     <Page
       title={isNew() ? "New library entry" : "Edit library entry"}
-      subtitle="Draft, edit, and publish guidance for students."
+      subtitle="Draft, edit, and publish library content for students."
       breadcrumb={
         <Breadcrumb>
           <BreadcrumbList>
@@ -169,7 +169,7 @@ export function AdminLibraryDetail() {
       }
       actions={
         <A href="/admin/library" class="text-sm text-primary underline">
-          Back to library
+          Back to library list
         </A>
       }
     >
@@ -211,7 +211,7 @@ export function AdminLibraryDetail() {
                   setForm({ ...form(), categoryId: e.currentTarget.value })
                 }
               >
-                <option value="">Select category</option>
+                <option value="">Select a category</option>
                 {categories().map((category) => (
                   <option value={category.id}>{category.name}</option>
                 ))}

@@ -108,11 +108,11 @@ describe("OnboardingCheckout", () => {
 
     expect(await screen.findByText("Video Creator")).toBeInTheDocument();
     expect(await screen.findByText("Course One")).toBeInTheDocument();
-    expect(screen.getByText("Community")).toBeInTheDocument();
+    expect(screen.getByText("StoryWalkers Community")).toBeInTheDocument();
     expect(screen.getByText("$62.22")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Go to Boosty" })).toBeInTheDocument();
     expect(
-      screen.getByText("Activation is manual after human review. Please wait for confirmation from the team."),
+      screen.getByText("Access is activated manually after review. Please wait for confirmation from the team."),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: "Contact Support" }),
@@ -169,8 +169,43 @@ describe("OnboardingCheckout", () => {
     expect(screen.getByRole("link", { name: "Go to Boosty" })).toBeInTheDocument();
     expect(
       screen.getByText(
-        "You are in the first 100 students cohort. No payment is required. The team will confirm access manually.",
+        "You are in the first 100 students cohort. No payment is required. The team will confirm your access manually.",
       ),
     ).toBeInTheDocument();
+    expect(screen.getByText("Congratulations!")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "You are one of the first 100 students on our platform. All current and future courses will be free for you.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("still includes mandatory community when saved profile has it disabled", async () => {
+    meState = {
+      ...meState,
+      subscriptionSelected: false,
+    };
+    vi.mocked(listCourses).mockResolvedValue({
+      items: [
+        {
+          id: "course-1",
+          title: "Course One",
+          shortDescription: "Desc one",
+          priceUsdCents: 4000,
+          isActive: true,
+          goalIds: ["goal-1"],
+        },
+      ],
+    });
+
+    render(() => (
+      <I18nProvider>
+        <OnboardingCheckout />
+      </I18nProvider>
+    ));
+
+    expect(await screen.findByText("Course One")).toBeInTheDocument();
+    expect(screen.getByText("StoryWalkers Community")).toBeInTheDocument();
+    expect(screen.getByText("$62.22")).toBeInTheDocument();
   });
 });

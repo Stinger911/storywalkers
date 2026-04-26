@@ -63,7 +63,7 @@ export function AdminQuestions() {
   return (
     <Page
       title="Student questions"
-      subtitle="Review new questions and respond with published answers."
+      subtitle="Review student questions and respond with published answers."
       breadcrumb={
         <Breadcrumb>
           <BreadcrumbList>
@@ -83,7 +83,7 @@ export function AdminQuestions() {
         </Button>
       }
     >
-      <SectionCard title="Filters" description="Refine by status, category, or student name.">
+      <SectionCard title="Filters" description="Filter by status, category, or student name.">
         <div class="mt-4 grid gap-4 md:grid-cols-3">
           <div class="grid gap-2">
             <label class="text-sm font-medium" for="question-status">
@@ -178,7 +178,7 @@ export function AdminQuestions() {
                     href={`/admin/questions/${question.id}`}
                     class="text-sm font-medium text-primary underline"
                   >
-                    Review
+                    Open question
                   </A>
                 </div>
               </div>

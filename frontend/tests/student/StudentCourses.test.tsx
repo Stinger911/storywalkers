@@ -138,7 +138,7 @@ describe("StudentCourses", () => {
     ));
 
     expect(await screen.findByText("New course")).toBeInTheDocument();
-    expect(screen.getByText("You are in the first 100 students cohort. No payment is required for these courses.")).toBeInTheDocument();
+    expect(screen.getByText("You are among the first 100 students. These courses are free for you.")).toBeInTheDocument();
     expect(screen.getByText("$40.00")).toHaveClass("line-through");
     expect(screen.getAllByText("$0.00").length).toBeGreaterThan(0);
 

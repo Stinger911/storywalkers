@@ -16,61 +16,61 @@ const adminCards: readonly AdminCard[] = [
   {
     title: "Students",
     description:
-      "Assign goals and plan steps for individualized learning paths.",
-    cta: "Manage Students",
+      "Manage students, assign goals, and maintain learning paths.",
+    cta: "Manage students",
     href: "/admin/students",
     icon: "group",
   },
   {
     title: "Questions",
     description:
-      "Answer submitted questions and publish curated content to the library.",
-    cta: "Review Queue",
+      "Review student questions and publish helpful answers to the library.",
+    cta: "Review queue",
     href: "/admin/questions",
     icon: "quiz",
   },
   {
     title: "Library",
     description:
-      "Draft and manage the master knowledge base entries. Curate the definitive guide for all walkers.",
-    cta: "Catalog Archive",
+      "Create and maintain library entries for students and mentors.",
+    cta: "Manage library",
     href: "/admin/library",
     icon: "menu_book",
   },
   {
     title: "Categories",
-    description: "Manage the global category dictionary and content hierarchy.",
-    cta: "Edit Dictionary",
+    description: "Maintain categories and keep the content structure organized.",
+    cta: "Edit categories",
     href: "/admin/categories",
     icon: "category",
   },
   {
     title: "Goals",
-    description: "Maintain learning goals and track aggregate success metrics.",
-    cta: "Milestones",
+    description: "Create learning goals and keep the program structure aligned.",
+    cta: "Manage goals",
     href: "/admin/goals",
     icon: "flag",
     progress: [1, 1, 0.35, 0.15],
   },
   {
     title: "Courses",
-    description: "Manage catalog pricing, enrollment rules, and goal mapping.",
-    cta: "Catalog Pricing",
+    description: "Manage courses, pricing, and goal mapping.",
+    cta: "Manage courses",
     href: "/admin/courses",
     icon: "school",
   },
   {
-    title: "Lesson Completions",
-    description: "Review and edit completion notes and verify step approvals.",
-    cta: "Verify Notes",
+    title: "Step Completions",
+    description: "Review completion notes, links, and step approvals.",
+    cta: "Review completions",
     href: "/admin/step-completions",
     icon: "fact_check",
   },
   {
     title: "Payments",
     description:
-      "Monitor payment status, refunds, and user activation records.",
-    cta: "Transaction Log",
+      "Review payment status, refunds, and activation records.",
+    cta: "Open payments",
     href: "/admin/payments",
     icon: "payments",
   },
@@ -80,13 +80,13 @@ const activityItems = [
   {
     icon: "trending_up",
     accent: "text-[#2a683a]",
-    title: "12 New Student Registrations",
-    detail: "Growth increased by 14% this week",
+    title: "12 new student registrations",
+    detail: "14% growth this week",
   },
   {
     icon: "pending_actions",
     accent: "text-primary",
-    title: "45 Questions Awaiting Review",
+    title: "45 questions awaiting review",
     detail: "Average response time: 4.2 hours",
   },
 ] as const;
@@ -103,7 +103,7 @@ export function AdminHome() {
     <section class="space-y-10 pb-8">
       <header class="space-y-4 lg:space-y-5">
         <p class="text-[11px] font-bold uppercase tracking-[0.2em] text-secondary">
-          Internal Administrator Portal
+          Admin workspace
         </p>
         <div class="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div class="space-y-1.5">
@@ -111,7 +111,7 @@ export function AdminHome() {
               Admin Console
             </h1>
             <p class="text-lg font-medium text-muted-foreground">
-              Staff Workspace • High Priority Actions
+              Team overview and priority actions
             </p>
           </div>
           {/* <ButtonLink href="/admin/library" icon="add">
@@ -197,7 +197,7 @@ export function AdminHome() {
           <div class="flex flex-col gap-10 lg:flex-row lg:items-center lg:gap-12">
             <div class="flex-1">
               <h2 class="text-2xl font-bold tracking-[-0.03em] text-foreground">
-                Workspace Activity
+                Recent activity
               </h2>
               <div class="mt-6 space-y-6">
                 {activityItems.map((item) => (
@@ -239,7 +239,7 @@ export function AdminHome() {
       </Card>
 
       <footer class="flex flex-col gap-4 border-t border-border/30 pt-8 text-xs text-muted-foreground md:flex-row md:items-center md:justify-between">
-        <p>© 2024 StoryWalkers Club Management System. All Rights Reserved.</p>
+        <p>© 2024 StoryWalkers admin workspace.</p>
         <div class="flex flex-wrap items-center gap-5">
           <a
             class="font-bold transition-colors duration-300 hover:text-primary"

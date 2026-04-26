@@ -147,7 +147,7 @@ export function AdminStepTemplates() {
   return (
     <Page
       title="Step Templates"
-      subtitle="Templates used to build student plans."
+      subtitle="Templates used to build student learning plans."
       breadcrumb={
         <Breadcrumb>
           <BreadcrumbList>
@@ -244,7 +244,7 @@ export function AdminStepTemplates() {
                 onInput={(e) =>
                   setForm({ ...form(), description: e.currentTarget.value })
                 }
-                placeholder="Short instructions"
+                placeholder="Add a short description"
               />
             </TextField>
             <TextField>
@@ -306,7 +306,7 @@ export function AdminStepTemplates() {
                 {form().id ? "Save changes" : "Create template"}
               </Button>
               <Button variant="outline" onClick={resetForm}>
-                Clear
+                Reset
               </Button>
             </div>
           </div>

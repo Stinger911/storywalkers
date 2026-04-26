@@ -42,9 +42,7 @@ export function OnboardingCheckout() {
   });
 
   const selectedCourseIds = createMemo(() => me()?.selectedCourses || []);
-  const communitySelected = createMemo(() =>
-    Boolean(me()?.subscriptionSelected),
-  );
+  const communitySelected = createMemo(() => true);
 
   const formatPrice = (usdCents: number) =>
     formatCents(
@@ -208,6 +206,14 @@ export function OnboardingCheckout() {
           </div>
         </div>
       </SectionCard>
+
+      <Show when={isFirstHundred()}>
+        <SectionCard title={t("student.onboarding.checkout.firstHundredCardTitle")}>
+          <p class="text-sm leading-6 text-muted-foreground">
+            {t("student.onboarding.checkout.firstHundredCardBody")}
+          </p>
+        </SectionCard>
+      </Show>
 
       <SectionCard title={t("student.onboarding.checkout.afterPaymentTitle")}>
         <div class="space-y-3 text-sm">

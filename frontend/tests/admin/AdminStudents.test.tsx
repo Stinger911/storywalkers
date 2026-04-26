@@ -141,10 +141,10 @@ describe("AdminStudents", () => {
     render(() => <AdminStudents />);
 
     expect(
-      await screen.findByText("No students match current filters."),
+      await screen.findByText("No students match the current filters."),
     ).toBeInTheDocument();
     expect(
-      await screen.findByText("No staff match current filters."),
+      await screen.findByText("No staff members match the current filters."),
     ).toBeInTheDocument();
   });
 });

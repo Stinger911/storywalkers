@@ -133,7 +133,7 @@ export function AdminGoals() {
   return (
     <Page
       title="Goals"
-      subtitle="Define learning goals assigned to students."
+      subtitle="Create and manage learning goals for students."
       breadcrumb={
         <Breadcrumb>
           <BreadcrumbList>
@@ -178,7 +178,7 @@ export function AdminGoals() {
               when={items().length > 0}
               fallback={
                 <div class="py-8 text-center text-sm text-muted-foreground">
-                  No goals yet.
+                  No goals have been created yet.
                 </div>
               }
             >
@@ -192,7 +192,7 @@ export function AdminGoals() {
                       <div>
                         <div class="text-base font-semibold">{item.title}</div>
                         <div class="text-sm text-muted-foreground">
-                          {item.description || "No description"}
+                          {item.description || "No description yet"}
                         </div>
                       </div>
                       <div class="flex gap-2">
@@ -250,7 +250,7 @@ export function AdminGoals() {
                   onInput={(e) =>
                     setForm({ ...form(), description: e.currentTarget.value })
                   }
-                  placeholder="Short description"
+                  placeholder="Add a short description"
                 />
               </TextField>
               <div class="flex flex-wrap gap-2">
@@ -258,7 +258,7 @@ export function AdminGoals() {
                   {form().id ? "Save changes" : "Create goal"}
                 </Button>
                 <Button variant="outline" onClick={resetForm}>
-                  Clear
+                  Reset
                 </Button>
               </div>
             </div>
@@ -266,7 +266,7 @@ export function AdminGoals() {
 
           <SectionCard
             title="Linked Courses"
-            description="Courses linked to this goal. Open course editor to update details."
+            description="Courses linked to this goal. Open the course editor to update them."
             actions={
               <Button as={A} href="/admin/courses" variant="outline">
                 Open courses
@@ -281,7 +281,7 @@ export function AdminGoals() {
                 when={linkedCourses().length > 0}
                 fallback={
                   <div class="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
-                    No courses linked to this goal yet.
+                    No courses are linked to this goal yet.
                   </div>
                 }
               >
@@ -292,7 +292,7 @@ export function AdminGoals() {
                         <div>
                           <div class="text-base font-semibold">{course.title}</div>
                           <div class="text-sm text-muted-foreground">
-                            {course.description || "No description"}
+                            {course.description || "No description yet"}
                           </div>
                         </div>
                         <div class="flex gap-2">

@@ -99,7 +99,7 @@ export function AdminPayments() {
   return (
     <Page
       title="Payments"
-      subtitle="Review payment records and activation lifecycle."
+      subtitle="Review payment records and track activation status."
       breadcrumb={
         <Breadcrumb>
           <BreadcrumbList>
@@ -129,8 +129,8 @@ export function AdminPayments() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Payments list</CardTitle>
-          <CardDescription>Filter by status or search by email/code.</CardDescription>
+          <CardTitle>Payment records</CardTitle>
+          <CardDescription>Filter by status or search by email, UID, or activation code.</CardDescription>
         </CardHeader>
         <CardContent class="space-y-4">
           <div class="grid gap-3 md:grid-cols-[220px_minmax(0,1fr)_auto]">
@@ -188,7 +188,7 @@ export function AdminPayments() {
               when={items().length > 0}
               fallback={
                 <div class="rounded-xl border border-border/70 p-4 text-sm text-muted-foreground">
-                  No payments found for current filters.
+                  No payment records match the current filters.
                 </div>
               }
             >

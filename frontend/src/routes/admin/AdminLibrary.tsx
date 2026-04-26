@@ -67,7 +67,7 @@ export function AdminLibrary() {
   return (
     <Page
       title="Library"
-      subtitle="Create, edit, and publish knowledge base entries."
+      subtitle="Create, edit, and publish library entries."
       breadcrumb={
         <Breadcrumb>
           <BreadcrumbList>
@@ -92,7 +92,7 @@ export function AdminLibrary() {
         </div>
       }
     >
-      <SectionCard title="Filters" description="Find entries by status, category, or keyword.">
+      <SectionCard title="Filters" description="Filter entries by status, category, or keyword.">
         <div class="mt-4 grid gap-4 md:grid-cols-3">
           <div class="grid gap-2">
             <label class="text-sm font-medium" for="library-status">
@@ -145,7 +145,7 @@ export function AdminLibrary() {
             variant="outline"
             onClick={() => setFilters({ status: "", categoryId: "", q: "" })}
           >
-            Clear
+            Reset
           </Button>
         </div>
       </SectionCard>
@@ -175,7 +175,7 @@ export function AdminLibrary() {
                     href={`/admin/library/${entry.id}`}
                     class="text-sm font-medium text-primary underline"
                   >
-                    Manage
+                    Open entry
                   </A>
                 </div>
               </div>

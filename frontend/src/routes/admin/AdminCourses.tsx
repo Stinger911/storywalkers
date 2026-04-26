@@ -228,7 +228,7 @@ export function AdminCourses() {
   return (
     <Page
       title="Courses"
-      subtitle="Manage paid courses used in onboarding."
+      subtitle="Manage paid courses available in onboarding."
       breadcrumb={
         <Breadcrumb>
           <BreadcrumbList>
@@ -285,7 +285,7 @@ export function AdminCourses() {
               when={items().length > 0}
               fallback={
                 <div class="py-8 text-center text-sm text-muted-foreground">
-                  No courses yet. Create one above.
+                  No courses have been created yet.
                 </div>
               }
             >
@@ -302,7 +302,7 @@ export function AdminCourses() {
                             </Badge>
                           </div>
                           <div class="text-sm text-muted-foreground">
-                            {item.description || "No description"}
+                            {item.description || "No description yet"}
                           </div>
                           <div class="mt-1 text-xs text-muted-foreground">
                             ${centsToDollars(item.priceUsdCents)} · goals:{" "}
@@ -321,7 +321,7 @@ export function AdminCourses() {
                             Lessons
                           </Button>
                           <Button variant="outline" size="sm" onClick={() => selectItem(item)}>
-                            Manage
+                            Edit
                           </Button>
                           <Button
                             variant="outline"
@@ -394,7 +394,7 @@ export function AdminCourses() {
                 when={goals().length > 0}
                 fallback={
                   <div class="rounded-md border border-border/70 p-3 text-sm text-muted-foreground">
-                    No goals available.
+                    No goals are available yet.
                   </div>
                 }
               >
@@ -431,7 +431,7 @@ export function AdminCourses() {
                 {form().id ? "Save changes" : "Create course"}
               </Button>
               <Button variant="outline" onClick={resetForm} disabled={saving()}>
-                Clear
+                Reset
               </Button>
             </div>
           </div>
@@ -444,8 +444,8 @@ export function AdminCourses() {
           if (!saving() && !open) setDeleteTarget(null);
         }}
         title="Deactivate course?"
-        description={`This hides "${deleteTarget()?.title || "this course"}" from active sales and onboarding selection.`}
-        acknowledgeLabel="I understand this action removes the course from active use."
+        description={`This will hide "${deleteTarget()?.title || "this course"}" from active sales and onboarding selection.`}
+        acknowledgeLabel="I understand this course will no longer be available for sale or selection."
         confirmKeyword="DELETE"
         confirmLabel="Confirm deactivate"
         loading={saving()}

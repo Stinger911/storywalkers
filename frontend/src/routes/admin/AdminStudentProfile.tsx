@@ -731,7 +731,7 @@ export function AdminStudentProfile() {
                       setIsFirstHundredDraft(event.currentTarget.checked)
                     }
                   />
-                  <span>First 100 students: courses are free</span>
+                  <span>First 100 students: all courses are free</span>
                 </label>
               </div>
               <Button
