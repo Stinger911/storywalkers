@@ -96,4 +96,37 @@ describe("coursesApi", () => {
     expect(apiFetch).toHaveBeenNthCalledWith(2, "/api/courses?goalId=goal-2");
     expect(apiFetch).toHaveBeenCalledTimes(2);
   });
+
+  it("falls back to unfiltered courses when filtered goal response is empty", async () => {
+    vi.mocked(apiFetch)
+      .mockResolvedValueOnce(new Response(JSON.stringify({ items: [] }), { status: 200 }))
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            items: [
+              {
+                id: "goal-1-course",
+                title: "Goal 1 Course",
+                priceUsdCents: 1000,
+                goalIds: ["goal-1"],
+              },
+              {
+                id: "goal-2-course",
+                title: "Goal 2 Course",
+                priceUsdCents: 2000,
+                goalIds: ["goal-2"],
+              },
+            ],
+          }),
+          { status: 200 },
+        ),
+      );
+
+    const result = await listCourses({ goalId: "goal-1" });
+
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0]?.id).toBe("goal-1-course");
+    expect(apiFetch).toHaveBeenNthCalledWith(1, "/api/courses?goalId=goal-1");
+    expect(apiFetch).toHaveBeenNthCalledWith(2, "/api/courses");
+  });
 });
