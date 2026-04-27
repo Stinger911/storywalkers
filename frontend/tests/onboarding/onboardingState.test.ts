@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { MeProfile } from "../../src/lib/auth";
 import {
+  canAccessOnboardingStep,
   getNextOnboardingStep,
   isOnboardingIncomplete,
   isProfileComplete,
@@ -52,6 +53,22 @@ describe("onboardingState", () => {
     expect(getNextOnboardingStep(me4)).toBe("checkout");
     expect(isOnboardingIncomplete(me4)).toBe(false);
     expect(isOnboardingIncomplete(me1)).toBe(true);
+  });
+
+  it("allows earlier onboarding steps but blocks skipping ahead", () => {
+    const me = {
+      ...baseMe(),
+      profileForm: {
+        ...baseMe().profileForm,
+        aboutMe: "I want to learn",
+      },
+      selectedGoalId: "goal-1",
+    };
+
+    expect(canAccessOnboardingStep(me, "profile")).toBe(true);
+    expect(canAccessOnboardingStep(me, "goal")).toBe(true);
+    expect(canAccessOnboardingStep(me, "courses")).toBe(true);
+    expect(canAccessOnboardingStep(me, "checkout")).toBe(false);
   });
 
   it("treats non-empty profileForm as complete", () => {

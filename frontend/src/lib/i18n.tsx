@@ -377,6 +377,7 @@ type RawDictionary = {
         currencySaveError: string;
         lessonCount: string;
         empty: string;
+        goalMissing: string;
         showLessons: string;
         hideLessons: string;
         lessonsTitle: string;
@@ -807,6 +808,7 @@ const dictionaries: Record<Locale, RawDictionary> = {
           currencySaveError: "Could not save preferred currency.",
           lessonCount: "{{ count }} steps",
           empty: "No paths selected yet.",
+          goalMissing: "Go back and choose a path first.",
           showLessons: "Show path",
           hideLessons: "Hide path",
           lessonsTitle: "Path",
@@ -1240,6 +1242,7 @@ const dictionaries: Record<Locale, RawDictionary> = {
           currencySaveError: "Не удалось сохранить предпочитаемую валюту.",
           lessonCount: "{{ count }} шагов",
           empty: "Пути пока не выбраны.",
+          goalMissing: "Сначала вернитесь и выберите путь.",
           showLessons: "Показать путь",
           hideLessons: "Скрыть путь",
           lessonsTitle: "Путь",

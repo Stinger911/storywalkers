@@ -3,6 +3,7 @@ from google.cloud import firestore
 
 from app.auth import deps as auth_deps
 from app.main import app
+import app.main as app_main
 from app.routers import auth
 
 
@@ -103,6 +104,34 @@ def test_patch_me_rejects_extra_fields(monkeypatch):
 
     response = client.patch("/api/me", json={"displayName": "New", "role": "admin"})
     assert response.status_code == 400
+
+    app.dependency_overrides.clear()
+
+
+def test_patch_me_logs_validation_errors_with_request_body(monkeypatch):
+    users = {"u1": {"displayName": "User One", "email": "u1@example.com"}}
+    fake_db = FakeFirestore(users)
+    log_calls: list[tuple[str, dict]] = []
+
+    def _fake_warning(message, *, extra):
+        log_calls.append((message, extra))
+
+    monkeypatch.setattr(auth, "get_firestore_client", lambda: fake_db)
+    monkeypatch.setattr(app_main.logger, "warning", _fake_warning)
+    app.dependency_overrides[auth_deps.get_current_user] = _override_user
+    client = TestClient(app)
+
+    response = client.patch("/api/me", json={"profileForm": {"unknown": "x"}})
+
+    assert response.status_code == 400
+    assert response.json()["error"]["message"] == "Request validation failed"
+    assert len(log_calls) == 1
+    message, extra = log_calls[0]
+    assert message == "request_validation_failed"
+    assert extra["path"] == "/api/me"
+    assert extra["method"] == "PATCH"
+    assert '"unknown":"x"' in extra["request_body"].replace(" ", "")
+    assert extra["errors"]
 
     app.dependency_overrides.clear()
 
