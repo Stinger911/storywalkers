@@ -45,7 +45,13 @@ describe("AdminStudents", () => {
       }
       return Promise.resolve({
         items: [
-          { uid: "s1", displayName: "Student S", email: "s@x.com", role: "student" },
+          {
+            uid: "s1",
+            displayName: "Student S",
+            email: "s@x.com",
+            role: "student",
+            isFirstHundred: true,
+          },
         ],
       });
     });
@@ -59,6 +65,7 @@ describe("AdminStudents", () => {
       expect(screen.getByText("Student S")).toBeInTheDocument();
       expect(screen.getByText("Admin A")).toBeInTheDocument();
       expect(screen.getByText("Expert E")).toBeInTheDocument();
+      expect(screen.getByLabelText("First 100 student")).toBeInTheDocument();
     });
 
     expect(listStudentsMock).toHaveBeenCalledWith({
@@ -75,6 +82,30 @@ describe("AdminStudents", () => {
       sortBy: "createdAt",
       sortDir: "desc",
     });
+  });
+
+  it("does not show the first hundred icon for regular students", async () => {
+    listStudentsMock.mockImplementation(({ role }: { role?: string }) =>
+      Promise.resolve({
+        items:
+          role === "staff"
+            ? []
+            : [
+                {
+                  uid: "s1",
+                  displayName: "Student S",
+                  email: "s@x.com",
+                  role: "student",
+                  isFirstHundred: false,
+                },
+              ],
+      }),
+    );
+
+    render(() => <AdminStudents />);
+
+    expect(await screen.findByText("Student S")).toBeInTheDocument();
+    expect(screen.queryByLabelText("First 100 student")).not.toBeInTheDocument();
   });
 
   it("applies status filter to both student queries and URL state", async () => {
