@@ -71,6 +71,22 @@ describe("onboardingState", () => {
     expect(canAccessOnboardingStep(me, "checkout")).toBe(false);
   });
 
+  it("treats community-only checkout as the next step when no courses are selected", () => {
+    const me = {
+      ...baseMe(),
+      profileForm: {
+        ...baseMe().profileForm,
+        aboutMe: "I want to learn",
+      },
+      selectedGoalId: "goal-1",
+      subscriptionSelected: true,
+      selectedCourses: [],
+    };
+
+    expect(getNextOnboardingStep(me)).toBe("checkout");
+    expect(isOnboardingIncomplete(me)).toBe(true);
+  });
+
   it("treats non-empty profileForm as complete", () => {
     expect(isProfileComplete(baseMe())).toBe(false);
     expect(

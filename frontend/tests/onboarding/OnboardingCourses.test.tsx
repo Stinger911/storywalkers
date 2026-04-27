@@ -319,4 +319,25 @@ describe("OnboardingCourses", () => {
       expect(navigateMock).toHaveBeenCalledWith("/onboarding/goal");
     });
   });
+
+  it("allows continuing to checkout with community access only", async () => {
+    vi.mocked(listCourses).mockResolvedValue({ items: [] });
+    patchMeMock.mockResolvedValue({});
+
+    render(() => (
+      <I18nProvider>
+        <OnboardingCourses />
+      </I18nProvider>
+    ));
+
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+
+    await waitFor(() => {
+      expect(patchMeMock).toHaveBeenCalledWith({
+        selectedCourses: [],
+        subscriptionSelected: true,
+      });
+      expect(navigateMock).toHaveBeenCalledWith("/onboarding/checkout");
+    });
+  });
 });

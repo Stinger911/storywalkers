@@ -545,9 +545,7 @@ export function OnboardingCourses() {
             </Button>
             <Button
               onClick={() => void next()}
-              disabled={
-                saving() || currencySaving() || selectedActiveCourseIds().length === 0
-              }
+              disabled={saving() || currencySaving()}
             >
               {saving()
                 ? t("student.onboarding.common.saving")

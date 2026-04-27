@@ -61,7 +61,9 @@ export function isProfileComplete(me: MeProfile): boolean {
 export function getNextOnboardingStep(me: MeProfile): OnboardingStep {
   if (!isProfileComplete(me)) return "profile";
   if (!me.selectedGoalId) return "goal";
-  if (!me.selectedCourses || me.selectedCourses.length === 0) return "courses";
+  if (!me.selectedCourses || me.selectedCourses.length === 0) {
+    return me.subscriptionSelected === true ? "checkout" : "courses";
+  }
   return "checkout";
 }
 
