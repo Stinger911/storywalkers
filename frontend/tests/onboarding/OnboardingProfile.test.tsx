@@ -175,4 +175,48 @@ describe("OnboardingProfile", () => {
       expect(screen.getByDisplayValue("https://example.com/alice")).toBeInTheDocument();
     });
   });
+
+  it("falls back to displayName when backend profileForm does not expose name fields", async () => {
+    patchMeMock.mockResolvedValue({});
+    setMeState({
+      ...makeMe(),
+      profileForm: {
+        aboutMe: null,
+        telegram: null,
+        socialLinks: [],
+        socialUrl: null,
+        notes: null,
+      } as never,
+    });
+
+    render(() => (
+      <I18nProvider>
+        <OnboardingProfile />
+      </I18nProvider>
+    ));
+
+    fireEvent.input(screen.getByLabelText("First name"), {
+      target: { value: "Alice" },
+    });
+    fireEvent.input(screen.getByLabelText("Last name"), {
+      target: { value: "Rivera" },
+    });
+    fireEvent.input(screen.getByLabelText("About me"), {
+      target: { value: "I want to become a better storyteller." },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Save profile" }));
+
+    await waitFor(() => {
+      expect(patchMeMock).toHaveBeenCalledWith({
+        displayName: "Alice Rivera",
+        profileForm: {
+          aboutMe: "I want to become a better storyteller.",
+          telegram: null,
+          socialLinks: [],
+          socialUrl: null,
+        },
+      });
+    });
+  });
 });

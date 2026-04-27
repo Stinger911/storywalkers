@@ -10,6 +10,7 @@ import {
   TextFieldTextArea,
 } from "../../components/ui/text-field";
 import { useAuth } from "../../lib/auth";
+import type { MeProfile, PatchMePayload } from "../../lib/auth";
 import { useI18n } from "../../lib/i18n";
 import { OnboardingLayout } from "./OnboardingLayout";
 
@@ -33,6 +34,15 @@ function normalizeTelegramInput(value: string) {
     return trimmed;
   }
   return trimmed.startsWith("@") ? trimmed : `@${trimmed}`;
+}
+
+function supportsProfileNameFields(profileForm: MeProfile["profileForm"] | undefined) {
+  return Boolean(
+    profileForm &&
+      typeof profileForm === "object" &&
+      Object.prototype.hasOwnProperty.call(profileForm, "firstName") &&
+      Object.prototype.hasOwnProperty.call(profileForm, "lastName"),
+  );
 }
 
 export function OnboardingProfile() {
@@ -108,16 +118,29 @@ export function OnboardingProfile() {
     setError(null);
     setFieldError(null);
     try {
-      await auth.patchMe({
+      const trimmedFirstName = firstName().trim();
+      const trimmedLastName = lastName().trim();
+      const displayName = [trimmedFirstName, trimmedLastName].filter(Boolean).join(" ");
+      const payload: PatchMePayload = {
         profileForm: {
-          firstName: firstName().trim() || null,
-          lastName: lastName().trim() || null,
           aboutMe: aboutMe().trim(),
           telegram: normalizeTelegramInput(telegram()) || null,
           socialLinks: cleanedSocialLinks(),
           socialUrl: cleanedSocialLinks()[0] || null,
         },
-      });
+      };
+
+      if (supportsProfileNameFields(auth.me()?.profileForm)) {
+        payload.profileForm = {
+          ...payload.profileForm,
+          firstName: trimmedFirstName || null,
+          lastName: trimmedLastName || null,
+        };
+      } else if (displayName) {
+        payload.displayName = displayName;
+      }
+
+      await auth.patchMe(payload);
       return true;
     } catch (err) {
       setError((err as Error).message);
