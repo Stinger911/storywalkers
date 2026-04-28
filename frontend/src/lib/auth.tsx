@@ -30,6 +30,7 @@ export type MeProfile = {
     firstName?: string | null
     lastName?: string | null
     aboutMe?: string | null
+    submitted?: boolean | null
     telegram?: string | null
     socialLinks?: string[]
     socialUrl?: string | null
@@ -50,6 +51,7 @@ export type PatchMePayload = {
     firstName?: string | null
     lastName?: string | null
     aboutMe?: string | null
+    submitted?: boolean | null
     telegram?: string | null
     socialLinks?: string[]
     socialUrl?: string | null

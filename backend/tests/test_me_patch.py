@@ -3,6 +3,7 @@ from google.cloud import firestore
 
 from app.auth import deps as auth_deps
 from app.main import app
+import app.main as app_main
 from app.routers import auth
 
 
@@ -107,6 +108,34 @@ def test_patch_me_rejects_extra_fields(monkeypatch):
     app.dependency_overrides.clear()
 
 
+def test_patch_me_logs_validation_errors_with_request_body(monkeypatch):
+    users = {"u1": {"displayName": "User One", "email": "u1@example.com"}}
+    fake_db = FakeFirestore(users)
+    log_calls: list[tuple[str, dict]] = []
+
+    def _fake_warning(message, *, extra):
+        log_calls.append((message, extra))
+
+    monkeypatch.setattr(auth, "get_firestore_client", lambda: fake_db)
+    monkeypatch.setattr(app_main.logger, "warning", _fake_warning)
+    app.dependency_overrides[auth_deps.get_current_user] = _override_user
+    client = TestClient(app)
+
+    response = client.patch("/api/me", json={"profileForm": {"unknown": "x"}})
+
+    assert response.status_code == 400
+    assert response.json()["error"]["message"] == "Request validation failed"
+    assert len(log_calls) == 1
+    message, extra = log_calls[0]
+    assert message == "request_validation_failed"
+    assert extra["path"] == "/api/me"
+    assert extra["method"] == "PATCH"
+    assert '"unknown":"x"' in extra["request_body"].replace(" ", "")
+    assert extra["errors"]
+
+    app.dependency_overrides.clear()
+
+
 def test_patch_me_rejects_forbidden_fields(monkeypatch):
     users = {"u1": {"displayName": "User One", "email": "u1@example.com"}}
     fake_db = FakeFirestore(users)
@@ -168,6 +197,7 @@ def test_patch_me_updates_onboarding_fields(monkeypatch):
             "profileForm": {
                 "firstName": "Existing",
                 "lastName": "Name",
+                "submitted": None,
                 "telegram": "@old",
                 "socialUrl": None,
                 "experienceLevel": "beginner",
@@ -190,6 +220,7 @@ def test_patch_me_updates_onboarding_fields(monkeypatch):
             "profileForm": {
                 "firstName": "  Alice  ",
                 "lastName": "  Rivera  ",
+                "submitted": True,
                 "telegram": "  @new  ",
                 "experienceLevel": "advanced",
             },
@@ -206,6 +237,7 @@ def test_patch_me_updates_onboarding_fields(monkeypatch):
     assert payload["displayName"] == "Alice Rivera"
     assert payload["profileForm"]["firstName"] == "Alice"
     assert payload["profileForm"]["lastName"] == "Rivera"
+    assert payload["profileForm"]["submitted"] is True
     assert payload["profileForm"]["telegram"] == "@new"
     assert payload["profileForm"]["experienceLevel"] == "advanced"
     assert payload["profileForm"]["socialUrl"] is None
@@ -216,6 +248,7 @@ def test_patch_me_updates_onboarding_fields(monkeypatch):
     assert users["u1"]["subscriptionSelected"] is True
     assert users["u1"]["profileForm"]["firstName"] == "Alice"
     assert users["u1"]["profileForm"]["lastName"] == "Rivera"
+    assert users["u1"]["profileForm"]["submitted"] is True
     assert users["u1"]["profileForm"]["telegram"] == "@new"
     assert users["u1"]["profileForm"]["experienceLevel"] == "advanced"
     assert users["u1"]["updatedAt"] == "SERVER_TIMESTAMP"
@@ -232,6 +265,7 @@ def test_patch_me_clears_display_name_when_profile_names_are_removed(monkeypatch
                 "firstName": "Alice",
                 "lastName": "Rivera",
                 "aboutMe": "Existing bio",
+                "submitted": True,
                 "telegram": "@alice",
                 "socialLinks": [],
                 "socialUrl": None,
@@ -259,6 +293,7 @@ def test_patch_me_clears_display_name_when_profile_names_are_removed(monkeypatch
     assert payload["displayName"] == ""
     assert payload["profileForm"]["firstName"] is None
     assert payload["profileForm"]["lastName"] is None
+    assert payload["profileForm"]["submitted"] is True
     assert users["u1"]["displayName"] == ""
 
     app.dependency_overrides.clear()
@@ -277,6 +312,7 @@ def test_patch_me_sends_questionnaire_completed_once_on_course_selection_transit
             "selectedCourses": [],
             "profileForm": {
                 "aboutMe": None,
+                "submitted": None,
                 "telegram": None,
                 "socialLinks": [],
                 "socialUrl": None,
@@ -298,7 +334,7 @@ def test_patch_me_sends_questionnaire_completed_once_on_course_selection_transit
 
     response = client.patch(
         "/api/me",
-        json={"profileForm": {"aboutMe": "I want to grow as a storyteller."}},
+        json={"profileForm": {"submitted": True}},
     )
     assert response.status_code == 200
     assert "text" in sent
@@ -329,6 +365,7 @@ def test_patch_me_does_not_resend_questionnaire_completed_when_already_marked(
             "telegramEvents": {"questionnaireCompletedAt": "2026-01-01T00:00:00Z"},
             "profileForm": {
                 "aboutMe": None,
+                "submitted": None,
                 "telegram": None,
                 "socialLinks": [],
                 "socialUrl": None,
@@ -458,6 +495,7 @@ def test_patch_me_allows_subscription_selection_for_non_active_after_onboarding(
             "selectedCourses": ["course-a"],
             "profileForm": {
                 "aboutMe": "Ready to go",
+                "submitted": True,
                 "telegram": None,
                 "socialLinks": [],
                 "socialUrl": None,

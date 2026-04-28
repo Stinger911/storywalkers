@@ -1,5 +1,5 @@
-import { A, useNavigate } from "@solidjs/router";
-import { createMemo, createSignal, For, onMount, Show } from "solid-js";
+import { useNavigate } from "@solidjs/router";
+import { createEffect, createMemo, createSignal, For, Show } from "solid-js";
 
 import { Button, buttonVariants } from "../../components/ui/button";
 import { SectionCard } from "../../components/ui/section-card";
@@ -27,6 +27,10 @@ import {
 import { getFxRates } from "../../lib/fxApi";
 import { useI18n } from "../../lib/i18n";
 import { OnboardingLayout } from "./OnboardingLayout";
+import {
+  readCachedOnboardingGoal,
+  writeCachedOnboardingGoal,
+} from "./onboardingState";
 
 const COMMUNITY_CARD = {
   id: "community",
@@ -70,7 +74,10 @@ export function OnboardingCourses() {
   };
   const [preferredCurrency, setPreferredCurrency] =
     createSignal<CurrencyOption["value"]>(initialPreferredCurrency());
-  const selectedGoalId = createMemo(() => auth.me()?.selectedGoalId || null);
+  const cachedGoal = createMemo(() => readCachedOnboardingGoal());
+  const selectedGoalId = createMemo(
+    () => auth.me()?.selectedGoalId || cachedGoal()?.goalId || null,
+  );
 
   const [saving, setSaving] = createSignal(false);
   const [currencySaving, setCurrencySaving] = createSignal(false);
@@ -202,7 +209,18 @@ export function OnboardingCourses() {
     }
   };
 
-  onMount(() => {
+  createEffect(() => {
+    const currentGoalId = auth.me()?.selectedGoalId;
+    if (currentGoalId) {
+      writeCachedOnboardingGoal({
+        goalId: currentGoalId,
+        goalTitle: auth.me()?.selectedGoalTitle || cachedGoal()?.goalTitle || null,
+      });
+    }
+  });
+
+  createEffect(() => {
+    if (!selectedGoalId()) return;
     void load();
   });
 
@@ -444,10 +462,12 @@ export function OnboardingCourses() {
               }
             >
               <Show
-                when={activeCourses().length > 0}
-                fallback={
+              when={activeCourses().length > 0}
+              fallback={
                   <div class="rounded-md border border-border/70 p-3 text-sm text-muted-foreground">
-                    {t("student.onboarding.courses.empty")}
+                    {selectedGoalId()
+                      ? t("student.onboarding.courses.empty")
+                      : t("student.onboarding.courses.goalMissing")}
                   </div>
                 }
               >
@@ -508,10 +528,9 @@ export function OnboardingCourses() {
 
           <div class="flex flex-wrap gap-2">
             <Button
-              as={A}
-              href="/onboarding/goal"
               variant="outline"
               disabled={saving() || currencySaving()}
+              onClick={() => void navigate("/onboarding/goal")}
             >
               {t("student.onboarding.profile.back")}
             </Button>
@@ -526,9 +545,7 @@ export function OnboardingCourses() {
             </Button>
             <Button
               onClick={() => void next()}
-              disabled={
-                saving() || currencySaving() || selectedActiveCourseIds().length === 0
-              }
+              disabled={saving() || currencySaving()}
             >
               {saving()
                 ? t("student.onboarding.common.saving")

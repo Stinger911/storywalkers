@@ -116,15 +116,25 @@ function normalizeGoalId(goalId: string | null | undefined) {
   return trimmed;
 }
 
+async function fetchCourses(goalId?: string | null) {
+  const normalizedGoalId = normalizeGoalId(goalId);
+  const query = normalizedGoalId ? `?goalId=${encodeURIComponent(normalizedGoalId)}` : "";
+  const response = await apiFetch(`/api/courses${query}`);
+  const payload = await handleJson<CoursesResponse | RawCourse[]>(response);
+  return normalizeResponse(payload);
+}
+
 export async function listCourses(options?: ListCoursesOptions) {
   const goalId = normalizeGoalId(options?.goalId);
   if (!options?.force && cachedCoursesByGoal.has(goalId)) {
     return { items: cachedCoursesByGoal.get(goalId) ?? [] };
   }
-  const query = goalId ? `?goalId=${encodeURIComponent(goalId)}` : "";
-  const response = await apiFetch(`/api/courses${query}`);
-  const payload = await handleJson<CoursesResponse | RawCourse[]>(response);
-  const items = normalizeResponse(payload);
+  let items = await fetchCourses(goalId);
+  if (goalId && items.length === 0) {
+    const fallbackItems = await fetchCourses();
+    const goalMatchedItems = fallbackItems.filter((course) => course.goalIds.includes(goalId));
+    items = goalMatchedItems.length > 0 ? goalMatchedItems : fallbackItems;
+  }
   cachedCoursesByGoal.set(goalId, items);
   return { items };
 }

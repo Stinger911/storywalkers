@@ -277,8 +277,19 @@ export function AdminStudents() {
                     <div class="rounded-xl border p-4">
                       <div class="flex items-start justify-between gap-4">
                         <div>
-                          <div class="text-base font-semibold">
+                          <div class="flex flex-wrap items-center gap-2 text-base font-semibold">
                             {student.displayName || "Student without a name"}
+                            <Show when={student.isFirstHundred === true}>
+                              <span
+                                class="inline-flex items-center justify-center rounded-full bg-amber-100 p-1 text-amber-700"
+                                title="First 100 student"
+                                aria-label="First 100 student"
+                              >
+                                <span class="material-symbols-outlined text-[16px]">
+                                  workspace_premium
+                                </span>
+                              </span>
+                            </Show>
                           </div>
                           <div class="text-sm text-muted-foreground">{student.email}</div>
                           <div class="text-xs text-muted-foreground">

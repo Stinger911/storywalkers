@@ -10,6 +10,7 @@ import {
   TextFieldTextArea,
 } from "../../components/ui/text-field";
 import { useAuth } from "../../lib/auth";
+import type { MeProfile, PatchMePayload } from "../../lib/auth";
 import { useI18n } from "../../lib/i18n";
 import { OnboardingLayout } from "./OnboardingLayout";
 
@@ -33,6 +34,15 @@ function normalizeTelegramInput(value: string) {
     return trimmed;
   }
   return trimmed.startsWith("@") ? trimmed : `@${trimmed}`;
+}
+
+function supportsProfileNameFields(profileForm: MeProfile["profileForm"] | undefined) {
+  return Boolean(
+    profileForm &&
+      typeof profileForm === "object" &&
+      Object.prototype.hasOwnProperty.call(profileForm, "firstName") &&
+      Object.prototype.hasOwnProperty.call(profileForm, "lastName"),
+  );
 }
 
 export function OnboardingProfile() {
@@ -75,7 +85,6 @@ export function OnboardingProfile() {
       .filter(Boolean);
 
   const validate = () => {
-    if (!aboutMe().trim()) return t("student.onboarding.profile.aboutMeRequired");
     const telegramValue = telegram().trim();
     if (telegramValue) {
       const normalized = telegramValue.startsWith("@")
@@ -108,17 +117,30 @@ export function OnboardingProfile() {
     setError(null);
     setFieldError(null);
     try {
-      await auth.patchMe({
+      const trimmedFirstName = firstName().trim();
+      const trimmedLastName = lastName().trim();
+      const displayName = [trimmedFirstName, trimmedLastName].filter(Boolean).join(" ");
+      const payload: PatchMePayload = {
         profileForm: {
-          firstName: firstName().trim() || null,
-          lastName: lastName().trim() || null,
           aboutMe: aboutMe().trim(),
-          notes: aboutMe().trim(),
+          submitted: true,
           telegram: normalizeTelegramInput(telegram()) || null,
           socialLinks: cleanedSocialLinks(),
           socialUrl: cleanedSocialLinks()[0] || null,
         },
-      });
+      };
+
+      if (supportsProfileNameFields(auth.me()?.profileForm)) {
+        payload.profileForm = {
+          ...payload.profileForm,
+          firstName: trimmedFirstName || null,
+          lastName: trimmedLastName || null,
+        };
+      } else if (displayName) {
+        payload.displayName = displayName;
+      }
+
+      await auth.patchMe(payload);
       return true;
     } catch (err) {
       setError((err as Error).message);
@@ -139,13 +161,15 @@ export function OnboardingProfile() {
     <OnboardingLayout
       step="profile"
       title={t("student.onboarding.profile.title")}
-      subtitle={t("student.onboarding.profile.subtitle")}
     >
       <SectionCard
         title={t("student.onboarding.profile.cardTitle")}
         class="rounded-[calc(var(--radius-lg)+8px)] border-0 bg-white shadow-card"
       >
         <div class="grid gap-5">
+          <p class="text-sm leading-7 text-muted-foreground">
+            {t("student.onboarding.profile.subtitle")}
+          </p>
           <div class="grid gap-5 md:grid-cols-2">
             <TextField class="grid gap-2">
               <TextFieldLabel for="onb-first-name">

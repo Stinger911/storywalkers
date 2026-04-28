@@ -7,6 +7,10 @@ import { useAuth } from "../../lib/auth";
 import { useI18n } from "../../lib/i18n";
 import { listGoals, type Goal } from "../../lib/adminApi";
 import { OnboardingLayout } from "./OnboardingLayout";
+import {
+  readCachedOnboardingGoal,
+  writeCachedOnboardingGoal,
+} from "./onboardingState";
 
 export function OnboardingGoal() {
   const auth = useAuth();
@@ -17,7 +21,7 @@ export function OnboardingGoal() {
   const [saving, setSaving] = createSignal(false);
   const [saveError, setSaveError] = createSignal<string | null>(null);
   const [selectedGoalId, setSelectedGoalId] = createSignal(
-    auth.me()?.selectedGoalId || "",
+    auth.me()?.selectedGoalId || readCachedOnboardingGoal()?.goalId || "",
   );
 
   const toHumanError = (err: unknown, fallbackKey: string) => {
@@ -53,6 +57,11 @@ export function OnboardingGoal() {
     setSaving(true);
     try {
       await auth.patchMe({ selectedGoalId: goalId });
+      const selectedGoal = goals().find((goal) => goal.id === goalId);
+      writeCachedOnboardingGoal({
+        goalId,
+        goalTitle: selectedGoal?.title || null,
+      });
     } catch (err) {
       setSelectedGoalId(prev);
       setSaveError(toHumanError(err, "student.onboarding.goal.saveError"));

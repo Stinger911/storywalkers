@@ -8,6 +8,7 @@ import { useI18n } from "../../lib/i18n";
 import { useTheme } from "../../lib/theme";
 import { cn } from "../../lib/utils";
 import {
+  canAccessOnboardingStep,
   getNextOnboardingStep,
   onboardingPath,
   ONBOARDING_STEPS,
@@ -102,7 +103,7 @@ export function OnboardingLayout(props: OnboardingLayoutProps) {
     }
     const target = onboardingPath(getNextOnboardingStep(me));
     setResumeChecked(true);
-    if (location.pathname !== target) {
+    if (!canAccessOnboardingStep(me, props.step) && location.pathname !== target) {
       void navigate(target, { replace: true });
     }
   });

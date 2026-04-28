@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { MeProfile } from "../../src/lib/auth";
 import {
+  canAccessOnboardingStep,
   getNextOnboardingStep,
   isOnboardingIncomplete,
   isProfileComplete,
@@ -18,6 +19,7 @@ function baseMe(): MeProfile {
     selectedGoalId: null,
     profileForm: {
       aboutMe: null,
+      submitted: null,
       telegram: null,
       socialUrl: null,
       experienceLevel: null,
@@ -37,7 +39,7 @@ describe("onboardingState", () => {
       ...baseMe(),
       profileForm: {
         ...baseMe().profileForm,
-        aboutMe: "I want to learn",
+        submitted: true,
       },
     };
     expect(getNextOnboardingStep(me2)).toBe("goal");
@@ -54,6 +56,38 @@ describe("onboardingState", () => {
     expect(isOnboardingIncomplete(me1)).toBe(true);
   });
 
+  it("allows earlier onboarding steps but blocks skipping ahead", () => {
+    const me = {
+      ...baseMe(),
+      profileForm: {
+        ...baseMe().profileForm,
+        submitted: true,
+      },
+      selectedGoalId: "goal-1",
+    };
+
+    expect(canAccessOnboardingStep(me, "profile")).toBe(true);
+    expect(canAccessOnboardingStep(me, "goal")).toBe(true);
+    expect(canAccessOnboardingStep(me, "courses")).toBe(true);
+    expect(canAccessOnboardingStep(me, "checkout")).toBe(false);
+  });
+
+  it("treats community-only checkout as the next step when no courses are selected", () => {
+    const me = {
+      ...baseMe(),
+      profileForm: {
+        ...baseMe().profileForm,
+        submitted: true,
+      },
+      selectedGoalId: "goal-1",
+      subscriptionSelected: true,
+      selectedCourses: [],
+    };
+
+    expect(getNextOnboardingStep(me)).toBe("checkout");
+    expect(isOnboardingIncomplete(me)).toBe(true);
+  });
+
   it("treats non-empty profileForm as complete", () => {
     expect(isProfileComplete(baseMe())).toBe(false);
     expect(
@@ -61,10 +95,23 @@ describe("onboardingState", () => {
         ...baseMe(),
         profileForm: {
           aboutMe: "I am here",
+          submitted: null,
           telegram: null,
           socialUrl: "https://example.com",
           experienceLevel: null,
           notes: null,
+        },
+      }),
+    ).toBe(true);
+  });
+
+  it("treats an explicitly submitted profile as complete", () => {
+    expect(
+      isProfileComplete({
+        ...baseMe(),
+        profileForm: {
+          ...baseMe().profileForm,
+          submitted: true,
         },
       }),
     ).toBe(true);

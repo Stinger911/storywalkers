@@ -11,27 +11,31 @@ service cloud.firestore {
       return request.auth != null && request.auth.uid != null;
     }
 
-    function userDocPath(uid) {
-      return /databases/$(database)/documents/users/$(uid);
+    function currentUserDocPath() {
+      return /databases/$(database)/documents/users/$(request.auth.uid);
     }
 
-    function userDoc(uid) {
-      return get(userDocPath(uid));
+    function currentUserDoc() {
+      return get(currentUserDocPath());
+    }
+
+    function currentUserExists() {
+      return exists(currentUserDocPath());
     }
 
     function userRole() {
       return isSignedIn()
-        && exists(userDocPath(request.auth.uid))
-        && ("role" in userDoc(request.auth.uid).data)
-        ? userDoc(request.auth.uid).data.role
+        && currentUserExists()
+        && ("role" in currentUserDoc().data)
+        ? currentUserDoc().data.role
         : null;
     }
 
     function userStatus() {
       return isSignedIn()
-        && exists(userDocPath(request.auth.uid))
-        && ("status" in userDoc(request.auth.uid).data)
-        ? userDoc(request.auth.uid).data.status
+        && currentUserExists()
+        && ("status" in currentUserDoc().data)
+        ? currentUserDoc().data.status
         : null;
     }
 
@@ -47,10 +51,6 @@ service cloud.firestore {
       );
     }
 
-    function isActiveStudent() {
-      return isSignedIn() && userRole() == "student" && userStatus() == "active";
-    }
-
     function isSelf(uid) {
       return isSignedIn() && request.auth.uid == uid;
     }
@@ -64,11 +64,6 @@ service cloud.firestore {
     // True if fields are unchanged (cannot be altered by this write).
     function fieldsUnchanged(fieldNames) {
       return !request.resource.data.diff(resource.data).changedKeys().hasAny(fieldNames);
-    }
-
-    // For creates where resource doesn't exist.
-    function hasOnlyKeysOnCreate(allowedKeys) {
-      return request.resource.data.keys().hasOnly(allowedKeys);
     }
 
     /* =========================

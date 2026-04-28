@@ -72,6 +72,19 @@ app.add_middleware(RequestIdMiddleware)
 app.add_middleware(RequestLoggingMiddleware)
 
 
+async def _validation_log_context(request: Request) -> dict:
+    context = {
+        "event": "request_validation_failed",
+        "method": request.method,
+        "path": request.url.path,
+        "query": str(request.url.query or ""),
+    }
+    if request.url.path == "/api/me":
+        body_bytes = await request.body()
+        context["request_body"] = body_bytes.decode("utf-8", errors="replace")
+    return context
+
+
 @app.exception_handler(AppError)
 async def app_error_handler(request: Request, exc: AppError):
     return JSONResponse(
@@ -103,6 +116,13 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException):
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    logger.warning(
+        "request_validation_failed",
+        extra={
+            **(await _validation_log_context(request)),
+            "errors": exc.errors(),
+        },
+    )
     return JSONResponse(
         status_code=400,
         content=error_payload(

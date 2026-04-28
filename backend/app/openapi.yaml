@@ -111,6 +111,15 @@ components:
           nullable: true
           maxLength: 60
           example: "Doe"
+        aboutMe:
+          type: string
+          nullable: true
+          maxLength: 4000
+          example: "I want to improve my storytelling."
+        submitted:
+          type: boolean
+          nullable: true
+          example: true
         telegram:
           type: string
           nullable: true

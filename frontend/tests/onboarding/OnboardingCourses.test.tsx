@@ -63,6 +63,7 @@ vi.mock("../../src/routes/onboarding/OnboardingLayout", () => ({
 
 describe("OnboardingCourses", () => {
   beforeEach(() => {
+    window.sessionStorage.clear();
     meState = {
       uid: "u1",
       email: "u1@example.com",
@@ -267,6 +268,76 @@ describe("OnboardingCourses", () => {
         selectedCourses: ["course-1"],
         subscriptionSelected: true,
       });
+    });
+  });
+
+  it("loads courses from cached onboarding goal when auth state has no selectedGoalId", async () => {
+    window.sessionStorage.setItem(
+      "storywalkers:onboarding-goal",
+      JSON.stringify({ goalId: "goal-1", goalTitle: "Goal One" }),
+    );
+    meState = {
+      ...meState,
+      selectedGoalId: null,
+    };
+    vi.mocked(listCourses).mockResolvedValue({
+      items: [
+        {
+          id: "course-1",
+          title: "Course One",
+          shortDescription: "Desc one",
+          priceUsdCents: 4000,
+          isActive: true,
+          goalIds: ["goal-1"],
+          lessonCount: 6,
+        },
+      ],
+    });
+
+    render(() => (
+      <I18nProvider>
+        <OnboardingCourses />
+      </I18nProvider>
+    ));
+
+    expect(await screen.findByText("Course One")).toBeInTheDocument();
+    expect(listCourses).toHaveBeenCalledWith({ goalId: "goal-1" });
+  });
+
+  it("navigates back to goal step from courses", async () => {
+    vi.mocked(listCourses).mockResolvedValue({ items: [] });
+
+    render(() => (
+      <I18nProvider>
+        <OnboardingCourses />
+      </I18nProvider>
+    ));
+
+    fireEvent.click(screen.getByRole("button", { name: "Back" }));
+
+    await waitFor(() => {
+      expect(navigateMock).toHaveBeenCalledWith("/onboarding/goal");
+    });
+  });
+
+  it("allows continuing to checkout with community access only", async () => {
+    vi.mocked(listCourses).mockResolvedValue({ items: [] });
+    patchMeMock.mockResolvedValue({});
+
+    render(() => (
+      <I18nProvider>
+        <OnboardingCourses />
+      </I18nProvider>
+    ));
+
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+
+    await waitFor(() => {
+      expect(patchMeMock).toHaveBeenCalledWith({
+        selectedCourses: [],
+        subscriptionSelected: true,
+      });
+      expect(navigateMock).toHaveBeenCalledWith("/onboarding/checkout");
     });
   });
 });
