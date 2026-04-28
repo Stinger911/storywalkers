@@ -120,6 +120,11 @@ def _build_user_payload(uid: str, decoded: dict, profile: dict | None) -> dict:
             "lastName": _sanitize_optional_text(profile_form.get("lastName")),
             "aboutMe": _sanitize_optional_text(profile_form.get("aboutMe"))
             or _sanitize_optional_text(profile_form.get("notes")),
+            "submitted": (
+                profile_form.get("submitted")
+                if isinstance(profile_form.get("submitted"), bool)
+                else None
+            ),
             "telegram": _sanitize_optional_text(profile_form.get("telegram")),
             "socialLinks": social_links,
             "socialUrl": social_url,

@@ -130,6 +130,14 @@ export function OnboardingCheckout() {
       title={t("student.onboarding.checkout.title")}
       subtitle={t("student.onboarding.checkout.subtitle")}
     >
+      <Show when={isFirstHundred()}>
+        <SectionCard title={t("student.onboarding.checkout.firstHundredCardTitle")}>
+          <p class="text-sm leading-6 text-muted-foreground">
+            {t("student.onboarding.checkout.firstHundredCardBody")}
+          </p>
+        </SectionCard>
+      </Show>
+
       <SectionCard title={t("student.onboarding.checkout.cardTitle")}>
         <div class="space-y-4 text-sm">
           <div>
@@ -206,14 +214,6 @@ export function OnboardingCheckout() {
           </div>
         </div>
       </SectionCard>
-
-      <Show when={isFirstHundred()}>
-        <SectionCard title={t("student.onboarding.checkout.firstHundredCardTitle")}>
-          <p class="text-sm leading-6 text-muted-foreground">
-            {t("student.onboarding.checkout.firstHundredCardBody")}
-          </p>
-        </SectionCard>
-      </Show>
 
       <SectionCard title={t("student.onboarding.checkout.afterPaymentTitle")}>
         <div class="space-y-3 text-sm">

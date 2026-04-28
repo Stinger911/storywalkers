@@ -85,7 +85,6 @@ export function OnboardingProfile() {
       .filter(Boolean);
 
   const validate = () => {
-    if (!aboutMe().trim()) return t("student.onboarding.profile.aboutMeRequired");
     const telegramValue = telegram().trim();
     if (telegramValue) {
       const normalized = telegramValue.startsWith("@")
@@ -124,6 +123,7 @@ export function OnboardingProfile() {
       const payload: PatchMePayload = {
         profileForm: {
           aboutMe: aboutMe().trim(),
+          submitted: true,
           telegram: normalizeTelegramInput(telegram()) || null,
           socialLinks: cleanedSocialLinks(),
           socialUrl: cleanedSocialLinks()[0] || null,
@@ -161,13 +161,15 @@ export function OnboardingProfile() {
     <OnboardingLayout
       step="profile"
       title={t("student.onboarding.profile.title")}
-      subtitle={t("student.onboarding.profile.subtitle")}
     >
       <SectionCard
         title={t("student.onboarding.profile.cardTitle")}
         class="rounded-[calc(var(--radius-lg)+8px)] border-0 bg-white shadow-card"
       >
         <div class="grid gap-5">
+          <p class="text-sm leading-7 text-muted-foreground">
+            {t("student.onboarding.profile.subtitle")}
+          </p>
           <div class="grid gap-5 md:grid-cols-2">
             <TextField class="grid gap-2">
               <TextFieldLabel for="onb-first-name">

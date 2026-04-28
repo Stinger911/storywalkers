@@ -19,6 +19,7 @@ function baseMe(): MeProfile {
     selectedGoalId: null,
     profileForm: {
       aboutMe: null,
+      submitted: null,
       telegram: null,
       socialUrl: null,
       experienceLevel: null,
@@ -38,7 +39,7 @@ describe("onboardingState", () => {
       ...baseMe(),
       profileForm: {
         ...baseMe().profileForm,
-        aboutMe: "I want to learn",
+        submitted: true,
       },
     };
     expect(getNextOnboardingStep(me2)).toBe("goal");
@@ -60,7 +61,7 @@ describe("onboardingState", () => {
       ...baseMe(),
       profileForm: {
         ...baseMe().profileForm,
-        aboutMe: "I want to learn",
+        submitted: true,
       },
       selectedGoalId: "goal-1",
     };
@@ -76,7 +77,7 @@ describe("onboardingState", () => {
       ...baseMe(),
       profileForm: {
         ...baseMe().profileForm,
-        aboutMe: "I want to learn",
+        submitted: true,
       },
       selectedGoalId: "goal-1",
       subscriptionSelected: true,
@@ -94,10 +95,23 @@ describe("onboardingState", () => {
         ...baseMe(),
         profileForm: {
           aboutMe: "I am here",
+          submitted: null,
           telegram: null,
           socialUrl: "https://example.com",
           experienceLevel: null,
           notes: null,
+        },
+      }),
+    ).toBe(true);
+  });
+
+  it("treats an explicitly submitted profile as complete", () => {
+    expect(
+      isProfileComplete({
+        ...baseMe(),
+        profileForm: {
+          ...baseMe().profileForm,
+          submitted: true,
         },
       }),
     ).toBe(true);

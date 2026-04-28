@@ -178,6 +178,12 @@ describe("OnboardingCheckout", () => {
         "You are one of the first 100 students on our platform. All current and future courses will be free for you.",
       ),
     ).toBeInTheDocument();
+    expect(
+      screen
+        .getByText("Congratulations!")
+        .compareDocumentPosition(screen.getByText("Summary")) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 
   it("still includes mandatory community when saved profile has it disabled", async () => {

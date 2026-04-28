@@ -104,6 +104,7 @@ def test_build_user_payload_includes_onboarding_fields():
             "firstName": " Alice ",
             "lastName": " Rivera ",
             "aboutMe": " about me ",
+            "submitted": True,
             "telegram": " @name ",
             "socialLinks": [" https://example.com/social ", "https://example.com/yt"],
             "socialUrl": " https://example.com/social ",
@@ -122,6 +123,7 @@ def test_build_user_payload_includes_onboarding_fields():
     assert payload["profileForm"]["firstName"] == "Alice"
     assert payload["profileForm"]["lastName"] == "Rivera"
     assert payload["profileForm"]["aboutMe"] == "about me"
+    assert payload["profileForm"]["submitted"] is True
     assert payload["profileForm"]["telegram"] == "@name"
     assert payload["profileForm"]["socialLinks"] == [
         "https://example.com/social",
@@ -147,6 +149,7 @@ def test_build_user_payload_defaults_missing_onboarding_fields():
         "firstName": None,
         "lastName": None,
         "aboutMe": None,
+        "submitted": None,
         "telegram": None,
         "socialLinks": [],
         "socialUrl": None,

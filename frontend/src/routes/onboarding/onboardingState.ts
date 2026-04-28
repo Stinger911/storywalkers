@@ -55,7 +55,7 @@ export function writeCachedOnboardingGoal(goal: CachedOnboardingGoal) {
 export function isProfileComplete(me: MeProfile): boolean {
   const profile = me.profileForm;
   if (!profile) return false;
-  return Boolean((profile.aboutMe || profile.notes || "").trim());
+  return Boolean(profile.submitted || (profile.aboutMe || profile.notes || "").trim());
 }
 
 export function getNextOnboardingStep(me: MeProfile): OnboardingStep {

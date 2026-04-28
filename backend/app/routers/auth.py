@@ -36,6 +36,7 @@ class ProfileFormModel(BaseModel):
     firstName: str | None = None
     lastName: str | None = None
     aboutMe: str | None = None
+    submitted: bool | None = None
     telegram: str | None = None
     socialLinks: list[str] = Field(default_factory=list)
     socialUrl: str | None = None
@@ -355,6 +356,9 @@ def _sanitize_profile_form(
         "lastName": _sanitize_optional_text(merged.get("lastName")),
         "aboutMe": _sanitize_optional_text(merged.get("aboutMe"))
         or _sanitize_optional_text(merged.get("notes")),
+        "submitted": merged.get("submitted")
+        if isinstance(merged.get("submitted"), bool)
+        else None,
         "telegram": _sanitize_optional_text(merged.get("telegram")),
         "socialLinks": social_links if isinstance(social_links, list) else [],
         "socialUrl": _sanitize_optional_text(merged.get("socialUrl")),
@@ -374,6 +378,7 @@ def _sanitize_profile_form(
             "firstName": None,
             "lastName": None,
             "aboutMe": None,
+            "submitted": None,
             "telegram": None,
             "socialLinks": [],
             "socialUrl": None,
@@ -397,6 +402,8 @@ def _is_profile_complete(data: dict[str, Any]) -> bool:
     profile_form = data.get("profileForm")
     if not isinstance(profile_form, dict):
         return False
+    if isinstance(profile_form.get("submitted"), bool) and profile_form.get("submitted"):
+        return True
     return bool(
         _sanitize_optional_text(profile_form.get("aboutMe"))
         or _sanitize_optional_text(profile_form.get("notes"))

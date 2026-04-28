@@ -756,7 +756,7 @@ const dictionaries: Record<Locale, RawDictionary> = {
         profile: {
           title: "Tell us about yourself",
           subtitle:
-            "This step is about your personal information. You can stay anonymous and share only what feels comfortable. At the same time, the better our team knows you, the easier it is for us to support your learning. We review the social links you provide and use that context to tailor the learning process.",
+            "This step is about your personal information. You can stay anonymous and share as much or as little as you want. At the same time, the better our team knows you, the easier it is for us to support your learning. We review the social links you share and use that context to optimize the learning process.",
           cardTitle: "Profile",
           cardDescription:
             "Start with your basic profile info. Only “About me” is required. Telegram and social links are optional.",
@@ -1189,7 +1189,7 @@ const dictionaries: Record<Locale, RawDictionary> = {
         profile: {
           title: "Расскажите о себе",
           subtitle:
-            "Этот шаг посвящён вашей личной информации. Вы можете остаться инкогнито и делиться только тем, чем вам комфортно. Но чем лучше наша команда знает вас, тем точнее мы сможем помочь вам в обучении. Мы просматриваем указанные вами социальные сети и используем этот контекст, чтобы лучше настроить процесс обучения.",
+            "Данный шаг это ваша личная информация. Конечно вы можете не делится ей и остаться инкогнито, но чем лучше наша команда знает вас тем легче нам будет помочь вам в обучении.  Мы просматриваем ваши социальные сети и в соответствии с этим делаем выводы позволяющие оптимизировать процесс обучения.",
           cardTitle: "Профиль",
           cardDescription:
             "Заполните базовую информацию о себе. Обязательное только поле «О себе». Telegram и ссылки на соцсети можно добавить по желанию.",

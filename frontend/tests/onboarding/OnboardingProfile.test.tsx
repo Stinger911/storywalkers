@@ -18,6 +18,7 @@ const [meState, setMeState] = createSignal<{
     firstName: string | null;
     lastName: string | null;
     aboutMe: string | null;
+    submitted?: boolean | null;
     telegram: string | null;
     socialLinks: string[];
     socialUrl: string | null;
@@ -39,6 +40,7 @@ function makeMe(overrides: Record<string, unknown> = {}) {
       firstName: null,
       lastName: null,
       aboutMe: null,
+      submitted: null,
       telegram: null,
       socialLinks: [],
       socialUrl: null,
@@ -110,6 +112,7 @@ describe("OnboardingProfile", () => {
           firstName: "Alice",
           lastName: "Rivera",
           aboutMe: "I want to become a better storyteller.",
+          submitted: true,
           telegram: "@alice",
           socialLinks: ["https://example.com/alice"],
           socialUrl: "https://example.com/alice",
@@ -139,6 +142,31 @@ describe("OnboardingProfile", () => {
     });
   });
 
+  it("allows saving an empty about me field", async () => {
+    patchMeMock.mockResolvedValue({});
+    render(() => (
+      <I18nProvider>
+        <OnboardingProfile />
+      </I18nProvider>
+    ));
+
+    fireEvent.click(screen.getByRole("button", { name: "Save profile" }));
+
+    await waitFor(() => {
+      expect(patchMeMock).toHaveBeenCalledWith({
+        profileForm: {
+          firstName: "User",
+          lastName: "One",
+          aboutMe: "",
+          submitted: true,
+          telegram: null,
+          socialLinks: [],
+          socialUrl: null,
+        },
+      });
+    });
+  });
+
   it("hydrates profile fields when auth data arrives after initial render", async () => {
     setMeState(null);
 
@@ -158,6 +186,7 @@ describe("OnboardingProfile", () => {
           firstName: null,
           lastName: null,
           aboutMe: "Existing bio",
+          submitted: true,
           telegram: "@alice",
           socialLinks: ["https://example.com/alice"],
           socialUrl: "https://example.com/alice",
@@ -212,11 +241,26 @@ describe("OnboardingProfile", () => {
         displayName: "Alice Rivera",
         profileForm: {
           aboutMe: "I want to become a better storyteller.",
+          submitted: true,
           telegram: null,
           socialLinks: [],
           socialUrl: null,
         },
       });
     });
+  });
+
+  it("renders the personal info text before the fields", () => {
+    render(() => (
+      <I18nProvider>
+        <OnboardingProfile />
+      </I18nProvider>
+    ));
+
+    expect(
+      screen.getByText(
+        "This step is about your personal information. You can stay anonymous and share as much or as little as you want. At the same time, the better our team knows you, the easier it is for us to support your learning. We review the social links you share and use that context to optimize the learning process.",
+      ),
+    ).toBeInTheDocument();
   });
 });
