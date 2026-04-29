@@ -55,6 +55,8 @@ export function writeCachedOnboardingGoal(goal: CachedOnboardingGoal) {
 export function isProfileComplete(me: MeProfile): boolean {
   const profile = me.profileForm;
   if (!profile) return false;
+  const hasTelegram = Boolean((profile.telegram || "").trim());
+  if (!hasTelegram) return false;
   return Boolean(profile.submitted || (profile.aboutMe || profile.notes || "").trim());
 }
 

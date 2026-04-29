@@ -345,6 +345,7 @@ type RawDictionary = {
         telegramLabel: string;
         telegramPlaceholder: string;
         telegramHelp: string;
+        telegramRequired: string;
         telegramPhoneError: string;
         socialLinksLabel: string;
         socialLinkPlaceholder: string;
@@ -759,7 +760,7 @@ const dictionaries: Record<Locale, RawDictionary> = {
             "This step is about your personal information. You can stay anonymous and share as much or as little as you want. At the same time, the better our team knows you, the easier it is for us to support your learning. We review the social links you share and use that context to optimize the learning process.",
           cardTitle: "Profile",
           cardDescription:
-            "Start with your basic profile info. Only “About me” is required. Telegram and social links are optional.",
+            "Start with your basic profile info. Telegram is required. Social links are optional.",
           firstNameLabel: "First name",
           firstNamePlaceholder: "Alex",
           lastNameLabel: "Last name",
@@ -773,6 +774,7 @@ const dictionaries: Record<Locale, RawDictionary> = {
           telegramPlaceholder: "@username",
           telegramHelp:
             "We add “@” automatically for Telegram handles. Phone numbers are not accepted here.",
+          telegramRequired: "Telegram is required.",
           telegramPhoneError: "Telegram must be a handle, not a phone number.",
           socialLinksLabel: "Social links",
           socialLinkPlaceholder: "https://instagram.com/yourname",
@@ -1192,7 +1194,7 @@ const dictionaries: Record<Locale, RawDictionary> = {
             "Данный шаг это ваша личная информация. Конечно вы можете не делится ей и остаться инкогнито, но чем лучше наша команда знает вас тем легче нам будет помочь вам в обучении.  Мы просматриваем ваши социальные сети и в соответствии с этим делаем выводы позволяющие оптимизировать процесс обучения.",
           cardTitle: "Профиль",
           cardDescription:
-            "Заполните базовую информацию о себе. Обязательное только поле «О себе». Telegram и ссылки на соцсети можно добавить по желанию.",
+            "Заполните базовую информацию о себе. Telegram обязателен. Ссылки на соцсети можно добавить по желанию.",
           firstNameLabel: "Имя",
           firstNamePlaceholder: "Алекс",
           lastNameLabel: "Фамилия",
@@ -1206,6 +1208,7 @@ const dictionaries: Record<Locale, RawDictionary> = {
           telegramPlaceholder: "@username",
           telegramHelp:
             "Для Telegram-хэндла символ “@” добавляется автоматически. Номер телефона сюда вводить нельзя.",
+          telegramRequired: "Поле Telegram обязательно.",
           telegramPhoneError:
             "Telegram должен быть хэндлом, а не номером телефона.",
           socialLinksLabel: "Ссылки на соцсети",
