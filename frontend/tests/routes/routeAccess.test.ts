@@ -10,6 +10,7 @@ const student = (status: "active" | "disabled" | "community_only" | "expired") =
   status,
   profileForm: {
     aboutMe: "About me",
+    telegram: "@user",
   },
   selectedGoalId: "goal-1",
   selectedCourses: ["course-1"],

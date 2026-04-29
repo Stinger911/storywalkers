@@ -87,4 +87,26 @@ describe("OnboardingGoal", () => {
 
     expect(await screen.findByText("Could not load goals.")).toBeInTheDocument();
   });
+
+  it("does not preselect a goal from session cache", async () => {
+    window.sessionStorage.setItem(
+      "storywalkers:onboarding-goal",
+      JSON.stringify({ goalId: "goal-1", goalTitle: "Goal One" }),
+    );
+    vi.mocked(listGoals).mockResolvedValue({
+      items: [
+        { id: "goal-1", title: "Goal One", description: "Desc one" },
+        { id: "goal-2", title: "Goal Two", description: "Desc two" },
+      ],
+    });
+
+    render(() => (
+      <I18nProvider>
+        <OnboardingGoal />
+      </I18nProvider>
+    ));
+
+    expect(await screen.findByText("Goal One")).toBeInTheDocument();
+    expect(screen.queryByText("Selected")).not.toBeInTheDocument();
+  });
 });

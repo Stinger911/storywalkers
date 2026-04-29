@@ -86,6 +86,9 @@ export function OnboardingProfile() {
 
   const validate = () => {
     const telegramValue = telegram().trim();
+    if (!telegramValue) {
+      return t("student.onboarding.profile.telegramRequired");
+    }
     if (telegramValue) {
       const normalized = telegramValue.startsWith("@")
         ? telegramValue.slice(1)
@@ -226,7 +229,10 @@ export function OnboardingProfile() {
           </TextField>
           <TextField class="grid gap-2">
             <TextFieldLabel for="onb-telegram">
-              {t("student.onboarding.profile.telegramLabel")}
+              {t("student.onboarding.profile.telegramLabel")}{" "}
+              <span class="text-red-600" aria-hidden="true">
+                *
+              </span>
             </TextFieldLabel>
             <TextFieldInput
               id="onb-telegram"
@@ -234,6 +240,8 @@ export function OnboardingProfile() {
               onInput={(event) => setTelegram(normalizeTelegramInput(event.currentTarget.value))}
               placeholder={t("student.onboarding.profile.telegramPlaceholder")}
               disabled={saving()}
+              required
+              aria-required="true"
             />
             <p class="text-xs text-muted-foreground">
               {t("student.onboarding.profile.telegramHelp")}

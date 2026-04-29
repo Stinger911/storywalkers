@@ -8,7 +8,6 @@ import { useI18n } from "../../lib/i18n";
 import { listGoals, type Goal } from "../../lib/adminApi";
 import { OnboardingLayout } from "./OnboardingLayout";
 import {
-  readCachedOnboardingGoal,
   writeCachedOnboardingGoal,
 } from "./onboardingState";
 
@@ -21,7 +20,7 @@ export function OnboardingGoal() {
   const [saving, setSaving] = createSignal(false);
   const [saveError, setSaveError] = createSignal<string | null>(null);
   const [selectedGoalId, setSelectedGoalId] = createSignal(
-    auth.me()?.selectedGoalId || readCachedOnboardingGoal()?.goalId || "",
+    auth.me()?.selectedGoalId || "",
   );
 
   const toHumanError = (err: unknown, fallbackKey: string) => {

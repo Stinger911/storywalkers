@@ -8,7 +8,6 @@ from pydantic import BaseModel, Field, field_validator
 from pydantic_core import PydanticCustomError
 
 from app.auth.deps import (
-    ensure_active_student_status,
     get_current_user,
     require_active_student,
 )
@@ -402,11 +401,28 @@ def _is_profile_complete(data: dict[str, Any]) -> bool:
     profile_form = data.get("profileForm")
     if not isinstance(profile_form, dict):
         return False
-    if isinstance(profile_form.get("submitted"), bool) and profile_form.get("submitted"):
+    if (
+        isinstance(profile_form.get("submitted"), bool)
+        and profile_form.get("submitted")
+        and _sanitize_optional_text(profile_form.get("telegram"))
+    ):
         return True
     return bool(
-        _sanitize_optional_text(profile_form.get("aboutMe"))
-        or _sanitize_optional_text(profile_form.get("notes"))
+        (_sanitize_optional_text(profile_form.get("aboutMe"))
+        or _sanitize_optional_text(profile_form.get("notes")))
+        and _sanitize_optional_text(profile_form.get("telegram"))
+    )
+
+
+def _validate_submitted_profile_or_400(profile_form: dict[str, Any]) -> None:
+    if not profile_form.get("submitted"):
+        return
+    if _sanitize_optional_text(profile_form.get("telegram")):
+        return
+    raise AppError(
+        code="validation_error",
+        message="telegram is required when submitting the profile",
+        status_code=400,
     )
 
 
@@ -478,6 +494,7 @@ async def patch_me(
             else None,
             payload.profileForm or ProfileFormModel(),
         )
+        _validate_submitted_profile_or_400(updates["profileForm"])
         first_name = _sanitize_optional_text(updates["profileForm"].get("firstName"))
         last_name = _sanitize_optional_text(updates["profileForm"].get("lastName"))
         updates["displayName"] = " ".join(

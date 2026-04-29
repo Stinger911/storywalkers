@@ -243,7 +243,13 @@ def test_telegram_questionnaire_completion_is_idempotent(monkeypatch):
     client = TestClient(app)
 
     first = client.patch(
-        "/api/me", json={"profileForm": {"aboutMe": "Ready for onboarding."}}
+        "/api/me",
+        json={
+            "profileForm": {
+                "aboutMe": "Ready for onboarding.",
+                "telegram": "@user_one",
+            }
+        },
     )
     assert first.status_code == 200
     assert calls["count"] == 1

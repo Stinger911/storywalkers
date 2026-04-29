@@ -14,6 +14,8 @@ let meState: {
   selectedCourses?: string[];
   profileForm?: {
     aboutMe?: string | null;
+    telegram?: string | null;
+    submitted?: boolean | null;
     notes?: string | null;
   };
 } | null = null;
@@ -61,6 +63,8 @@ describe("OnboardingLayout", () => {
       selectedGoalId: "goal-1",
       profileForm: {
         aboutMe: "About me",
+        telegram: "@user",
+        submitted: true,
         notes: null,
       },
       selectedCourses: [],

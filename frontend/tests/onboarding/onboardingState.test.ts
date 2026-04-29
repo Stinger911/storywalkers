@@ -40,6 +40,7 @@ describe("onboardingState", () => {
       profileForm: {
         ...baseMe().profileForm,
         submitted: true,
+        telegram: "@alice",
       },
     };
     expect(getNextOnboardingStep(me2)).toBe("goal");
@@ -62,6 +63,7 @@ describe("onboardingState", () => {
       profileForm: {
         ...baseMe().profileForm,
         submitted: true,
+        telegram: "@alice",
       },
       selectedGoalId: "goal-1",
     };
@@ -78,6 +80,7 @@ describe("onboardingState", () => {
       profileForm: {
         ...baseMe().profileForm,
         submitted: true,
+        telegram: "@alice",
       },
       selectedGoalId: "goal-1",
       subscriptionSelected: true,
@@ -88,7 +91,7 @@ describe("onboardingState", () => {
     expect(isOnboardingIncomplete(me)).toBe(true);
   });
 
-  it("treats non-empty profileForm as complete", () => {
+  it("treats non-empty profileForm with telegram as complete", () => {
     expect(isProfileComplete(baseMe())).toBe(false);
     expect(
       isProfileComplete({
@@ -96,7 +99,7 @@ describe("onboardingState", () => {
         profileForm: {
           aboutMe: "I am here",
           submitted: null,
-          telegram: null,
+          telegram: "@alice",
           socialUrl: "https://example.com",
           experienceLevel: null,
           notes: null,
@@ -105,15 +108,29 @@ describe("onboardingState", () => {
     ).toBe(true);
   });
 
-  it("treats an explicitly submitted profile as complete", () => {
+  it("treats an explicitly submitted profile with telegram as complete", () => {
     expect(
       isProfileComplete({
         ...baseMe(),
         profileForm: {
           ...baseMe().profileForm,
           submitted: true,
+          telegram: "@alice",
         },
       }),
     ).toBe(true);
+  });
+
+  it("treats submitted profile without telegram as incomplete", () => {
+    expect(
+      isProfileComplete({
+        ...baseMe(),
+        profileForm: {
+          ...baseMe().profileForm,
+          submitted: true,
+          telegram: null,
+        },
+      }),
+    ).toBe(false);
   });
 });

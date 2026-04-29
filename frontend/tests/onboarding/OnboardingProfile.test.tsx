@@ -5,6 +5,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { I18nProvider } from "../../src/lib/i18n";
 import { OnboardingProfile } from "../../src/routes/onboarding/OnboardingProfile";
 
+const TELEGRAM_LABEL = /^Telegram\b/;
+
 const patchMeMock = vi.fn();
 const navigateMock = vi.fn();
 const [meState, setMeState] = createSignal<{
@@ -96,7 +98,7 @@ describe("OnboardingProfile", () => {
     fireEvent.input(screen.getByLabelText("About me"), {
       target: { value: "I want to become a better storyteller." },
     });
-    fireEvent.input(screen.getByLabelText("Telegram"), {
+    fireEvent.input(screen.getByLabelText(TELEGRAM_LABEL), {
       target: { value: "@alice" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Add link" }));
@@ -134,6 +136,9 @@ describe("OnboardingProfile", () => {
     fireEvent.input(screen.getByLabelText("About me"), {
       target: { value: "I want to become a better storyteller." },
     });
+    fireEvent.input(screen.getByLabelText(TELEGRAM_LABEL), {
+      target: { value: "@alice" },
+    });
     fireEvent.click(screen.getByRole("button", { name: "Next" }));
 
     await waitFor(() => {
@@ -142,8 +147,7 @@ describe("OnboardingProfile", () => {
     });
   });
 
-  it("allows saving an empty about me field", async () => {
-    patchMeMock.mockResolvedValue({});
+  it("requires telegram before saving", async () => {
     render(() => (
       <I18nProvider>
         <OnboardingProfile />
@@ -152,19 +156,8 @@ describe("OnboardingProfile", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Save profile" }));
 
-    await waitFor(() => {
-      expect(patchMeMock).toHaveBeenCalledWith({
-        profileForm: {
-          firstName: "User",
-          lastName: "One",
-          aboutMe: "",
-          submitted: true,
-          telegram: null,
-          socialLinks: [],
-          socialUrl: null,
-        },
-      });
-    });
+    expect(patchMeMock).not.toHaveBeenCalled();
+    expect(screen.getByText("Telegram is required.")).toBeInTheDocument();
   });
 
   it("hydrates profile fields when auth data arrives after initial render", async () => {
@@ -199,7 +192,7 @@ describe("OnboardingProfile", () => {
       expect(screen.getByLabelText("First name")).toHaveValue("Alice");
       expect(screen.getByLabelText("Last name")).toHaveValue("Rivera");
       expect(screen.getByLabelText("About me")).toHaveValue("Existing bio");
-      expect(screen.getByLabelText("Telegram")).toHaveValue("@alice");
+      expect(screen.getByLabelText(TELEGRAM_LABEL)).toHaveValue("@alice");
       expect(screen.getByLabelText("Email")).toHaveValue("u1@example.com");
       expect(screen.getByDisplayValue("https://example.com/alice")).toBeInTheDocument();
     });
@@ -233,6 +226,9 @@ describe("OnboardingProfile", () => {
     fireEvent.input(screen.getByLabelText("About me"), {
       target: { value: "I want to become a better storyteller." },
     });
+    fireEvent.input(screen.getByLabelText(TELEGRAM_LABEL), {
+      target: { value: "@alice" },
+    });
 
     fireEvent.click(screen.getByRole("button", { name: "Save profile" }));
 
@@ -242,7 +238,7 @@ describe("OnboardingProfile", () => {
         profileForm: {
           aboutMe: "I want to become a better storyteller.",
           submitted: true,
-          telegram: null,
+          telegram: "@alice",
           socialLinks: [],
           socialUrl: null,
         },
@@ -262,5 +258,17 @@ describe("OnboardingProfile", () => {
         "This step is about your personal information. You can stay anonymous and share as much or as little as you want. At the same time, the better our team knows you, the easier it is for us to support your learning. We review the social links you share and use that context to optimize the learning process.",
       ),
     ).toBeInTheDocument();
+  });
+
+  it("marks telegram as a required field", () => {
+    render(() => (
+      <I18nProvider>
+        <OnboardingProfile />
+      </I18nProvider>
+    ));
+
+    const telegramInput = screen.getByLabelText(TELEGRAM_LABEL);
+    expect(telegramInput).toBeRequired();
+    expect(screen.getByText("*")).toHaveClass("text-red-600");
   });
 });

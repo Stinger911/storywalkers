@@ -28,7 +28,6 @@ import { getFxRates } from "../../lib/fxApi";
 import { useI18n } from "../../lib/i18n";
 import { OnboardingLayout } from "./OnboardingLayout";
 import {
-  readCachedOnboardingGoal,
   writeCachedOnboardingGoal,
 } from "./onboardingState";
 
@@ -74,10 +73,7 @@ export function OnboardingCourses() {
   };
   const [preferredCurrency, setPreferredCurrency] =
     createSignal<CurrencyOption["value"]>(initialPreferredCurrency());
-  const cachedGoal = createMemo(() => readCachedOnboardingGoal());
-  const selectedGoalId = createMemo(
-    () => auth.me()?.selectedGoalId || cachedGoal()?.goalId || null,
-  );
+  const selectedGoalId = createMemo(() => auth.me()?.selectedGoalId || null);
 
   const [saving, setSaving] = createSignal(false);
   const [currencySaving, setCurrencySaving] = createSignal(false);
@@ -214,7 +210,7 @@ export function OnboardingCourses() {
     if (currentGoalId) {
       writeCachedOnboardingGoal({
         goalId: currentGoalId,
-        goalTitle: auth.me()?.selectedGoalTitle || cachedGoal()?.goalTitle || null,
+        goalTitle: auth.me()?.selectedGoalTitle || null,
       });
     }
   });
@@ -225,6 +221,10 @@ export function OnboardingCourses() {
   });
 
   const save = async (): Promise<boolean> => {
+    if (!selectedGoalId()) {
+      setSaveError(t("student.onboarding.courses.goalMissing"));
+      return false;
+    }
     setSaving(true);
     setSaveError(null);
     try {
@@ -537,7 +537,7 @@ export function OnboardingCourses() {
             <Button
               variant="outline"
               onClick={() => void save()}
-              disabled={saving() || currencySaving()}
+              disabled={saving() || currencySaving() || !selectedGoalId()}
             >
               {saving()
                 ? t("student.onboarding.common.saving")
@@ -545,7 +545,7 @@ export function OnboardingCourses() {
             </Button>
             <Button
               onClick={() => void next()}
-              disabled={saving() || currencySaving()}
+              disabled={saving() || currencySaving() || !selectedGoalId()}
             >
               {saving()
                 ? t("student.onboarding.common.saving")

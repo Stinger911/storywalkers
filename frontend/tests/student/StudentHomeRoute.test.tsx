@@ -96,7 +96,7 @@ describe("StudentHomeRoute", () => {
       status: "community_only",
       level: 1,
       selectedGoalId: null,
-      profileForm: { aboutMe: "About me" },
+      profileForm: { aboutMe: "About me", telegram: "@user" },
       selectedCourses: [],
     };
     render(() => <StudentHomeRoute />);

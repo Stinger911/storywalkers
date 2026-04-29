@@ -271,11 +271,7 @@ describe("OnboardingCourses", () => {
     });
   });
 
-  it("loads courses from cached onboarding goal when auth state has no selectedGoalId", async () => {
-    window.sessionStorage.setItem(
-      "storywalkers:onboarding-goal",
-      JSON.stringify({ goalId: "goal-1", goalTitle: "Goal One" }),
-    );
+  it("does not load courses when auth state has no selectedGoalId", async () => {
     meState = {
       ...meState,
       selectedGoalId: null,
@@ -300,8 +296,9 @@ describe("OnboardingCourses", () => {
       </I18nProvider>
     ));
 
-    expect(await screen.findByText("Course One")).toBeInTheDocument();
-    expect(listCourses).toHaveBeenCalledWith({ goalId: "goal-1" });
+    expect(screen.getByRole("button", { name: "Next" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Save profile" })).toBeDisabled();
+    expect(listCourses).not.toHaveBeenCalled();
   });
 
   it("navigates back to goal step from courses", async () => {

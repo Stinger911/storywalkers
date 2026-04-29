@@ -256,6 +256,38 @@ def test_patch_me_updates_onboarding_fields(monkeypatch):
     app.dependency_overrides.clear()
 
 
+def test_patch_me_rejects_submitted_profile_without_telegram(monkeypatch):
+    users = {
+        "u1": {
+            "displayName": "User One",
+            "email": "u1@example.com",
+            "profileForm": {},
+        }
+    }
+    fake_db = FakeFirestore(users)
+    monkeypatch.setattr(auth, "get_firestore_client", lambda: fake_db)
+    app.dependency_overrides[auth_deps.get_current_user] = _override_user
+    client = TestClient(app)
+
+    response = client.patch(
+        "/api/me",
+        json={
+            "profileForm": {
+                "aboutMe": "About me",
+                "submitted": True,
+                "telegram": None,
+            }
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json()["error"]["message"] == (
+        "telegram is required when submitting the profile"
+    )
+
+    app.dependency_overrides.clear()
+
+
 def test_patch_me_clears_display_name_when_profile_names_are_removed(monkeypatch):
     users = {
         "u1": {
@@ -334,7 +366,7 @@ def test_patch_me_sends_questionnaire_completed_once_on_course_selection_transit
 
     response = client.patch(
         "/api/me",
-        json={"profileForm": {"submitted": True}},
+        json={"profileForm": {"submitted": True, "telegram": "@alice"}},
     )
     assert response.status_code == 200
     assert "text" in sent
