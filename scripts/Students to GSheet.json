@@ -1,0 +1,366 @@
+{
+  "name": "Students to GSheet",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "ad49c9e9-b34b-40d7-83b9-8d3f18566b74",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "0abfd754-0a3d-44f2-b010-c743d0ceae82",
+              "leftValue": "={{ $json.role }}",
+              "rightValue": "student",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [
+        672,
+        0
+      ],
+      "id": "ea4a9d10-2ceb-4b81-8885-e8881bcecd3c",
+      "name": "Filter"
+    },
+    {
+      "parameters": {
+        "jsCode": "// make goals map\nconst GOALS = {};\nfor (const goal of $(\"Get goals\").all()) {\n  GOALS[goal.json._id] = goal.json.title;\n}\n// Loop over input items and add a new field called 'myNewField' to the JSON of each one\nfor (const item of $input.all()) {\n  item.json.telegram_id = item.json.profileForm ? item.json.profileForm.telegram : \"\";\n  item.json.notes = (item.json.profileForm && item.json.profileForm.notes) ? item.json.profileForm.notes : \"\";\n  const goal = item.json.selectedGoalId;\n  item.json.goal = GOALS[goal] ? GOALS[goal] : goal;\n}\n\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        896,
+        0
+      ],
+      "id": "44056adb-a687-4e7c-8b2f-900f8eae6fb1",
+      "name": "Flatten Form"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "19XvhMyXL-1yhPtXF27KMICp9aJ9TE7m4dtUXZN2WsoQ",
+          "mode": "list",
+          "cachedResultName": "StoryWalkers CRM",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/19XvhMyXL-1yhPtXF27KMICp9aJ9TE7m4dtUXZN2WsoQ/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/19XvhMyXL-1yhPtXF27KMICp9aJ9TE7m4dtUXZN2WsoQ/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "email": "={{ $json.email }}",
+            "Registration": "={{ $json.createdAt.toDateTime().format('yyyy-MM-dd HH:mm:ss') }}",
+            "Name": "={{ $json.displayName }}",
+            "Telegram": "={{ $json.telegram_id }}",
+            "About": "={{ $json.notes }}",
+            "Goals": "={{ $json.goal }}",
+            "Status": "={{ $json.status }}"
+          },
+          "matchingColumns": [
+            "email"
+          ],
+          "schema": [
+            {
+              "id": "Registration",
+              "displayName": "Registration",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Telegram",
+              "displayName": "Telegram",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "About",
+              "displayName": "About",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Goals",
+              "displayName": "Goals",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1120,
+        0
+      ],
+      "id": "6868f50c-0441-48b7-9031-cebb034417d7",
+      "name": "Append or update row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "SiijwL0Q0hIbbiug",
+          "name": "Google Sheets OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "projectId": "=storywalkers-b4fdf",
+        "database": "pathways",
+        "collection": "goals",
+        "returnAll": true
+      },
+      "type": "n8n-nodes-base.googleFirebaseCloudFirestore",
+      "typeVersion": 1.1,
+      "position": [
+        224,
+        0
+      ],
+      "id": "05ca1175-51c5-4193-9be0-fa13feba086d",
+      "name": "Get goals",
+      "credentials": {
+        "googleFirebaseCloudFirestoreOAuth2Api": {
+          "id": "wBd3vVLjHUcvf8sV",
+          "name": "Google Firebase Cloud Firestore account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 8
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        -144
+      ],
+      "id": "4c2884ff-81f2-434e-adf7-7fe8f3233aef",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "chatId": "-1003896283228",
+        "text": "=Students records processed.  \nFound {{ $input.all().length / $('Get goals').all().length }} records.  \nSuccessfully updated [StoryWalkers CRM](https://docs.google.com/spreadsheets/d/19XvhMyXL-1yhPtXF27KMICp9aJ9TE7m4dtUXZN2WsoQ/edit?gid=0#gid=0)",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1328,
+        0
+      ],
+      "id": "41c5dab2-3f7e-4ab4-985e-c58a80f7bc0e",
+      "name": "Send a text message",
+      "webhookId": "25223afe-b4fa-499c-acd4-77756f612c4c",
+      "executeOnce": true,
+      "credentials": {
+        "telegramApi": {
+          "id": "XnsaD7H3IKuW6PvA",
+          "name": "Telegram account SW"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "projectId": "=storywalkers-b4fdf",
+        "database": "pathways",
+        "collection": "users",
+        "returnAll": true
+      },
+      "type": "n8n-nodes-base.googleFirebaseCloudFirestore",
+      "typeVersion": 1.1,
+      "position": [
+        448,
+        0
+      ],
+      "id": "18378e83-ea7d-483e-bf20-498b2725dc80",
+      "name": "Get students",
+      "executeOnce": true,
+      "credentials": {
+        "googleFirebaseCloudFirestoreOAuth2Api": {
+          "id": "wBd3vVLjHUcvf8sV",
+          "name": "Google Firebase Cloud Firestore account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Get goals",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter": {
+      "main": [
+        [
+          {
+            "node": "Flatten Form",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Flatten Form": {
+      "main": [
+        [
+          {
+            "node": "Append or update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get goals": {
+      "main": [
+        [
+          {
+            "node": "Get students",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get goals",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append or update row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get students": {
+      "main": [
+        [
+          {
+            "node": "Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "errorWorkflow": "DlW9onTw8HgCl3iS",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false,
+    "timeSavedPerExecution": 60
+  },
+  "versionId": "e9b3371b-a520-40b2-bec2-95b914510256",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "899d4ada7c2a91af1ad45b3d93cbd7a60489e825ced40cd449109d52bd341227"
+  },
+  "id": "paI98e3lfE9iLTkt",
+  "tags": []
+}
