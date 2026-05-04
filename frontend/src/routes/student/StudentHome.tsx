@@ -1,6 +1,5 @@
-import { Show, createMemo, createSignal } from 'solid-js'
-import { Button, buttonVariants } from '../../components/ui/button'
-import { Card, CardContent } from '../../components/ui/card'
+import { Show, createEffect, createMemo, createSignal, onCleanup } from 'solid-js'
+import { Button } from '../../components/ui/button'
 import {
   Dialog,
   DialogContent,
@@ -13,94 +12,105 @@ import { SectionCard } from '../../components/ui/section-card'
 import { Skeleton } from '../../components/ui/skeleton'
 import { TextField, TextFieldInput, TextFieldLabel, TextFieldTextArea } from '../../components/ui/text-field'
 import { showToast } from '../../components/ui/toast'
-import { Markdown } from '../../components/ui/markdown'
 import { useMe } from '../../lib/useMe'
 import { useI18n } from '../../lib/i18n'
 import { useMyPlan } from './studentPlanContext'
+import { useStudentLayoutRail } from './StudentLayout'
 import { StudentPathVisualization } from './StudentPathVisualization'
-import { cn } from '../../lib/utils'
-import { getYouTubeEmbedUrl } from '../../lib/youtube'
 
 export function StudentHome() {
   const { me } = useMe()
-  const { plan, goal, steps, loading, error, progress, markStepDone, completeStep, openMaterial } = useMyPlan()
+  const { plan, steps, loading, error, progress, markStepDone, completeStep, openMaterial } = useMyPlan()
   const { t } = useI18n()
   const [completeDialogOpen, setCompleteDialogOpen] = createSignal(false)
   const [pendingStepId, setPendingStepId] = createSignal<string | null>(null)
   const [doneComment, setDoneComment] = createSignal('')
   const [doneLink, setDoneLink] = createSignal('')
   const [submittingComplete, setSubmittingComplete] = createSignal(false)
+  const setStudentRail = useStudentLayoutRail()
   const firstName = createMemo(() => {
     const raw = me()?.displayName ?? ''
     return raw.trim().split(' ')[0] || t('student.home.fallbackName')
   })
   const currentStep = createMemo(() => steps().find((step) => !step.isDone) ?? null)
-  const currentStepEmbedUrl = createMemo(() => getYouTubeEmbedUrl(currentStep()?.materialUrl))
   const ownedCoursesCount = createMemo(
     () => me()?.selectedCourses?.filter((value) => typeof value === "string").length ?? 0,
   )
   const completedLessonsCount = createMemo(() => progress().done)
-  const recentActivity = createMemo(() => {
-    const completed = steps().filter((step) => step.isDone).slice(0, 2)
-    const items = [
-      currentStep()
-        ? {
-            icon: "forum",
-            title: currentStep()?.title ?? t("student.home.currentStepTitle"),
-            description:
-              currentStep()?.description || t("student.home.currentStepDescription"),
-            meta: t("student.home.activityCurrentFocus"),
-          }
-        : null,
-      ...completed.map((step) => ({
-        icon: "assignment",
-        title: step.title,
-        description: step.doneComment || step.description,
-        meta: t("student.home.activityCompletedStep"),
-      })),
-      goal()
-        ? {
-            icon: "star",
-            title: goal()?.title ?? t("student.home.goalLabel"),
-            description:
-              goal()?.description || t("student.home.goalFallbackDescription"),
-            meta: t("student.home.activityGoalProgress"),
-          }
-        : null,
-    ].filter(Boolean)
-    return items.slice(0, 3) as {
-      icon: string
-      title: string
-      description: string
-      meta: string
-    }[]
-  })
-  const resourceItems = createMemo(() => {
-    const items = []
-    if (currentStep()?.materialUrl) {
-      items.push({
-        title: currentStep()?.title ?? t("student.home.currentStepMaterial"),
-        meta: t("student.home.resourceLatestMaterial"),
-        action: t("common.open"),
-        onClick: () => openMaterial(currentStep()?.materialUrl),
-        icon: "description",
-      })
-    }
-    items.push({
-      title: t("student.profileRail.library"),
-      meta: t("student.home.resourceSavedDocuments"),
-      action: t("common.view"),
-      href: "/student/library",
-      icon: "bookmark",
+  const progressCards = createMemo(() => [
+    {
+      label: t('student.home.ongoingCourses'),
+      value: String(ownedCoursesCount()).padStart(2, "0"),
+      icon: "play_circle",
+      iconClass: "text-primary",
+    },
+    {
+      label: t('student.home.completedLessons'),
+      value: String(completedLessonsCount()).padStart(2, "0"),
+      icon: "task_alt",
+      iconClass: "text-[#2a683a]",
+    },
+    {
+      label: t('student.home.nextMilestone'),
+      value: currentStep()?.title ?? t('student.home.currentStepEmpty'),
+      icon: "auto_stories",
+      iconClass: "text-primary",
+      meta: t('student.home.milestoneProgress', { done: progress().done, total: progress().total }),
+      emphasis: true,
+    },
+  ])
+
+  createEffect(() => {
+    if (!setStudentRail) return
+
+    setStudentRail(
+      <div class="space-y-3">
+        {progressCards().map((item) => (
+          <div
+            class={
+              item.emphasis
+                ? "overflow-hidden rounded-[calc(var(--radius-lg)+2px)] bg-primary px-4 py-4 text-white shadow-none"
+                : "rounded-[calc(var(--radius-lg)+2px)] border border-border/70 bg-card px-4 py-4 shadow-none"
+            }
+          >
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0">
+                <p
+                  class={
+                    item.emphasis
+                      ? "text-[10px] font-bold uppercase tracking-[0.14em] text-[rgba(209,228,255,0.95)]"
+                      : "text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground"
+                  }
+                >
+                  {item.label}
+                </p>
+                <p
+                  class={
+                    item.emphasis
+                      ? "mt-2 text-lg font-bold leading-6 tracking-[-0.03em]"
+                      : "mt-2 text-3xl font-extrabold tracking-[-0.04em] text-foreground"
+                  }
+                >
+                  {item.value}
+                </p>
+                <Show when={item.meta}>
+                  <div class={item.emphasis ? "mt-3 text-xs text-white/85" : "mt-3 text-xs text-muted-foreground"}>
+                    {item.meta}
+                  </div>
+                </Show>
+              </div>
+              <span class={`material-symbols-outlined text-3xl ${item.iconClass} ${item.emphasis ? '!text-white/80' : ''}`}>
+                {item.icon}
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>,
+    )
+
+    onCleanup(() => {
+      setStudentRail(null)
     })
-    items.push({
-      title: t("student.questions.askQuestion"),
-      meta: t("student.home.resourceMentorSupport"),
-      action: t("common.open"),
-      href: "/student/questions/new",
-      icon: "video_library",
-    })
-    return items.slice(0, 3)
   })
 
   const openCompleteDialog = (stepId: string) => {
@@ -234,237 +244,6 @@ export function StudentHome() {
                   openCompleteDialog(step.id)
                 }}
               />
-            </Show>
-          </SectionCard>
-
-          <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            <Card class="student-stat-card border-0 shadow-none">
-              <CardContent class="flex items-center justify-between p-6">
-                <div>
-                  <p class="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
-                    {t('student.home.ongoingCourses')}
-                  </p>
-                  <p class="mt-2 text-4xl font-extrabold tracking-[-0.04em] text-foreground">
-                    {String(ownedCoursesCount()).padStart(2, "0")}
-                  </p>
-                </div>
-                <span class="material-symbols-outlined text-4xl text-primary">
-                  play_circle
-                </span>
-              </CardContent>
-            </Card>
-
-            <Card class="student-stat-card border-0 shadow-none">
-              <CardContent class="flex items-center justify-between p-6">
-                <div>
-                  <p class="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
-                    {t('student.home.completedLessons')}
-                  </p>
-                  <p class="mt-2 text-4xl font-extrabold tracking-[-0.04em] text-foreground">
-                    {String(completedLessonsCount()).padStart(2, "0")}
-                  </p>
-                </div>
-                <span class="material-symbols-outlined text-4xl text-[#2a683a]">
-                  task_alt
-                </span>
-              </CardContent>
-            </Card>
-
-            <Card class="overflow-hidden rounded-[calc(var(--radius-lg)+2px)] border-0 bg-primary text-white shadow-none">
-              <CardContent class="relative p-6">
-                <p class="text-[10px] font-bold uppercase tracking-[0.14em] text-[rgba(209,228,255,0.95)]">
-                  {t('student.home.nextMilestone')}
-                </p>
-                <p class="mt-2 text-2xl font-bold tracking-[-0.04em]">
-                  {currentStep()?.title ?? t('student.home.currentStepEmpty')}
-                </p>
-                <div class="mt-4 flex items-center gap-2 text-xs text-white/85">
-                  <span class="material-symbols-outlined text-sm">flag</span>
-                  <span>{t('student.home.milestoneProgress', { done: progress().done, total: progress().total })}</span>
-                </div>
-                <span class="material-symbols-outlined pointer-events-none absolute -bottom-3 -right-3 text-[7rem] text-white/10">
-                  auto_stories
-                </span>
-              </CardContent>
-            </Card>
-          </div>
-
-          <div class="grid gap-6 lg:grid-cols-[minmax(0,1.3fr)_360px]">
-            <Card class="rounded-[calc(var(--radius-lg)+6px)] border-0 bg-white shadow-card">
-              <CardContent class="p-8">
-                <div class="mb-8 flex items-center justify-between gap-4">
-                  <h2 class="text-2xl font-bold tracking-[-0.03em] text-foreground">
-                    {t('student.home.recentActivityTitle')}
-                  </h2>
-                  <a href="/student/questions" class="text-[11px] font-bold uppercase tracking-[0.16em] text-secondary">
-                    {t('student.home.viewAll')}
-                  </a>
-                </div>
-                <div class="space-y-7">
-                  {recentActivity().map((item) => (
-                    <div class="flex gap-5">
-                      <div class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-[rgba(223,233,247,0.85)] text-primary">
-                        <span class="material-symbols-outlined">{item.icon}</span>
-                      </div>
-                      <div class="min-w-0">
-                        <p class="text-sm font-bold text-foreground">{item.title}</p>
-                        <p class="mt-1 line-clamp-2 text-xs leading-6 text-muted-foreground">
-                          {item.description}
-                        </p>
-                        <p class="mt-3 text-[10px] font-bold uppercase tracking-[0.16em] text-[#9aa3b2]">
-                          {item.meta}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card class="rounded-[calc(var(--radius-lg)+6px)] border-0 bg-white shadow-card">
-              <CardContent class="p-8">
-                <h2 class="mb-8 text-2xl font-bold tracking-[-0.03em] text-foreground">
-                  {t('student.home.resourcesTitle')}
-                </h2>
-                <div class="space-y-4">
-                  {resourceItems().map((item) => (
-                    <div class="student-resource-item rounded-[calc(var(--radius-md)+2px)] border border-[rgba(194,199,208,0.18)] px-4 py-4">
-                      <div class="flex items-center gap-4">
-                        <span class="material-symbols-outlined text-muted-foreground">
-                          {item.icon}
-                        </span>
-                        <div class="min-w-0 flex-1">
-                          <p class="text-sm font-bold text-foreground">{item.title}</p>
-                          <p class="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
-                            {item.meta}
-                          </p>
-                        </div>
-                        {"href" in item ? (
-                          <a
-                            href={item.href}
-                            class="material-symbols-outlined text-muted-foreground transition-colors duration-300 hover:text-primary"
-                          >
-                            open_in_new
-                          </a>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => item.onClick()}
-                            class="material-symbols-outlined text-muted-foreground transition-colors duration-300 hover:text-primary"
-                          >
-                            download
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <div class="mt-8 pt-8">
-                  <a
-                    href="/student/library"
-                    class="inline-flex w-full items-center justify-center gap-2 rounded-[var(--radius-md)] bg-[rgba(223,233,247,0.8)] px-5 py-3 text-sm font-bold text-primary transition-colors duration-300 hover:bg-secondary hover:text-white"
-                  >
-                    <span class="material-symbols-outlined text-lg">local_library</span>
-                    {t('student.home.browseFullLibrary')}
-                  </a>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          <SectionCard
-            title={t('student.home.currentStepTitle')}
-            description={t('student.home.currentStepDescription')}
-          >
-            <Show
-              when={currentStep()}
-              fallback={
-                <div class="text-sm text-muted-foreground">
-                  {t('student.home.currentStepEmpty')}
-                </div>
-              }
-            >
-              {(step) => (
-                <div
-                  id="current-lesson-details"
-                  class={cn(
-                    'student-list-card rounded-[calc(var(--radius-lg)+2px)] border border-border/70 bg-card p-5 shadow-none',
-                    step().isLocked && 'opacity-60',
-                  )}
-                >
-                  <div class="flex flex-wrap items-start justify-between gap-4">
-                    <div class="min-w-0">
-                      <div class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                        {t('student.home.currentStepLabel')}
-                      </div>
-                      <div
-                        class={cn(
-                          'mt-2 text-xl font-semibold tracking-[-0.03em]',
-                          step().isLocked && 'text-muted-foreground',
-                        )}
-                      >
-                        {step().title}
-                      </div>
-                      <Markdown
-                        class="mt-2 text-sm text-muted-foreground [&_a]:text-primary [&_a]:underline [&_code]:rounded [&_code]:bg-muted [&_code]:px-1 [&_code]:py-0.5 [&_ol]:ml-5 [&_ol]:list-decimal [&_p]:m-0 [&_ul]:ml-5 [&_ul]:list-disc"
-                        content={step().description}
-                      />
-                      <Show when={step().isLocked}>
-                        <div class="mt-2 text-xs font-medium text-muted-foreground">
-                          {t('student.home.stepLocked')}
-                        </div>
-                      </Show>
-                      <Show when={currentStepEmbedUrl() && !step().isLocked}>
-                        <div class="mt-4 overflow-hidden rounded-[calc(var(--radius-md)+2px)] border border-border/70 bg-muted/30">
-                          <div class="aspect-video">
-                            <iframe
-                              class="h-full w-full"
-                              src={currentStepEmbedUrl() ?? undefined}
-                              title={step().title}
-                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                              allowfullscreen
-                              referrerPolicy="strict-origin-when-cross-origin"
-                            />
-                          </div>
-                        </div>
-                      </Show>
-                      <Show when={step().materialUrl}>
-                        <button
-                          class="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-primary"
-                          onClick={() => openMaterial(step().materialUrl)}
-                          disabled={step().isLocked}
-                        >
-                          <span class="material-symbols-outlined text-[18px]">open_in_new</span>
-                          {t('student.home.currentStepMaterial')}
-                        </button>
-                      </Show>
-                    </div>
-                    <div class="flex flex-wrap gap-2">
-                      {step().materialUrl ? (
-                        <button
-                          class={buttonVariants({ size: 'sm' })}
-                          onClick={() => openMaterial(step().materialUrl)}
-                          disabled={step().isLocked}
-                        >
-                          {t('common.open')}
-                        </button>
-                      ) : (
-                        <Button size="sm" disabled>
-                          {t('common.open')}
-                        </Button>
-                      )}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openCompleteDialog(step().id)}
-                        disabled={step().isLocked}
-                      >
-                        {t('student.home.currentStepMarkDone')}
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              )}
             </Show>
           </SectionCard>
 

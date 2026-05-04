@@ -1,5 +1,5 @@
 import { A, useLocation } from "@solidjs/router";
-import { Show, createMemo, type JSX } from "solid-js";
+import { Show, createContext, createMemo, createSignal, type JSX, useContext } from "solid-js";
 import { AppShell } from "../../components/AppShell";
 import { Avatar, AvatarFallback } from "../../components/ui/avatar";
 import { useAuth } from "../../lib/auth";
@@ -12,6 +12,14 @@ type StudentLayoutProps = {
   children?: JSX.Element;
   rightRail?: JSX.Element;
 };
+
+type StudentLayoutRailSetter = (content: JSX.Element | null) => void;
+
+const StudentLayoutRailContext = createContext<StudentLayoutRailSetter>();
+
+export function useStudentLayoutRail() {
+  return useContext(StudentLayoutRailContext);
+}
 
 export function StudentLayout(props: StudentLayoutProps) {
   const auth = useAuth();
@@ -42,137 +50,142 @@ export function StudentLayout(props: StudentLayoutProps) {
     const rawLevel = auth.me()?.level;
     return typeof rawLevel === "number" && rawLevel > 0 ? Math.floor(rawLevel) : 1;
   });
+  const [leftRailContent, setLeftRailContent] = createSignal<JSX.Element | null>(null);
 
   const shell = (
     <div class="student-shell min-h-screen bg-background text-foreground [font-family:Manrope,'Space_Grotesk',system-ui,sans-serif]">
-      <AppShell
-        title={t("student.layout.title")}
-        roleLabel={t("student.layout.roleLabel")}
-        userName={auth.me()?.displayName}
-        showSettingsTrigger
-        brandSlot={
-          <div class="flex items-center gap-8">
-            <A
-              href="/student"
-              class={cn(
-                "text-xl font-extrabold tracking-[-0.04em]",
-                theme() === "dark" ? "text-primary" : "text-[#1f3b67]",
-              )}
-            >
-              {t("student.layout.brand")}
-            </A>
-          </div>
-        }
-        hideLogout
-        headerClass="border-b-0 bg-background/70"
-        headerInnerClass="max-w-[1280px] px-4 py-3 sm:px-6 lg:px-8"
-        mainClass={cn(
-          "max-w-[1280px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8",
-          props.rightRail ? "pb-24 md:pb-8" : "pb-24 md:pb-8",
-        )}
-        centerSlot={
-          <div class="hidden md:flex flex-1 justify-center">
-            <div
-              class={cn(
-                "flex w-full max-w-xs items-center gap-2 rounded-[var(--radius-md)] px-4 py-2.5 text-muted-foreground",
-                theme() === "dark"
-                  ? "border border-border/70 bg-[rgba(18,29,38,0.9)]"
-                  : "bg-[rgba(223,233,247,0.8)]",
-              )}
-            >
-              <span class="material-symbols-outlined text-[18px]">search</span>
-              <input
-                type="search"
-                placeholder={t("student.layout.searchPlaceholder")}
-                class="w-full border-0 bg-transparent p-0 text-sm text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus:ring-0"
-              />
-            </div>
-          </div>
-        }
-        userMenuSlot={
-          <div class="flex items-center gap-3">
-            <div class="flex items-center gap-3">
-              <div class="hidden text-right sm:block">
-                <p class="text-xs font-bold leading-none text-foreground">
-                  {auth.me()?.displayName || firstName()}
-                </p>
-                <p class="text-[10px] font-bold uppercase tracking-[0.14em] text-secondary">
-                  {t("student.layout.levelLabel", { level: studentLevel() })}
-                </p>
-              </div>
-              <Avatar
+      <StudentLayoutRailContext.Provider value={setLeftRailContent}>
+        <AppShell
+          title={t("student.layout.title")}
+          roleLabel={t("student.layout.roleLabel")}
+          userName={auth.me()?.displayName}
+          showSettingsTrigger
+          brandSlot={
+            <div class="flex items-center gap-8">
+              <A
+                href="/student"
                 class={cn(
-                  "h-10 w-10 rounded-[var(--radius-md)]",
-                  theme() === "dark"
-                    ? "border border-border/70 bg-[rgba(22,33,42,0.96)]"
-                    : "bg-[rgba(217,227,241,0.95)]",
+                  "text-xl font-extrabold tracking-[-0.04em]",
+                  theme() === "dark" ? "text-primary" : "text-[#1f3b67]",
                 )}
               >
-                <AvatarFallback
+                {t("student.layout.brand")}
+              </A>
+            </div>
+          }
+          hideLogout
+          headerClass="border-b-0 bg-background/70"
+          headerInnerClass="max-w-[1280px] px-4 py-3 sm:px-6 lg:px-8"
+          mainClass={cn(
+            "max-w-[1280px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8",
+            props.rightRail ? "pb-24 md:pb-8" : "pb-24 md:pb-8",
+          )}
+          centerSlot={
+            <div class="hidden md:flex flex-1 justify-center">
+              <div
+                class={cn(
+                  "flex w-full max-w-xs items-center gap-2 rounded-[var(--radius-md)] px-4 py-2.5 text-muted-foreground",
+                  theme() === "dark"
+                    ? "border border-border/70 bg-[rgba(18,29,38,0.9)]"
+                    : "bg-[rgba(223,233,247,0.8)]",
+                )}
+              >
+                <span class="material-symbols-outlined text-[18px]">search</span>
+                <input
+                  type="search"
+                  placeholder={t("student.layout.searchPlaceholder")}
+                  class="w-full border-0 bg-transparent p-0 text-sm text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus:ring-0"
+                />
+              </div>
+            </div>
+          }
+          userMenuSlot={
+            <div class="flex items-center gap-3">
+              <div class="flex items-center gap-3">
+                <div class="hidden text-right sm:block">
+                  <p class="text-xs font-bold leading-none text-foreground">
+                    {auth.me()?.displayName || firstName()}
+                  </p>
+                  <p class="text-[10px] font-bold uppercase tracking-[0.14em] text-secondary">
+                    {t("student.layout.levelLabel", { level: studentLevel() })}
+                  </p>
+                </div>
+                <Avatar
                   class={cn(
-                    "text-xs font-bold text-primary",
+                    "h-10 w-10 rounded-[var(--radius-md)]",
                     theme() === "dark"
-                      ? "bg-[rgba(22,33,42,0.96)]"
+                      ? "border border-border/70 bg-[rgba(22,33,42,0.96)]"
                       : "bg-[rgba(217,227,241,0.95)]",
                   )}
                 >
-                  {userInitials()}
-                </AvatarFallback>
-              </Avatar>
-            </div>
-          </div>
-        }
-        rightRail={props.rightRail}
-        onLogout={() => {
-          void auth.logout();
-          window.location.href = "/";
-        }}
-      >
-        <div class="grid gap-8 md:grid-cols-[220px_minmax(0,1fr)] lg:gap-10">
-          <aside class="hidden md:flex md:min-h-[calc(100vh-8rem)] md:flex-col md:justify-between px-2 py-4">
-            <div class="space-y-7">
-              <div class="px-2">
-                <div
-                  class={cn(
-                    "text-[1.05rem] font-extrabold tracking-[-0.03em]",
-                    theme() === "dark" ? "text-primary" : "text-[#1f3b67]",
-                  )}
-                >
-                  {t("student.layout.workspaceTitle")}
-                </div>
-                <Show when={t("student.layout.workspaceSubtitle")}>
-                  <div class="text-[10px] font-bold uppercase tracking-[0.14em] text-secondary">
-                    {t("student.layout.workspaceSubtitle")}
-                  </div>
-                </Show>
-              </div>
-              <nav class="grid gap-1">
-                {studentNavItems().map((item) => (
-                  <A
-                    href={item.href}
+                  <AvatarFallback
                     class={cn(
-                      "flex items-center gap-3 px-3 py-3 text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground transition-all duration-300 hover:text-primary",
-                      theme() === "dark" ? "hover:bg-white/5" : "hover:bg-white/60",
-                      isActive(item.href)
-                        ? theme() === "dark"
-                          ? "border-r-4 border-secondary bg-[rgba(18,29,38,0.9)] text-secondary"
-                          : "border-r-4 border-secondary bg-[rgba(237,244,255,0.7)] text-secondary"
-                        : "",
+                      "text-xs font-bold text-primary",
+                      theme() === "dark"
+                        ? "bg-[rgba(22,33,42,0.96)]"
+                        : "bg-[rgba(217,227,241,0.95)]",
                     )}
                   >
-                    <span class="material-symbols-outlined text-[18px]">
-                      {item.icon}
-                    </span>
-                    <span>{item.label}</span>
-                  </A>
-                ))}
-              </nav>
+                    {userInitials()}
+                  </AvatarFallback>
+                </Avatar>
+              </div>
             </div>
-
-          </aside>
-          <div class="min-w-0">{props.children}</div>
-        </div>
-      </AppShell>
+          }
+          rightRail={props.rightRail}
+          onLogout={() => {
+            void auth.logout();
+            window.location.href = "/";
+          }}
+        >
+          <div class="grid gap-8 md:grid-cols-[220px_minmax(0,1fr)] lg:gap-10">
+            <aside class="hidden md:block px-2 py-4">
+              <div class="sticky top-24 space-y-7">
+                <div class="px-2">
+                  <div
+                    class={cn(
+                      "text-[1.05rem] font-extrabold tracking-[-0.03em]",
+                      theme() === "dark" ? "text-primary" : "text-[#1f3b67]",
+                    )}
+                  >
+                    {t("student.layout.workspaceTitle")}
+                  </div>
+                  <Show when={t("student.layout.workspaceSubtitle")}>
+                    <div class="text-[10px] font-bold uppercase tracking-[0.14em] text-secondary">
+                      {t("student.layout.workspaceSubtitle")}
+                    </div>
+                  </Show>
+                </div>
+                <nav class="grid gap-1">
+                  {studentNavItems().map((item) => (
+                    <A
+                      href={item.href}
+                      class={cn(
+                        "flex items-center gap-3 px-3 py-3 text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground transition-all duration-300 hover:text-primary",
+                        theme() === "dark" ? "hover:bg-white/5" : "hover:bg-white/60",
+                        isActive(item.href)
+                          ? theme() === "dark"
+                            ? "border-r-4 border-secondary bg-[rgba(18,29,38,0.9)] text-secondary"
+                            : "border-r-4 border-secondary bg-[rgba(237,244,255,0.7)] text-secondary"
+                          : "",
+                      )}
+                    >
+                      <span class="material-symbols-outlined text-[18px]">
+                        {item.icon}
+                      </span>
+                      <span>{item.label}</span>
+                    </A>
+                  ))}
+                </nav>
+                <Show when={leftRailContent()}>
+                  <div class="px-2">{leftRailContent()}</div>
+                </Show>
+              </div>
+            </aside>
+            <div class="min-w-0">{props.children}</div>
+          </div>
+        </AppShell>
+      </StudentLayoutRailContext.Provider>
 
       <nav
         class={cn(

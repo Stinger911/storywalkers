@@ -1,7 +1,15 @@
 import { For, Show, createEffect, createMemo, createSignal } from "solid-js";
 
 import { Button, buttonVariants } from "../../components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "../../components/ui/dialog";
 import { Markdown } from "../../components/ui/markdown";
+import { getYouTubeEmbedUrl } from "../../lib/youtube";
 import { cn } from "../../lib/utils";
 import type { StudentPathStep } from "./studentPathTypes";
 
@@ -39,10 +47,12 @@ function buildSegmentPath(from: PathPoint, to: PathPoint) {
 
 export function StudentPathVisualization(props: StudentPathVisualizationProps) {
   const [selectedStepId, setSelectedStepId] = createSignal<string | null>(props.initialStepId ?? null);
+  const [detailsOpen, setDetailsOpen] = createSignal(false);
 
   const selectedStep = createMemo(
     () => props.steps.find((step) => step.id === selectedStepId()) ?? props.steps[0] ?? null,
   );
+  const selectedStepEmbedUrl = createMemo(() => getYouTubeEmbedUrl(selectedStep()?.materialUrl));
 
   createEffect(() => {
     const nextSelected =
@@ -86,16 +96,17 @@ export function StudentPathVisualization(props: StudentPathVisualizationProps) {
   );
 
   return (
-    <div class="space-y-6">
-      <div class="overflow-hidden rounded-[calc(var(--radius-lg)+4px)] bg-[linear-gradient(180deg,rgba(237,244,255,0.96)_0%,rgba(255,255,255,1)_100%)] p-4 sm:p-6">
-        <div class="overflow-x-auto pb-2">
-          <div class="relative min-w-[680px]" style={{ height: `${svgHeight()}px` }}>
-            <svg
-              viewBox={`0 0 ${WIDTH} ${svgHeight()}`}
-              class="absolute inset-0 h-full w-full"
-              role="img"
-              aria-label={props.ariaLabel}
-            >
+    <>
+      <div class="space-y-6">
+        <div class="overflow-hidden rounded-[calc(var(--radius-lg)+4px)] bg-[linear-gradient(180deg,rgba(237,244,255,0.96)_0%,rgba(255,255,255,1)_100%)] p-4 sm:p-6">
+          <div class="overflow-x-auto pb-2">
+            <div class="relative min-w-[680px]" style={{ height: `${svgHeight()}px` }}>
+              <svg
+                viewBox={`0 0 ${WIDTH} ${svgHeight()}`}
+                class="absolute inset-0 h-full w-full"
+                role="img"
+                aria-label={props.ariaLabel}
+              >
               <defs>
                 <linearGradient id="student-path-track" x1="0%" y1="0%" x2="100%" y2="100%">
                   <stop offset="0%" stop-color="rgba(74,120,167,0.18)" />
@@ -177,147 +188,163 @@ export function StudentPathVisualization(props: StudentPathVisualizationProps) {
                   );
                 }}
               </For>
-            </svg>
+              </svg>
 
-            <For each={points()}>
-              {(point, index) => {
-                const isSelected = () => selectedStep()?.id === point.step.id;
+              <For each={points()}>
+                {(point, index) => {
+                  const isSelected = () => selectedStep()?.id === point.step.id;
 
-                return (
-                  <button
-                    type="button"
-                    class={cn(
-                      "student-path-node-card absolute w-[196px] -translate-x-1/2 -translate-y-1/2 rounded-[calc(var(--radius-md)+4px)] bg-white/95 p-4 text-left shadow-[0px_20px_40px_rgba(18,29,38,0.06)] transition-all duration-300",
-                      isSelected() && "ring-2 ring-primary/20",
-                      point.step.isLocked && "opacity-70",
-                    )}
-                    style={{
-                      left: `${point.x}px`,
-                      top: `${point.y}px`,
-                    }}
-                    aria-pressed={isSelected()}
-                    onClick={() => setSelectedStepId(point.step.id)}
-                  >
-                    <div class="flex items-start justify-between gap-3">
-                      <div>
-                        <p class="text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
-                          #{String((point.step.order ?? index()) + 1).padStart(2, "0")}
-                        </p>
-                        <p class="mt-2 line-clamp-2 text-sm font-bold text-foreground">
-                          {point.step.title}
-                        </p>
+                  return (
+                    <button
+                      type="button"
+                      class={cn(
+                        "student-path-node-card absolute w-[196px] -translate-x-1/2 -translate-y-1/2 rounded-[calc(var(--radius-md)+4px)] bg-white/95 p-4 text-left shadow-[0px_20px_40px_rgba(18,29,38,0.06)] transition-all duration-300",
+                        isSelected() && "ring-2 ring-primary ring-offset-4 ring-offset-[rgba(237,244,255,0.92)]",
+                        point.step.isLocked && "opacity-70",
+                      )}
+                      style={{
+                        left: `${point.x}px`,
+                        top: `${point.y}px`,
+                      }}
+                      aria-pressed={isSelected()}
+                      aria-current={isSelected() ? "true" : undefined}
+                      onClick={() => {
+                        setSelectedStepId(point.step.id);
+                        setDetailsOpen(true);
+                      }}
+                    >
+                      <div class="flex items-start justify-between gap-3">
+                        <div>
+                          <p class="text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
+                            #{String((point.step.order ?? index()) + 1).padStart(2, "0")}
+                          </p>
+                          <p class="mt-2 line-clamp-2 text-sm font-bold text-foreground">
+                            {point.step.title}
+                          </p>
+                        </div>
+                        <span
+                          class={cn(
+                            "mt-1 h-2.5 w-2.5 flex-shrink-0 rounded-full",
+                            point.step.isDone
+                              ? "bg-[#2a683a]"
+                              : point.step.isLocked
+                                ? "bg-[#9aa3b2]"
+                                : "bg-primary",
+                          )}
+                        />
                       </div>
-                      <span
-                        class={cn(
-                          "mt-1 h-2.5 w-2.5 flex-shrink-0 rounded-full",
-                          point.step.isDone
-                            ? "bg-[#2a683a]"
-                            : point.step.isLocked
-                              ? "bg-[#9aa3b2]"
-                              : "bg-primary",
-                        )}
-                      />
-                    </div>
-                    <p class="mt-3 line-clamp-2 text-xs leading-5 text-muted-foreground">
-                      {point.step.description}
-                    </p>
-                  </button>
-                );
-              }}
-            </For>
+                      <p class="mt-3 line-clamp-2 text-xs leading-5 text-muted-foreground">
+                        {point.step.description}
+                      </p>
+                    </button>
+                  );
+                }}
+              </For>
+            </div>
           </div>
         </div>
       </div>
 
-      <Show when={selectedStep()}>
-        {(step) => (
-          <div
-            class={cn(
-              "rounded-[calc(var(--radius-lg)+2px)] bg-card p-5 shadow-none",
-              step().isLocked && "opacity-70",
-            )}
-          >
-            <div class="flex flex-wrap items-start justify-between gap-4">
-              <div class="min-w-0 flex-1">
-                <div class="flex flex-wrap items-center gap-3">
-                  <span class="inline-flex rounded-full bg-[rgba(223,233,247,0.85)] px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-primary">
-                    #{String((step().order ?? 0) + 1).padStart(2, "0")}
-                  </span>
-                  <Show when={step().isLocked}>
-                    <span class="text-xs font-medium text-muted-foreground">
-                      {props.lockedLabel}
-                    </span>
-                  </Show>
+      <Dialog open={detailsOpen()} onOpenChange={setDetailsOpen}>
+        <DialogContent class="h-[100dvh] max-h-[100dvh] max-w-[min(96vw,1100px)] overflow-hidden rounded-none border-0 p-0 sm:h-[min(92dvh,960px)] sm:max-h-[92dvh] sm:rounded-[calc(var(--radius-lg)+8px)]">
+          <Show when={selectedStep()}>
+            {(step) => (
+              <div class="flex h-full min-h-0 flex-col bg-background">
+                <DialogHeader class="border-b border-border/70 px-6 py-5 pr-14 sm:px-8">
+                  <DialogTitle class="text-2xl font-bold tracking-[-0.03em] text-foreground">
+                    {step().title}
+                  </DialogTitle>
+                  <DialogDescription class="text-sm leading-6">
+                    {step().isLocked
+                      ? props.lockedLabel
+                      : `#${String((step().order ?? 0) + 1).padStart(2, "0")}`}
+                  </DialogDescription>
+                </DialogHeader>
+
+                <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 py-6 sm:px-8 sm:py-8">
+                  <div class={cn("space-y-5", step().isLocked && "opacity-60")}>
+                    <Markdown
+                      class="text-sm leading-7 text-muted-foreground [&_a]:text-primary [&_a]:underline [&_code]:rounded [&_code]:bg-muted [&_code]:px-1 [&_code]:py-0.5 [&_ol]:ml-5 [&_ol]:list-decimal [&_p]:m-0 [&_p+*]:mt-4 [&_ul]:ml-5 [&_ul]:list-disc"
+                      content={step().description}
+                    />
+                    <Show when={step().isLocked}>
+                      <div class="text-xs font-medium text-muted-foreground">
+                        {props.lockedLabel}
+                      </div>
+                    </Show>
+                    <Show when={selectedStepEmbedUrl() && !step().isLocked}>
+                      <div class="overflow-hidden rounded-[calc(var(--radius-md)+2px)] border border-border/70 bg-muted/30">
+                        <div class="aspect-video">
+                          <iframe
+                            class="h-full w-full"
+                            src={selectedStepEmbedUrl() ?? undefined}
+                            title={step().title}
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                            allowfullscreen
+                            referrerPolicy="strict-origin-when-cross-origin"
+                          />
+                        </div>
+                      </div>
+                    </Show>
+                    <Show when={step().isDone && step().doneComment}>
+                      <div class="text-xs">
+                        <span class="font-semibold">{props.doneCommentLabel} </span>
+                        <span class="text-muted-foreground">{step().doneComment}</span>
+                      </div>
+                    </Show>
+                    <Show when={step().isDone && step().doneLink}>
+                      <div class="text-xs">
+                        <span class="font-semibold">{props.doneLinkLabel} </span>
+                        <a
+                          href={step().doneLink ?? "#"}
+                          target="_blank"
+                          rel="noopener"
+                          class="text-primary underline"
+                        >
+                          {step().doneLink}
+                        </a>
+                      </div>
+                    </Show>
+                    <Show when={step().materialUrl}>
+                      <button
+                        class="inline-flex items-center gap-2 text-sm font-semibold text-primary"
+                        onClick={() => props.onOpenMaterial(step().materialUrl)}
+                        disabled={step().isLocked}
+                      >
+                        <span class="material-symbols-outlined text-[18px]">open_in_new</span>
+                        {props.materialLabel}
+                      </button>
+                    </Show>
+                    <div class="flex flex-wrap gap-2 border-t border-border/70 pt-5">
+                      {step().materialUrl ? (
+                        <button
+                          class={buttonVariants({ size: "sm" })}
+                          onClick={() => props.onOpenMaterial(step().materialUrl)}
+                          disabled={step().isLocked}
+                        >
+                          {props.openLabel}
+                        </button>
+                      ) : (
+                        <Button size="sm" disabled>
+                          {props.openLabel}
+                        </Button>
+                      )}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => props.onToggleStep(step())}
+                        disabled={step().isLocked}
+                      >
+                        {step().isDone ? props.markNotDoneLabel : props.markDoneLabel}
+                      </Button>
+                    </div>
+                  </div>
                 </div>
-
-                <h3 class="mt-4 text-xl font-semibold tracking-[-0.03em] text-foreground">
-                  {step().title}
-                </h3>
-                <Markdown
-                  class="mt-3 text-sm text-muted-foreground [&_a]:text-primary [&_a]:underline [&_code]:rounded [&_code]:bg-muted [&_code]:px-1 [&_code]:py-0.5 [&_ol]:ml-5 [&_ol]:list-decimal [&_p]:m-0 [&_ul]:ml-5 [&_ul]:list-disc"
-                  content={step().description}
-                />
-
-                <Show when={step().isDone && step().doneComment}>
-                  <div class="mt-4 text-xs">
-                    <span class="font-semibold">{props.doneCommentLabel} </span>
-                    <span class="text-muted-foreground">{step().doneComment}</span>
-                  </div>
-                </Show>
-
-                <Show when={step().isDone && step().doneLink}>
-                  <div class="mt-2 text-xs">
-                    <span class="font-semibold">{props.doneLinkLabel} </span>
-                    <a
-                      href={step().doneLink ?? "#"}
-                      target="_blank"
-                      rel="noopener"
-                      class="text-primary underline"
-                    >
-                      {step().doneLink}
-                    </a>
-                  </div>
-                </Show>
               </div>
-
-              <div class="flex flex-wrap items-center gap-2">
-                {step().materialUrl ? (
-                  <button
-                    class={buttonVariants({ size: "sm" })}
-                    onClick={() => props.onOpenMaterial(step().materialUrl)}
-                    disabled={step().isLocked}
-                  >
-                    {props.openLabel}
-                  </button>
-                ) : (
-                  <Button size="sm" disabled>
-                    {props.openLabel}
-                  </Button>
-                )}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => props.onToggleStep(step())}
-                  disabled={step().isLocked}
-                >
-                  {step().isDone ? props.markNotDoneLabel : props.markDoneLabel}
-                </Button>
-              </div>
-            </div>
-
-            <Show when={step().materialUrl}>
-              <button
-                class="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-primary"
-                onClick={() => props.onOpenMaterial(step().materialUrl)}
-                disabled={step().isLocked}
-              >
-                <span class="material-symbols-outlined text-[18px]">open_in_new</span>
-                {props.materialLabel}
-              </button>
-            </Show>
-          </div>
-        )}
-      </Show>
-    </div>
+            )}
+          </Show>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

@@ -1,5 +1,5 @@
-import { fireEvent, render, screen, waitFor } from "@solidjs/testing-library";
-import { vi } from "vitest";
+import { cleanup, fireEvent, render, screen, waitFor } from "@solidjs/testing-library";
+import { afterEach, vi } from "vitest";
 
 import { StudentHome } from "../../src/routes/student/StudentHome";
 import { I18nProvider } from "../../src/lib/i18n";
@@ -25,9 +25,39 @@ vi.mock("../../src/components/ui/toast", () => ({
   showToast: vi.fn(),
 }));
 
+vi.mock("../../src/components/ui/dialog", () => ({
+  Dialog: (props: {
+    open?: boolean;
+    children: unknown;
+    onOpenChange?: (open: boolean) => void;
+  }) => <>{props.open ? props.children : null}</>,
+  DialogContent: (props: { children: unknown; class?: string }) => (
+    <div role="dialog" class={props.class}>
+      {props.children}
+    </div>
+  ),
+  DialogHeader: (props: { children: unknown; class?: string }) => (
+    <div class={props.class}>{props.children}</div>
+  ),
+  DialogFooter: (props: { children: unknown; class?: string }) => (
+    <div class={props.class}>{props.children}</div>
+  ),
+  DialogTitle: (props: { children: unknown; class?: string }) => (
+    <h2 class={props.class}>{props.children}</h2>
+  ),
+  DialogDescription: (props: { children: unknown; class?: string }) => (
+    <p class={props.class}>{props.children}</p>
+  ),
+}));
+
 const useMeMock = vi.mocked(useMe);
 const useMyPlanMock = vi.mocked(useMyPlan);
 const showToastMock = vi.mocked(showToast);
+
+afterEach(async () => {
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  cleanup();
+});
 
 describe("StudentHome", () => {
   let markStepDoneMock: ReturnType<typeof vi.fn>;
@@ -80,7 +110,6 @@ describe("StudentHome", () => {
     ));
     expect(screen.getByText("Welcome back, Alex")).toBeInTheDocument();
     expect(screen.getByText("Your learning space")).toBeInTheDocument();
-    expect(screen.getByText("Current step")).toBeInTheDocument();
     expect(screen.getByText("Path steps")).toBeInTheDocument();
     expect(
       screen.getByText("Your learning path is waiting. You’ve completed 0% of your goal."),
@@ -89,7 +118,7 @@ describe("StudentHome", () => {
     expect(screen.getByLabelText("Learning path map")).toBeInTheDocument();
   });
 
-  it("embeds official youtube lesson links in the current lesson card", () => {
+  it("embeds official youtube lesson links in the lesson popup", () => {
     useMyPlanMock.mockReturnValue({
       plan: () => ({ studentUid: "u1", goalId: "g1" }),
       goal: () => ({ title: "Video Editing Basics", description: "Learn the workflow." }),
@@ -108,6 +137,8 @@ describe("StudentHome", () => {
       </I18nProvider>
     ));
 
+    fireEvent.click(screen.getByRole("button", { name: /import footage/i }));
+
     const frame = screen.getByTitle("Import footage");
     expect(frame.tagName).toBe("IFRAME");
     expect(frame).toHaveAttribute(
@@ -116,7 +147,7 @@ describe("StudentHome", () => {
     );
   });
 
-  it("renders lesson descriptions as markdown", () => {
+  it("renders lesson descriptions as markdown", async () => {
     useMyPlanMock.mockReturnValue({
       plan: () => ({ studentUid: "u1", goalId: "g1" }),
       goal: () => ({ title: "Video Editing Basics", description: "Learn the workflow." }),
@@ -135,6 +166,11 @@ describe("StudentHome", () => {
       </I18nProvider>
     ));
 
+    fireEvent.click(screen.getByRole("button", { name: /import footage/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("dialog")).toBeInTheDocument();
+    });
     expect(screen.getAllByText("Bold")[0].tagName).toBe("STRONG");
     expect(
       screen.getAllByRole("link", { name: "link" }).every((link) =>
@@ -143,7 +179,53 @@ describe("StudentHome", () => {
     ).toBe(true);
   });
 
-  it("does not embed non-youtube lesson links", () => {
+  it("opens the selected lesson in a full-page popup and updates it on click", async () => {
+    useMyPlanMock.mockReturnValue({
+      plan: () => ({ studentUid: "u1", goalId: "g1" }),
+      goal: () => ({ title: "Video Editing Basics", description: "Learn the workflow." }),
+      steps: () => [
+        makeStep({
+          id: "s1",
+          title: "Import footage",
+          description: "Bring clips into the editor",
+          order: 0,
+        }),
+        makeStep({
+          id: "s2",
+          title: "Trim rough cut",
+          description: "Shape the first clean sequence",
+          order: 1,
+        }),
+      ],
+      loading: () => false,
+      error: () => null,
+      progress: () => ({ total: 2, done: 0, percent: 0 }),
+      markStepDone: markStepDoneMock,
+      completeStep: completeStepMock,
+      openMaterial: openMaterialMock,
+    });
+
+    render(() => (
+      <I18nProvider>
+        <StudentHome />
+      </I18nProvider>
+    ));
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /trim rough cut/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("dialog")).toBeInTheDocument();
+    });
+    expect(screen.getAllByRole("heading", { name: "Trim rough cut" }).length).toBeGreaterThan(0);
+    expect(screen.getByRole("button", { name: /trim rough cut/i, hidden: true })).toHaveAttribute(
+      "aria-current",
+      "true",
+    );
+  });
+
+  it("does not embed non-youtube lesson links", async () => {
     useMyPlanMock.mockReturnValue({
       plan: () => ({ studentUid: "u1", goalId: "g1" }),
       goal: () => ({ title: "Video Editing Basics", description: "Learn the workflow." }),
@@ -162,6 +244,11 @@ describe("StudentHome", () => {
       </I18nProvider>
     ));
 
+    fireEvent.click(screen.getByRole("button", { name: /import footage/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("dialog")).toBeInTheDocument();
+    });
     expect(screen.queryByTitle("Import footage")).not.toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: "Open" }).length).toBeGreaterThan(0);
   });
@@ -216,6 +303,7 @@ describe("StudentHome", () => {
       </I18nProvider>
     ));
 
+    fireEvent.click(screen.getByRole("button", { name: /import footage/i }));
     fireEvent.click(screen.getByRole("button", { name: "Mark as complete" }));
     expect(screen.getByText("Comment (optional)")).toBeInTheDocument();
 
@@ -239,6 +327,7 @@ describe("StudentHome", () => {
       </I18nProvider>
     ));
 
+    fireEvent.click(screen.getByRole("button", { name: /import footage/i }));
     fireEvent.click(screen.getByRole("button", { name: "Mark as complete" }));
     fireEvent.input(screen.getByLabelText("Comment (optional)"), {
       target: { value: "comment" },
@@ -265,6 +354,7 @@ describe("StudentHome", () => {
       </I18nProvider>
     ));
 
+    fireEvent.click(screen.getByRole("button", { name: /import footage/i }));
     fireEvent.click(screen.getByRole("button", { name: "Mark as complete" }));
     fireEvent.click(screen.getByRole("button", { name: "Complete step" }));
 
@@ -278,7 +368,7 @@ describe("StudentHome", () => {
     });
   });
 
-  it("renders locked lesson state and disables lesson actions", () => {
+  it("renders locked lesson state and disables lesson actions in the popup", () => {
     useMyPlanMock.mockReturnValue({
       plan: () => ({ studentUid: "u1", goalId: "g1" }),
       goal: () => ({ title: "Video Editing Basics", description: "Learn the workflow." }),
@@ -303,6 +393,8 @@ describe("StudentHome", () => {
         <StudentHome />
       </I18nProvider>
     ));
+
+    fireEvent.click(screen.getByRole("button", { name: /locked lesson/i }));
 
     expect(screen.getAllByText("Complete the previous steps first").length).toBeGreaterThan(0);
     expect(screen.getAllByRole("button", { name: "Open" }).every((button) => button.hasAttribute("disabled"))).toBe(true);
@@ -342,6 +434,9 @@ describe("StudentHome", () => {
       </I18nProvider>
     ));
 
+    fireEvent.click(screen.getByRole("button", { name: /#01 Import footage/i }));
+
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
     expect(screen.getByText("Comment:")).toBeInTheDocument();
     expect(screen.getAllByText("Готово").length).toBeGreaterThan(0);
     const link = screen.getByRole("link", { name: "https://example.com/work" });
@@ -379,7 +474,7 @@ describe("StudentHome", () => {
     fireEvent.click(screen.getByRole("button", { name: /#02 Cut selects/i }));
     expect(screen.getByRole("heading", { name: "Cut selects" })).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: /#01 Import footage/i }));
+    fireEvent.click(screen.getByRole("button", { name: /#01 Import footage/i, hidden: true }));
     expect(screen.getByRole("heading", { name: "Import footage" })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Mark as incomplete" }));
