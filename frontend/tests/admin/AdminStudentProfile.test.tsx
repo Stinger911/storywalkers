@@ -176,7 +176,6 @@ describe("AdminStudentProfile", () => {
       expect(updateStudentMock).toHaveBeenCalledWith("u1", {
         role: "expert",
         status: "active",
-        boostyUserId: null,
         isFirstHundred: false,
       });
     });
@@ -215,7 +214,6 @@ describe("AdminStudentProfile", () => {
       expect(updateStudentMock).toHaveBeenCalledWith("u1", {
         role: "student",
         status: "disabled",
-        boostyUserId: null,
         isFirstHundred: false,
       });
     });
@@ -229,6 +227,7 @@ describe("AdminStudentProfile", () => {
       role: "student",
       status: "active",
       boostyUserId: "21985241",
+      profileForm: { telegram: "@old_handle" },
     });
     getStudentPlanMock.mockRejectedValue(new Error("no plan"));
     getStudentPlanStepsMock.mockResolvedValue({ items: [] });
@@ -245,6 +244,7 @@ describe("AdminStudentProfile", () => {
       role: "student",
       status: "active",
       boostyUserId: "43061401",
+      profileForm: { telegram: "@old_handle" },
     });
 
     renderWithShell();
@@ -260,6 +260,52 @@ describe("AdminStudentProfile", () => {
         role: "student",
         status: "active",
         boostyUserId: "43061401",
+        isFirstHundred: false,
+      });
+    });
+  });
+
+  it("updates telegram via access controls", async () => {
+    getStudentMock.mockResolvedValue({
+      uid: "u1",
+      displayName: "Student One",
+      email: "s1@x.com",
+      role: "student",
+      status: "active",
+      boostyUserId: "21985241",
+      profileForm: { telegram: "@old_handle" },
+    });
+    getStudentPlanMock.mockRejectedValue(new Error("no plan"));
+    getStudentPlanStepsMock.mockResolvedValue({ items: [] });
+    listGoalsMock.mockResolvedValue({
+      items: [{ id: "goal-42", title: "Portrait Creator" }],
+    });
+    listAdminCoursesMock.mockResolvedValue({
+      items: [
+        { id: "course-a", title: "Light Basics" },
+        { id: "course-b", title: "Color Workflow" },
+      ],
+    });
+    updateStudentMock.mockResolvedValue({
+      role: "student",
+      status: "active",
+      boostyUserId: "21985241",
+      profileForm: { telegram: "@new_handle" },
+    });
+
+    renderWithShell();
+
+    const telegramInput = await screen.findByLabelText("Telegram");
+    fireEvent.input(telegramInput, { target: { value: "@new_handle" } });
+
+    const saveButton = screen.getByText("Save access");
+    fireEvent.click(saveButton);
+
+    await waitFor(() => {
+      expect(updateStudentMock).toHaveBeenCalledWith("u1", {
+        role: "student",
+        status: "active",
+        telegram: "@new_handle",
         isFirstHundred: false,
       });
     });
@@ -300,7 +346,6 @@ describe("AdminStudentProfile", () => {
       expect(updateStudentMock).toHaveBeenCalledWith("u1", {
         role: "student",
         status: "active",
-        boostyUserId: null,
         isFirstHundred: true,
       });
     });
@@ -510,6 +555,57 @@ describe("AdminStudentProfile", () => {
     });
   });
 
+  it("shows the saved goal when the plan response lags behind the student profile", async () => {
+    getStudentMock
+      .mockResolvedValueOnce({
+        uid: "u1",
+        displayName: "Student One",
+        email: "s1@x.com",
+        role: "student",
+        selectedGoalId: null,
+      })
+      .mockResolvedValueOnce({
+        uid: "u1",
+        displayName: "Student One",
+        email: "s1@x.com",
+        role: "student",
+        selectedGoalId: "goal-42",
+      });
+    getStudentPlanMock
+      .mockResolvedValueOnce({ goalId: "" })
+      .mockResolvedValueOnce({ goalId: "" });
+    getStudentPlanStepsMock.mockResolvedValue({ items: [] });
+    listGoalsMock.mockResolvedValue({
+      items: [{ id: "goal-42", title: "Portrait Creator" }],
+    });
+    assignPlanMock.mockResolvedValue({ planId: "u1", goalId: "goal-42" });
+
+    renderWithShell();
+
+    await screen.findByText("Portrait Creator");
+
+    const goalSelects = await screen.findAllByTestId("goal-select");
+    const goalSelect = goalSelects.find((select) =>
+      Array.from((select as HTMLSelectElement).options).some(
+        (option) => option.value === "goal-42",
+      ),
+    );
+    if (!goalSelect) {
+      throw new Error("Goal select not found");
+    }
+
+    fireEvent.change(goalSelect, { target: { value: "goal-42" } });
+    fireEvent.click(screen.getByText("Save goal"));
+
+    await waitFor(() => {
+      expect(assignPlanMock).toHaveBeenCalledWith("u1", "goal-42");
+    });
+
+    await waitFor(() => {
+      expect(goalSelect).toHaveValue("goal-42");
+    });
+  });
+
   it("deletes a step from the plan", async () => {
     getStudentMock.mockResolvedValue({
       uid: "u1",
@@ -582,7 +678,7 @@ describe("AdminStudentProfile", () => {
     });
   });
 
-  it("appends selected course lessons to the student plan", async () => {
+  it("allows restoring lessons for a course that is already in selectedCourses", async () => {
     getStudentMock.mockResolvedValue({
       uid: "u1",
       displayName: "Student One",
@@ -596,12 +692,11 @@ describe("AdminStudentProfile", () => {
     listAdminCoursesMock.mockResolvedValue({
       items: [
         { id: "course-a", title: "Light Basics", description: "Owned", isActive: true },
-        { id: "course-b", title: "Color Workflow", description: "New", isActive: true },
       ],
     });
     appendCoursesToStudentPlanMock.mockResolvedValue({
       status: "ok",
-      addedCourseIds: ["course-b"],
+      addedCourseIds: [],
       createdSteps: 2,
     });
 
@@ -609,9 +704,10 @@ describe("AdminStudentProfile", () => {
 
     await screen.findByText("Add course lessons");
     await waitFor(() => {
-      expect(screen.getByText("Color Workflow")).toBeInTheDocument();
+      expect(screen.getByText("Light Basics")).toBeInTheDocument();
+      expect(screen.getByText("Already selected")).toBeInTheDocument();
     });
-    const courseCard = screen.getByText("Color Workflow").closest("label");
+    const courseCard = screen.getByText("Light Basics").closest("label");
     if (!courseCard) {
       throw new Error("Course card not found");
     }
@@ -620,7 +716,7 @@ describe("AdminStudentProfile", () => {
 
     await waitFor(() => {
       expect(appendCoursesToStudentPlanMock).toHaveBeenCalledWith("u1", {
-        courseIds: ["course-b"],
+        courseIds: ["course-a"],
       });
     });
   });

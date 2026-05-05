@@ -102,6 +102,9 @@ type Student = {
   role?: string
   status?: string
   boostyUserId?: string | null
+  profileForm?: {
+    telegram?: string | null
+  }
   isFirstHundred?: boolean
   progressPercent?: number
   stepsDone?: number
@@ -419,6 +422,7 @@ export async function updateStudent(
     status?: string
     role?: string
     boostyUserId?: string | null
+    telegram?: string | null
     isFirstHundred?: boolean
   },
 ) {

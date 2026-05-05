@@ -827,6 +827,76 @@ def test_patch_student_updates_boosty_user_id(monkeypatch):
     app.dependency_overrides.clear()
 
 
+def test_patch_student_updates_telegram_in_profile_form(monkeypatch):
+    users = {
+        "s1": {
+            "role": "student",
+            "status": "active",
+            "email": "s1@x.com",
+            "profileForm": {
+                "telegram": "@old_handle",
+                "socialUrl": "https://example.com/profile",
+            },
+        }
+    }
+    fake_db = FakeFirestore(users)
+    monkeypatch.setattr(admin_students, "get_firestore_client", lambda: fake_db)
+    app.dependency_overrides[get_current_user] = _override_staff
+    client = TestClient(app)
+
+    response = client.patch(
+        "/api/admin/students/s1",
+        json={"telegram": " new_handle "},
+    )
+    assert response.status_code == 200
+    assert response.json()["profileForm"]["telegram"] == "@new_handle"
+    assert response.json()["profileForm"]["socialUrl"] == "https://example.com/profile"
+    assert users["s1"]["profileForm"]["telegram"] == "@new_handle"
+    assert users["s1"]["profileForm"]["socialUrl"] == "https://example.com/profile"
+
+    app.dependency_overrides.clear()
+
+
+def test_patch_student_clears_telegram_in_profile_form(monkeypatch):
+    users = {
+        "s1": {
+            "role": "student",
+            "status": "active",
+            "email": "s1@x.com",
+            "profileForm": {
+                "telegram": "@old_handle",
+            },
+        }
+    }
+    fake_db = FakeFirestore(users)
+    monkeypatch.setattr(admin_students, "get_firestore_client", lambda: fake_db)
+    app.dependency_overrides[get_current_user] = _override_staff
+    client = TestClient(app)
+
+    response = client.patch(
+        "/api/admin/students/s1",
+        json={"telegram": "   "},
+    )
+    assert response.status_code == 200
+    assert response.json()["profileForm"]["telegram"] is None
+    assert users["s1"]["profileForm"]["telegram"] is None
+
+    app.dependency_overrides.clear()
+
+
+def test_patch_student_rejects_invalid_telegram(monkeypatch):
+    users = {"s1": {"role": "student", "status": "active", "email": "s1@x.com"}}
+    fake_db = FakeFirestore(users)
+    monkeypatch.setattr(admin_students, "get_firestore_client", lambda: fake_db)
+    app.dependency_overrides[get_current_user] = _override_staff
+    client = TestClient(app)
+
+    response = client.patch("/api/admin/students/s1", json={"telegram": "bad-telegram"})
+    assert response.status_code == 400
+
+    app.dependency_overrides.clear()
+
+
 def test_patch_student_clears_boosty_user_id(monkeypatch):
     users = {
         "s1": {

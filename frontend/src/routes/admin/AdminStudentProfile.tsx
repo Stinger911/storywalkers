@@ -127,6 +127,9 @@ export function AdminStudentProfile() {
   const [roleDraft, setRoleDraft] = createSignal("student");
   const [statusDraft, setStatusDraft] = createSignal("active");
   const [boostyUserIdDraft, setBoostyUserIdDraft] = createSignal("");
+  const [telegramDraft, setTelegramDraft] = createSignal("");
+  const [boostyUserIdDirty, setBoostyUserIdDirty] = createSignal(false);
+  const [telegramDirty, setTelegramDirty] = createSignal(false);
   const [isFirstHundredDraft, setIsFirstHundredDraft] = createSignal(false);
   const [selectedCourseIdsToAppend, setSelectedCourseIdsToAppend] = createSignal<string[]>([]);
   const [previewOpen, setPreviewOpen] = createSignal(false);
@@ -154,13 +157,22 @@ export function AdminStudentProfile() {
       const stepsData = planData
         ? await getStudentPlanSteps(uid()).catch(() => ({ items: [] }))
         : { items: [] };
-      setStudent(studentData as StudentProfile);
+      const nextStudent = studentData as StudentProfile;
+      setStudent(nextStudent);
+      setRoleDraft(nextStudent.role || "student");
+      setStatusDraft(nextStudent.status || "active");
+      setBoostyUserIdDraft(nextStudent.boostyUserId || "");
+      setTelegramDraft(nextStudent.profileForm?.telegram || "");
+      setBoostyUserIdDirty(false);
+      setTelegramDirty(false);
+      setIsFirstHundredDraft(nextStudent.isFirstHundred === true);
+      const savedGoalId = nextStudent.selectedGoalId || "";
       if (planData) {
         setPlan(planData as StudentPlan);
-        setGoalId(planData.goalId || "");
+        setGoalId(planData.goalId || savedGoalId);
       } else {
         setPlan(null);
-        setGoalId("");
+        setGoalId(savedGoalId);
       }
       setSteps(
         stepsData.items.map((step) => ({
@@ -182,25 +194,6 @@ export function AdminStudentProfile() {
 
   createEffect(() => {
     void load();
-  });
-
-  createEffect(() => {
-    const currentRole = student()?.role || "student";
-    setRoleDraft(currentRole);
-  });
-
-  createEffect(() => {
-    const currentStatus = student()?.status || "active";
-    setStatusDraft(currentStatus);
-  });
-
-  createEffect(() => {
-    const currentBoostyUserId = student()?.boostyUserId || "";
-    setBoostyUserIdDraft(currentBoostyUserId);
-  });
-
-  createEffect(() => {
-    setIsFirstHundredDraft(student()?.isFirstHundred === true);
   });
 
   createEffect(() => {
@@ -245,10 +238,12 @@ export function AdminStudentProfile() {
       (courseId) => courseTitleById().get(courseId) || courseId,
     ),
   );
-  const appendableCourses = createMemo(() => {
-    const owned = new Set(questionnaireSelectedCourses());
-    return courses().filter((course) => course.isActive && !owned.has(course.id));
-  });
+  const selectedQuestionnaireCourseIds = createMemo(
+    () => new Set(questionnaireSelectedCourses()),
+  );
+  const appendableCourses = createMemo(() =>
+    courses().filter((course) => course.isActive),
+  );
   const questionnaireExperience = createMemo(() => {
     const level = student()?.profileForm?.experienceLevel;
     if (level === "beginner") return "Beginner";
@@ -400,8 +395,13 @@ export function AdminStudentProfile() {
       await updateStudent(uid(), {
         role: roleDraft(),
         status: statusDraft(),
-        boostyUserId: boostyUserIdDraft().trim() || null,
         isFirstHundred: isFirstHundredDraft(),
+        ...(boostyUserIdDirty()
+          ? { boostyUserId: boostyUserIdDraft().trim() || null }
+          : {}),
+        ...(telegramDirty()
+          ? { telegram: telegramDraft().trim() || null }
+          : {}),
       });
       await load();
     } catch (err) {
@@ -707,6 +707,21 @@ export function AdminStudentProfile() {
               </div>
               <div class="grid gap-2 md:max-w-sm">
                 <TextField>
+                  <TextFieldLabel for="telegram-input">Telegram</TextFieldLabel>
+                  <TextFieldInput
+                    id="telegram-input"
+                    value={telegramDraft()}
+                    placeholder="@username"
+                    onInput={(event) => {
+                      setTelegramDirty(true);
+                      setTelegramDraft(event.currentTarget.value);
+                    }}
+                  />
+                </TextField>
+                <div class="text-xs text-muted-foreground">
+                  Leave empty to clear the saved Telegram handle.
+                </div>
+                <TextField>
                   <TextFieldLabel for="boosty-user-id-input">
                     Boosty User ID
                   </TextFieldLabel>
@@ -715,9 +730,10 @@ export function AdminStudentProfile() {
                     value={boostyUserIdDraft()}
                     inputMode="numeric"
                     placeholder="21985241"
-                    onInput={(event) =>
-                      setBoostyUserIdDraft(event.currentTarget.value)
-                    }
+                    onInput={(event) => {
+                      setBoostyUserIdDirty(true);
+                      setBoostyUserIdDraft(event.currentTarget.value);
+                    }}
                   />
                 </TextField>
                 <div class="text-xs text-muted-foreground">
@@ -837,9 +853,18 @@ export function AdminStudentProfile() {
                       <label class="rounded-[var(--radius-md)] border border-border/70 bg-card p-3 shadow-rail">
                         <div class="flex items-start justify-between gap-3">
                           <div>
-                            <div class="text-sm font-semibold">{course.title}</div>
+                            <div class="flex flex-wrap items-center gap-2">
+                              <div class="text-sm font-semibold">{course.title}</div>
+                              <Show when={selectedQuestionnaireCourseIds().has(course.id)}>
+                                <span class="rounded-full bg-secondary px-2 py-0.5 text-[11px] font-medium text-secondary-foreground">
+                                  Already selected
+                                </span>
+                              </Show>
+                            </div>
                             <div class="text-xs text-muted-foreground">
-                              {course.description || "No description"}
+                              {selectedQuestionnaireCourseIds().has(course.id)
+                                ? "Selected in the questionnaire. Add it again to restore any missing lessons in the plan."
+                                : (course.description || "No description")}
                             </div>
                           </div>
                           <input

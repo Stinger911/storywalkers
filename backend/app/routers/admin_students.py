@@ -17,6 +17,7 @@ from app.auth.user_status import (
 from app.core.errors import AppError, forbidden_error
 from app.core.logging import get_logger
 from app.db.firestore import get_firestore_client, should_mark_first_hundred_student
+from app.routers.auth import ProfileFormModel
 from app.services.course_plan_sync import append_courses_to_student_plan
 from app.services.goal_template_steps import list_steps
 from app.services.telegram import send_admin_message
@@ -40,6 +41,7 @@ class PatchStudentRequest(BaseModel):
     status: UserStatus | None = None
     role: str | None = None
     boostyUserId: str | None = None
+    telegram: str | None = None
     isFirstHundred: bool | None = None
 
     model_config = {"extra": "forbid"}
@@ -68,6 +70,22 @@ class PatchStudentRequest(BaseModel):
                 "boostyUserId must be 32 characters or fewer",
             )
         return value
+
+    @field_validator("telegram", mode="before")
+    @classmethod
+    def _trim_telegram(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        trimmed = str(value).strip()
+        return trimmed or None
+
+    @field_validator("telegram")
+    @classmethod
+    def _validate_telegram(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        validated = ProfileFormModel.model_validate({"telegram": value})
+        return validated.telegram
 
 
 class AssignPlanRequest(BaseModel):
@@ -482,6 +500,13 @@ async def update_student(
                 status_code=400,
             )
         updates["role"] = role_normalized
+    if "telegram" in updates:
+        existing_profile_form = current.get("profileForm")
+        profile_form = (
+            dict(existing_profile_form) if isinstance(existing_profile_form, dict) else {}
+        )
+        profile_form["telegram"] = updates.pop("telegram")
+        updates["profileForm"] = profile_form
     status = updates.get("status")
     new_status: UserStatus | None = None
     if status is not None:
