@@ -383,6 +383,7 @@ def test_list_students_cursor_paginates_sorted_results(monkeypatch):
     first_payload = first_response.json()
     assert [item["uid"] for item in first_payload["items"]] == ["u1", "u2"]
     assert first_payload["nextCursor"] == "u2"
+    assert first_payload["total"] == 3
 
     second_response = client.get(
         f"/api/admin/students?sortBy=createdAt&sortDir=asc&limit=2&cursor={first_payload['nextCursor']}"
@@ -391,6 +392,7 @@ def test_list_students_cursor_paginates_sorted_results(monkeypatch):
     second_payload = second_response.json()
     assert [item["uid"] for item in second_payload["items"]] == ["u3"]
     assert second_payload["nextCursor"] is None
+    assert second_payload["total"] == 3
 
     app.dependency_overrides.clear()
 

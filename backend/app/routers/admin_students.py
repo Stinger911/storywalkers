@@ -365,6 +365,7 @@ async def list_students(
         ]
 
     items = _sort_student_items(items, sort_by=sort_by, sort_dir=sort_dir)
+    total = len(items)
 
     if cursor:
         cursor_index = next(
@@ -393,7 +394,7 @@ async def list_students(
             "db_writes_estimate": 0,
         },
     )
-    return {"items": page_items, "nextCursor": next_cursor}
+    return {"items": page_items, "nextCursor": next_cursor, "total": total}
 
 
 @router.post("/students", status_code=status.HTTP_201_CREATED)

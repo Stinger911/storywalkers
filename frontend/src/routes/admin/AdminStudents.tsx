@@ -66,6 +66,8 @@ export function AdminStudents() {
   >([]);
   const [studentNextCursor, setStudentNextCursor] = createSignal<string | null>(null);
   const [staffNextCursor, setStaffNextCursor] = createSignal<string | null>(null);
+  const [studentTotal, setStudentTotal] = createSignal(0);
+  const [staffTotal, setStaffTotal] = createSignal(0);
   const [loading, setLoading] = createSignal(true);
   const [error, setError] = createSignal<string | null>(null);
   const [query, setQuery] = createSignal(normalizeQueryParam(searchParams.q));
@@ -86,7 +88,10 @@ export function AdminStudents() {
     setStaffCursorHistory([]);
     setStudentNextCursor(null);
     setStaffNextCursor(null);
+    setStudentTotal(0);
+    setStaffTotal(0);
   };
+  const totalPages = (total: number) => Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   const syncSearchParams = (next: {
     q?: string;
@@ -132,6 +137,8 @@ export function AdminStudents() {
       setStaff(staffData.items);
       setStudentNextCursor(studentData.nextCursor ?? null);
       setStaffNextCursor(staffData.nextCursor ?? null);
+      setStudentTotal(studentData.total ?? studentData.items.length);
+      setStaffTotal(staffData.total ?? staffData.items.length);
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -220,6 +227,7 @@ export function AdminStudents() {
   const PaginationControls = (props: {
     label: string;
     page: number;
+    totalPages: number;
     hasPrevious: boolean;
     hasNext: boolean;
     onPrevious: () => void;
@@ -227,7 +235,7 @@ export function AdminStudents() {
   }) => (
     <div class="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-md)] border border-border/70 px-3 py-2">
       <div class="text-xs font-medium text-muted-foreground">
-        {props.label} · Page {props.page}
+        {props.label} · Page {props.page} / {props.totalPages}
       </div>
       <div class="flex items-center gap-2">
         <Button
@@ -355,6 +363,7 @@ export function AdminStudents() {
               <PaginationControls
                 label="Students"
                 page={studentCursorHistory().length + 1}
+                totalPages={totalPages(studentTotal())}
                 hasPrevious={studentCursorHistory().length > 0}
                 hasNext={Boolean(studentNextCursor())}
                 onPrevious={goToPreviousStudentsPage}
@@ -416,6 +425,7 @@ export function AdminStudents() {
               <PaginationControls
                 label="Students"
                 page={studentCursorHistory().length + 1}
+                totalPages={totalPages(studentTotal())}
                 hasPrevious={studentCursorHistory().length > 0}
                 hasNext={Boolean(studentNextCursor())}
                 onPrevious={goToPreviousStudentsPage}
@@ -428,6 +438,7 @@ export function AdminStudents() {
               <PaginationControls
                 label="Staff"
                 page={staffCursorHistory().length + 1}
+                totalPages={totalPages(staffTotal())}
                 hasPrevious={staffCursorHistory().length > 0}
                 hasNext={Boolean(staffNextCursor())}
                 onPrevious={goToPreviousStaffPage}
@@ -470,6 +481,7 @@ export function AdminStudents() {
               <PaginationControls
                 label="Staff"
                 page={staffCursorHistory().length + 1}
+                totalPages={totalPages(staffTotal())}
                 hasPrevious={staffCursorHistory().length > 0}
                 hasNext={Boolean(staffNextCursor())}
                 onPrevious={goToPreviousStaffPage}

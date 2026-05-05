@@ -1,6 +1,6 @@
 import { apiFetch } from './api'
 
-type ApiList<T> = { items: T[]; nextCursor?: string | null }
+type ApiList<T> = { items: T[]; nextCursor?: string | null; total?: number }
 
 type Category = {
   id: string
