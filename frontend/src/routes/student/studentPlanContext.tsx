@@ -11,12 +11,12 @@ import {
 } from "../../lib/studentApi";
 import type { StudentPathStep } from "./studentPathTypes";
 
-type StudentPlan = {
+export type StudentPlan = {
   studentUid: string;
   goalId: string;
 };
 
-type StudentPlanState = {
+export type StudentPlanState = {
   plan: () => StudentPlan | null;
   goal: () => Goal | null;
   steps: () => StudentPathStep[];
@@ -29,7 +29,7 @@ type StudentPlanState = {
   openMaterial: (url?: string | null) => void;
 };
 
-const StudentPlanContext = createContext<StudentPlanState>();
+export const StudentPlanContext = createContext<StudentPlanState>();
 
 export function StudentPlanProvider(props: { children: JSX.Element }) {
   const auth = useAuth();

@@ -18,7 +18,7 @@ import { useMyPlan } from './studentPlanContext'
 import { useStudentLayoutRail } from './StudentLayout'
 import { StudentPathVisualization } from './StudentPathVisualization'
 
-export function StudentHome() {
+export function StudentHome(props: { readOnly?: boolean }) {
   const { me } = useMe()
   const { plan, steps, loading, error, progress, markStepDone, completeStep, openMaterial } = useMyPlan()
   const { t } = useI18n()
@@ -184,6 +184,12 @@ export function StudentHome() {
           </div>
         </div>
 
+        <Show when={props.readOnly}>
+          <div class="student-callout text-sm">
+            Preview mode. This dashboard is read-only for admins.
+          </div>
+        </Show>
+
         <Show when={error()}>
           <div class="student-callout student-callout--error text-sm">
             {error()}
@@ -226,6 +232,7 @@ export function StudentHome() {
               <StudentPathVisualization
                 steps={steps()}
                 initialStepId={currentStep()?.id ?? steps()[0]?.id ?? null}
+                currentStepId={currentStep()?.id ?? null}
                 ariaLabel={t('student.home.pathMapAriaLabel')}
                 openLabel={t('common.open')}
                 markDoneLabel={t('student.home.markDone')}
@@ -235,7 +242,9 @@ export function StudentHome() {
                 doneLinkLabel={t('student.home.doneLinkLabel')}
                 materialLabel={t('student.home.currentStepMaterial')}
                 onOpenMaterial={openMaterial}
+                toggleDisabled={props.readOnly}
                 onToggleStep={(step) => {
+                  if (props.readOnly) return
                   if (step.isLocked) return
                   if (step.isDone) {
                     void markStepDone(step.id, false)

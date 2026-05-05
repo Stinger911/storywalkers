@@ -480,6 +480,11 @@ export function AdminStudentProfile() {
     <Page
       title="Student profile"
       subtitle="Manage access, goals, and plan steps."
+      actions={
+        <a href={`/admin/students/${uid()}/view-as`}>
+          <Button variant="outline">View as student</Button>
+        </a>
+      }
       breadcrumb={
         <Breadcrumb>
           <BreadcrumbList>
@@ -705,40 +710,46 @@ export function AdminStudentProfile() {
                   </Select>
                 </div>
               </div>
+              <div class="grid gap-4 md:grid-cols-2">
+                <div class="grid gap-2">
+                  <TextField>
+                    <TextFieldLabel for="telegram-input">Telegram</TextFieldLabel>
+                    <TextFieldInput
+                      id="telegram-input"
+                      value={telegramDraft()}
+                      placeholder="@username"
+                      onInput={(event) => {
+                        setTelegramDirty(true);
+                        setTelegramDraft(event.currentTarget.value);
+                      }}
+                    />
+                  </TextField>
+                  <div class="text-xs text-muted-foreground">
+                    Leave empty to clear the saved Telegram handle.
+                  </div>
+                </div>
+                <div class="grid gap-2">
+                  <TextField>
+                    <TextFieldLabel for="boosty-user-id-input">
+                      Boosty User ID
+                    </TextFieldLabel>
+                    <TextFieldInput
+                      id="boosty-user-id-input"
+                      value={boostyUserIdDraft()}
+                      inputMode="numeric"
+                      placeholder="11112222"
+                      onInput={(event) => {
+                        setBoostyUserIdDirty(true);
+                        setBoostyUserIdDraft(event.currentTarget.value);
+                      }}
+                    />
+                  </TextField>
+                  <div class="text-xs text-muted-foreground">
+                    Leave empty to clear the saved Boosty user id.
+                  </div>
+                </div>
+              </div>
               <div class="grid gap-2 md:max-w-sm">
-                <TextField>
-                  <TextFieldLabel for="telegram-input">Telegram</TextFieldLabel>
-                  <TextFieldInput
-                    id="telegram-input"
-                    value={telegramDraft()}
-                    placeholder="@username"
-                    onInput={(event) => {
-                      setTelegramDirty(true);
-                      setTelegramDraft(event.currentTarget.value);
-                    }}
-                  />
-                </TextField>
-                <div class="text-xs text-muted-foreground">
-                  Leave empty to clear the saved Telegram handle.
-                </div>
-                <TextField>
-                  <TextFieldLabel for="boosty-user-id-input">
-                    Boosty User ID
-                  </TextFieldLabel>
-                  <TextFieldInput
-                    id="boosty-user-id-input"
-                    value={boostyUserIdDraft()}
-                    inputMode="numeric"
-                    placeholder="21985241"
-                    onInput={(event) => {
-                      setBoostyUserIdDirty(true);
-                      setBoostyUserIdDraft(event.currentTarget.value);
-                    }}
-                  />
-                </TextField>
-                <div class="text-xs text-muted-foreground">
-                  Leave empty to clear the saved Boosty user id.
-                </div>
                 <label class="flex items-center gap-2 text-sm">
                   <input
                     type="checkbox"

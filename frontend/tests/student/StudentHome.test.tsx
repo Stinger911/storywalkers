@@ -115,6 +115,7 @@ describe("StudentHome", () => {
       screen.getByText("Your learning path is waiting. You’ve completed 0% of your goal."),
     ).toBeInTheDocument();
     expect(screen.getAllByText("Import footage").length).toBeGreaterThan(0);
+    expect(screen.getByText("Current step")).toBeInTheDocument();
     expect(screen.getByLabelText("Learning path map")).toBeInTheDocument();
   });
 
@@ -471,7 +472,7 @@ describe("StudentHome", () => {
       </I18nProvider>
     ));
 
-    fireEvent.click(screen.getByRole("button", { name: /#02 Cut selects/i }));
+    fireEvent.click(screen.getByRole("button", { name: /cut selects/i }));
     expect(screen.getByRole("heading", { name: "Cut selects" })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /#01 Import footage/i, hidden: true }));

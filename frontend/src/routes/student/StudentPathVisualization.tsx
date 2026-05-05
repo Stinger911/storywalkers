@@ -16,6 +16,7 @@ import type { StudentPathStep } from "./studentPathTypes";
 type StudentPathVisualizationProps = {
   steps: StudentPathStep[];
   initialStepId?: string | null;
+  currentStepId?: string | null;
   ariaLabel: string;
   openLabel: string;
   markDoneLabel: string;
@@ -26,6 +27,7 @@ type StudentPathVisualizationProps = {
   materialLabel: string;
   onOpenMaterial: (url?: string | null) => void;
   onToggleStep: (step: StudentPathStep) => void;
+  toggleDisabled?: boolean;
 };
 
 type PathPoint = {
@@ -152,6 +154,7 @@ export function StudentPathVisualization(props: StudentPathVisualizationProps) {
               <For each={points()}>
                 {(point) => {
                   const isSelected = () => selectedStep()?.id === point.step.id;
+                  const isCurrent = () => props.currentStepId === point.step.id;
                   const isLocked = () => point.step.isLocked;
                   const isDone = () => point.step.isDone;
                   const fill = () =>
@@ -184,6 +187,23 @@ export function StudentPathVisualization(props: StudentPathVisualizationProps) {
                           stroke-width="2.5"
                         />
                       </Show>
+                      <Show when={isCurrent() && !isDone()}>
+                        <foreignObject
+                          x={point.x - 10}
+                          y={point.y - 10}
+                          width="20"
+                          height="20"
+                        >
+                          <div class="flex h-5 w-5 items-center justify-center">
+                            <span
+                              aria-label="Current step"
+                              class="material-symbols-outlined text-[12px] leading-none text-white"
+                            >
+                              auto_stories
+                            </span>
+                          </div>
+                        </foreignObject>
+                      </Show>
                     </g>
                   );
                 }}
@@ -193,6 +213,7 @@ export function StudentPathVisualization(props: StudentPathVisualizationProps) {
               <For each={points()}>
                 {(point, index) => {
                   const isSelected = () => selectedStep()?.id === point.step.id;
+                  const isCurrent = () => props.currentStepId === point.step.id;
 
                   return (
                     <button
@@ -215,9 +236,19 @@ export function StudentPathVisualization(props: StudentPathVisualizationProps) {
                     >
                       <div class="flex items-start justify-between gap-3">
                         <div>
-                          <p class="text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
-                            #{String((point.step.order ?? index()) + 1).padStart(2, "0")}
-                          </p>
+                          <div class="flex flex-wrap items-center gap-2">
+                            <p class="text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
+                              #{String((point.step.order ?? index()) + 1).padStart(2, "0")}
+                            </p>
+                            <Show when={isCurrent() && !point.step.isDone}>
+                              <span class="inline-flex items-center gap-1 rounded-full bg-[rgba(74,120,167,0.12)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-primary">
+                                <span class="material-symbols-outlined text-[12px] leading-none">
+                                  auto_stories
+                                </span>
+                                Current step
+                              </span>
+                            </Show>
+                          </div>
                           <p class="mt-2 line-clamp-2 text-sm font-bold text-foreground">
                             {point.step.title}
                           </p>
@@ -333,7 +364,7 @@ export function StudentPathVisualization(props: StudentPathVisualizationProps) {
                         variant="outline"
                         size="sm"
                         onClick={() => props.onToggleStep(step())}
-                        disabled={step().isLocked}
+                        disabled={step().isLocked || props.toggleDisabled}
                       >
                         {step().isDone ? props.markNotDoneLabel : props.markDoneLabel}
                       </Button>

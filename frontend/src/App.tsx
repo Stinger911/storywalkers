@@ -41,6 +41,11 @@ const AdminStudentProfile = lazy(async () => {
   return { default: module.AdminStudentProfile };
 });
 
+const AdminStudentDashboardPreview = lazy(async () => {
+  const module = await import("./routes/admin/AdminStudentDashboardPreview.tsx");
+  return { default: module.AdminStudentDashboardPreview };
+});
+
 const AdminCategories = lazy(async () => {
   const module = await import("./routes/admin/AdminCategories.tsx");
   return { default: module.AdminCategories };
@@ -171,6 +176,12 @@ const AdminStudentsRoute = () => (
 const AdminStudentProfileRoute = () => (
   <AdminLayout>
     <AdminStudentProfile />
+  </AdminLayout>
+);
+
+const AdminStudentDashboardPreviewRoute = () => (
+  <AdminLayout>
+    <AdminStudentDashboardPreview />
   </AdminLayout>
 );
 
@@ -313,6 +324,7 @@ export default function App() {
           <Route path="/admin/home" component={AdminHomeRoute} />
           <Route path="/admin/students" component={AdminStudentsRoute} />
           <Route path="/admin/students/:uid" component={AdminStudentProfileRoute} />
+          <Route path="/admin/students/:uid/view-as" component={AdminStudentDashboardPreviewRoute} />
           <Route path="/admin/questions" component={AdminQuestionsRoute} />
           <Route path="/admin/questions/:id" component={AdminQuestionDetailRoute} />
           <Route path="/admin/step-completions" component={AdminStepCompletionsRoute} />

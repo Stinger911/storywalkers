@@ -383,6 +383,23 @@ describe("AdminStudentProfile", () => {
     });
   });
 
+  it("links to the student dashboard preview", async () => {
+    getStudentMock.mockResolvedValue({
+      uid: "u1",
+      displayName: "Student One",
+      email: "s1@x.com",
+      role: "student",
+    });
+    getStudentPlanMock.mockRejectedValue(new Error("no plan"));
+    getStudentPlanStepsMock.mockResolvedValue({ items: [] });
+    listGoalsMock.mockResolvedValue({ items: [] });
+
+    renderWithShell();
+
+    const previewLink = await screen.findByRole("link", { name: "View as student" });
+    expect(previewLink).toHaveAttribute("href", "/admin/students/u1/view-as");
+  });
+
   it("shows questionnaire answers in questionnaire tab", async () => {
     getStudentMock.mockResolvedValue({
       uid: "u1",

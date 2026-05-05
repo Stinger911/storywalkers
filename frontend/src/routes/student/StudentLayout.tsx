@@ -15,7 +15,7 @@ type StudentLayoutProps = {
 
 type StudentLayoutRailSetter = (content: JSX.Element | null) => void;
 
-const StudentLayoutRailContext = createContext<StudentLayoutRailSetter>();
+export const StudentLayoutRailContext = createContext<StudentLayoutRailSetter>();
 
 export function useStudentLayoutRail() {
   return useContext(StudentLayoutRailContext);
