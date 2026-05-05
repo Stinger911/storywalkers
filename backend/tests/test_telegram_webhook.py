@@ -23,6 +23,10 @@ class _FakeSnap:
     def exists(self):
         return self._data is not None
 
+    @property
+    def id(self):
+        return self._doc.id
+
     def to_dict(self):
         return self._data
 
@@ -51,6 +55,34 @@ class _FakeCollection:
         if doc_id is None:
             raise ValueError("doc_id required")
         return _FakeDoc(self._store, doc_id)
+
+    def where(self, field_path, op_string, value):
+        return _FakeQuery(self._store, field_path, op_string, value)
+
+
+class _FakeQuery:
+    def __init__(self, store, field_path, op_string, value):
+        self._store = store
+        self._field_path = field_path
+        self._op_string = op_string
+        self._value = value
+        self._limit: int | None = None
+
+    def limit(self, count):
+        self._limit = count
+        return self
+
+    def stream(self):
+        if self._op_string != "==":
+            raise ValueError(f"unsupported op {self._op_string}")
+        matches = [
+            _FakeSnap(_FakeDoc(self._store, doc_id))
+            for doc_id, data in self._store.items()
+            if data.get(self._field_path) == self._value
+        ]
+        if self._limit is not None:
+            matches = matches[: self._limit]
+        return matches
 
 
 class _FakeFirestore:
@@ -185,6 +217,8 @@ def test_webhook_accepts_valid_secret_and_logs_ids(monkeypatch):
     )
     assert re.search(r"UTC: \d{4}-\d{2}-\d{2}T", sent["text"])
     assert fake_db._telegram_users["501"]["chatId"] == 502
+    assert fake_db._telegram_users["501"]["username"] == "alice"
+    assert fake_db._telegram_users["501"]["usernameLower"] == "alice"
 
 
 def test_webhook_safe_parse_on_non_message_payload(monkeypatch):
@@ -442,7 +476,8 @@ def test_reply_command_parse_fail_sends_help(monkeypatch):
     )
 
     assert response.status_code == 200
-    assert "Usage: /reply {telegram_user_id} {text}" in sent["text"]
+    assert "Usage: /reply {telegram_user_id_or_username} {text}" in sent["text"]
+    assert "Example: /reply @username" in sent["text"]
 
 
 def test_reply_command_sends_message_to_mapped_chat(monkeypatch):
@@ -488,6 +523,96 @@ def test_reply_command_sends_message_to_mapped_chat(monkeypatch):
     assert sent["text"] == "Support reply: Thanks for the details"
     assert confirmations
     assert confirmations[0].startswith("✅ Sent to 12345: Thanks for the details")
+
+
+def test_reply_command_sends_message_to_mapped_chat_by_at_username(monkeypatch):
+    monkeypatch.setattr(telegram_webhook, "get_settings", lambda: _Settings(None, 999))
+    fake_db = _FakeFirestore()
+    fake_db._telegram_users["12345"] = {
+        "chatId": 555,
+        "username": "Alice",
+        "usernameLower": "alice",
+        "firstSeenAt": "OLD",
+        "lastSeenAt": "OLD",
+    }
+    monkeypatch.setattr(telegram_webhook, "get_firestore_client", lambda: fake_db)
+    sent: dict[str, object] = {}
+    confirmations: list[str] = []
+
+    async def _fake_send(chat_id, text: str):
+        sent["chat_id"] = chat_id
+        sent["text"] = text
+        return True, None
+
+    async def _fake_admin(text: str):
+        confirmations.append(text)
+        return True, None
+
+    monkeypatch.setattr(telegram_webhook, "send_message", _fake_send)
+    monkeypatch.setattr(telegram_webhook, "send_admin_message", _fake_admin)
+    client = TestClient(app)
+
+    response = client.post(
+        "/webhooks/telegram",
+        json={
+            "update_id": 1012,
+            "message": {
+                "from": {"id": 1},
+                "chat": {"id": 999, "type": "private"},
+                "message_id": 15,
+                "text": "/reply @Alice Thanks by username",
+            },
+        },
+    )
+
+    assert response.status_code == 200
+    assert sent["chat_id"] == 555
+    assert sent["text"] == "Support reply: Thanks by username"
+    assert confirmations
+    assert confirmations[0].startswith("✅ Sent to 12345: Thanks by username")
+
+
+def test_reply_command_sends_message_to_mapped_chat_by_plain_username(monkeypatch):
+    monkeypatch.setattr(telegram_webhook, "get_settings", lambda: _Settings(None, 999))
+    fake_db = _FakeFirestore()
+    fake_db._telegram_users["12345"] = {
+        "chatId": 555,
+        "username": "alice",
+        "usernameLower": "alice",
+        "firstSeenAt": "OLD",
+        "lastSeenAt": "OLD",
+    }
+    monkeypatch.setattr(telegram_webhook, "get_firestore_client", lambda: fake_db)
+    sent: dict[str, object] = {}
+
+    async def _fake_send(chat_id, text: str):
+        sent["chat_id"] = chat_id
+        sent["text"] = text
+        return True, None
+
+    async def _fake_admin(_text: str):
+        return True, None
+
+    monkeypatch.setattr(telegram_webhook, "send_message", _fake_send)
+    monkeypatch.setattr(telegram_webhook, "send_admin_message", _fake_admin)
+    client = TestClient(app)
+
+    response = client.post(
+        "/webhooks/telegram",
+        json={
+            "update_id": 1012,
+            "message": {
+                "from": {"id": 1},
+                "chat": {"id": 999, "type": "private"},
+                "message_id": 15,
+                "text": "/reply alice Thanks by plain username",
+            },
+        },
+    )
+
+    assert response.status_code == 200
+    assert sent["chat_id"] == 555
+    assert sent["text"] == "Support reply: Thanks by plain username"
 
 
 def test_reply_command_works_from_admin_group_chat(monkeypatch):

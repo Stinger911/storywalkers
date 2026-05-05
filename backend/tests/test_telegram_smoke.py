@@ -239,6 +239,16 @@ def test_telegram_questionnaire_completion_is_idempotent(monkeypatch):
         calls["count"] += 1
 
     monkeypatch.setattr(auth, "send_admin_message", _fake_send)
+    webhook_calls = {"count": 0}
+
+    async def _fake_questionnaire_completed_webhook(_uid: str) -> None:
+        webhook_calls["count"] += 1
+
+    monkeypatch.setattr(
+        auth,
+        "_call_questionnaire_completed_webhook",
+        _fake_questionnaire_completed_webhook,
+    )
     app.dependency_overrides[auth_deps.get_current_user] = _override_student
     client = TestClient(app)
 
@@ -257,10 +267,12 @@ def test_telegram_questionnaire_completion_is_idempotent(monkeypatch):
         fake_db._users["u1"]["telegramEvents"]["questionnaireCompletedAt"]
         is firestore.SERVER_TIMESTAMP
     )
+    assert webhook_calls["count"] == 1
 
     second = client.patch("/api/me", json={"displayName": "User One New"})
     assert second.status_code == 200
     assert calls["count"] == 1
+    assert webhook_calls["count"] == 1
 
     app.dependency_overrides.clear()
 

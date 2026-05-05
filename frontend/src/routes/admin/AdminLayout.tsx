@@ -57,25 +57,6 @@ export function AdminLayout(props: AdminLayoutProps) {
           headerClass="border-b-0 bg-background/70"
           headerInnerClass="max-w-[1400px] px-4 py-3 sm:px-6 lg:px-8"
           mainClass="max-w-[1400px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8"
-          centerSlot={
-            <div class="hidden lg:flex flex-1 justify-center">
-              <div
-                class={cn(
-                  "flex w-full max-w-sm items-center gap-2 rounded-[var(--radius-md)] px-4 py-2.5 text-muted-foreground",
-                  theme() === "dark"
-                    ? "border border-border/70 bg-[rgba(18,29,38,0.9)]"
-                    : "bg-[rgba(223,233,247,0.8)]",
-                )}
-              >
-                <span class="material-symbols-outlined text-[18px]">search</span>
-                <input
-                  type="search"
-                  placeholder="Search records"
-                  class="w-full border-0 bg-transparent p-0 text-sm text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus:ring-0"
-                />
-              </div>
-            </div>
-          }
           userMenuSlot={
             <div class="flex items-center gap-3">
               <div class="flex items-center gap-3">

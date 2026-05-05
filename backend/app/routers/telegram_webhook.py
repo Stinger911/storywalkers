@@ -18,6 +18,24 @@ MAX_TELEGRAM_TEXT_LEN = 3500
 FORWARD_COOLDOWN_SECONDS = 2
 
 
+def _normalize_telegram_username(value: str) -> str | None:
+    raw = value.strip()
+    if raw.startswith("@"):
+        raw = raw[1:]
+    normalized = raw.lower()
+    if not normalized:
+        return None
+    return normalized
+
+
+def _reply_usage() -> str:
+    return (
+        "Usage: /reply {telegram_user_id_or_username} {text}\n"
+        "Example: /reply 123456789 Thanks, we will review this shortly.\n"
+        "Example: /reply @username Thanks, we will review this shortly."
+    )
+
+
 def _as_utc_datetime(value: Any) -> datetime | None:
     if isinstance(value, datetime):
         if value.tzinfo is None:
@@ -186,28 +204,46 @@ async def telegram_webhook(request: Request) -> dict[str, bool]:
             )
             return {"ok": True}
 
-        # Expected format: /reply {telegram_user_id_digits} {message...}
+        # Expected format: /reply {telegram_user_id_or_username} {message...}
         parts = text.split(maxsplit=2)
-        valid_uid = len(parts) >= 2 and parts[1].isdigit()
+        valid_target = len(parts) >= 2 and bool(parts[1].strip())
         valid_text = len(parts) >= 3 and bool(parts[2].strip())
-        if not (valid_uid and valid_text):
-            await send_admin_message(
-                "Usage: /reply {telegram_user_id} {text}\n"
-                "Example: /reply 123456789 Thanks, we will review this shortly."
-            )
+        if not (valid_target and valid_text):
+            await send_admin_message(_reply_usage())
             return {"ok": True}
 
-        target_uid = parts[1]
+        target = parts[1].strip()
         reply_text = parts[2].strip()[:MAX_TELEGRAM_TEXT_LEN]
         try:
             db = get_firestore_client()
-            target_ref = db.collection("telegram_users").document(target_uid)
-            target_snap = target_ref.get()
+            telegram_users = db.collection("telegram_users")
+            target_uid = target
+            if target.isdigit():
+                target_snap = telegram_users.document(target).get()
+            else:
+                target_username = _normalize_telegram_username(target)
+                if target_username is None:
+                    await send_admin_message(_reply_usage())
+                    return {"ok": True}
+                matches = list(
+                    telegram_users.where("usernameLower", "==", target_username)
+                    .limit(2)
+                    .stream()
+                )
+                if len(matches) > 1:
+                    await send_admin_message(
+                        f"Cannot reply: username {target} matched multiple users."
+                    )
+                    return {"ok": True}
+                target_snap = (
+                    matches[0] if matches else telegram_users.document(target).get()
+                )
+                target_uid = target_snap.id if target_snap.exists else target
             target_data = target_snap.to_dict() or {}
             target_chat_id = target_data.get("chatId")
             if not target_snap.exists or not isinstance(target_chat_id, (int, str)):
                 await send_admin_message(
-                    f"Cannot reply: user {target_uid} not found (no DM received yet)."
+                    f"Cannot reply: user {target} not found (no DM received yet)."
                 )
                 return {"ok": True}
             ok, error_summary = await send_message(
@@ -220,7 +256,7 @@ async def telegram_webhook(request: Request) -> dict[str, bool]:
                 await send_admin_message(f"✅ Sent to {target_uid}: {preview}")
             else:
                 await send_admin_message(
-                    f"Cannot reply to {target_uid}: {error_summary or 'unknown error'}"
+                    f"Cannot reply to {target}: {error_summary or 'unknown error'}"
                 )
         except Exception:
             logger.warning(
@@ -229,11 +265,11 @@ async def telegram_webhook(request: Request) -> dict[str, bool]:
                     "event": "telegram_reply_command_failed",
                     "update_id": payload.get("update_id"),
                     "admin_chat_id": chat_id,
-                    "target_uid": target_uid,
+                    "target": target,
                 },
                 exc_info=True,
             )
-            await send_admin_message(f"Cannot reply to {target_uid}: internal error")
+            await send_admin_message(f"Cannot reply to {target}: internal error")
         return {"ok": True}
 
     try:
@@ -245,6 +281,10 @@ async def telegram_webhook(request: Request) -> dict[str, bool]:
             "chatId": chat_id,
             "lastSeenAt": firestore.SERVER_TIMESTAMP,
         }
+        username = from_data.get("username")
+        if isinstance(username, str) and username.strip():
+            mapping_update["username"] = username.strip()
+            mapping_update["usernameLower"] = username.strip().lower()
         if not existing.exists or not existing_data.get("firstSeenAt"):
             mapping_update["firstSeenAt"] = firestore.SERVER_TIMESTAMP
         user_ref.set(mapping_update, merge=True)

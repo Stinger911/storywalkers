@@ -339,10 +339,14 @@ Create these if Firestore asks, or proactively:
 
 6. `step_completions`: index/query on `completedAt DESC` for admin feed.
 
+### Users
+
+7. `users`: `role ASC, status ASC` for first-hundred active student eligibility checks.
+
 ### Courses and lessons
 
-7. `courses`: composite index for active catalog listing/filtering, e.g. `isActive ASC, title ASC`.
-8. `courses/{courseId}/lessons`: index for ordered active lessons, e.g. `isActive ASC, order ASC`.
+8. `courses`: composite index for active catalog listing/filtering, e.g. `isActive ASC, title ASC`.
+9. `courses/{courseId}/lessons`: index for ordered active lessons, e.g. `isActive ASC, order ASC`.
 
 ---
 

@@ -115,7 +115,9 @@ def test_build_user_payload_includes_onboarding_fields():
         "isFirstHundred": True,
         "subscriptionSelected": True,
     }
-    payload = _build_user_payload("u1", decoded, {**profile, "selectedGoalTitle": "Goal One"})
+    payload = _build_user_payload(
+        "u1", decoded, {**profile, "selectedGoalTitle": "Goal One"}
+    )
 
     assert payload["level"] == 4
     assert payload["selectedGoalId"] == "goal-1"
@@ -230,10 +232,12 @@ def test_get_current_user_resolves_selected_goal_title(monkeypatch):
     assert payload["selectedGoalTitle"] == "Goal One"
 
 
-def test_get_current_user_bootstrap_keeps_first_hundred_false_after_threshold(monkeypatch):
+def test_get_current_user_bootstrap_keeps_first_hundred_false_after_threshold(
+    monkeypatch,
+):
     fake_db = _FakeFirestore()
     for index in range(100):
-        fake_db._users[f"student-{index}"] = {"role": "student"}
+        fake_db._users[f"student-{index}"] = {"role": "student", "status": "active"}
     monkeypatch.setattr(auth_deps, "get_firestore_client", lambda: fake_db)
     monkeypatch.setattr(auth_deps, "get_settings", lambda: _Settings())
     monkeypatch.setattr(
@@ -257,3 +261,42 @@ def test_get_current_user_bootstrap_keeps_first_hundred_false_after_threshold(mo
 
     assert payload["isFirstHundred"] is False
     assert fake_db._users["u101"]["isFirstHundred"] is False
+
+
+def test_get_current_user_bootstrap_ignores_inactive_students_for_first_hundred(
+    monkeypatch,
+):
+    fake_db = _FakeFirestore()
+    for index in range(99):
+        fake_db._users[f"active-student-{index}"] = {
+            "role": "student",
+            "status": "active",
+        }
+    for index in range(20):
+        fake_db._users[f"inactive-student-{index}"] = {
+            "role": "student",
+            "status": "disabled",
+        }
+    monkeypatch.setattr(auth_deps, "get_firestore_client", lambda: fake_db)
+    monkeypatch.setattr(auth_deps, "get_settings", lambda: _Settings())
+    monkeypatch.setattr(
+        auth_deps,
+        "verify_id_token",
+        lambda _token: {
+            "uid": "u100",
+            "email": "u100@example.com",
+            "name": "User 100",
+        },
+    )
+
+    async def _fake_send_admin_message(_text: str):
+        return True, None
+
+    monkeypatch.setattr(auth_deps, "send_admin_message", _fake_send_admin_message)
+
+    request = Request({"type": "http", "headers": []})
+    creds = HTTPAuthorizationCredentials(scheme="Bearer", credentials="token")
+    payload = asyncio.run(auth_deps.get_current_user(request, creds))
+
+    assert payload["isFirstHundred"] is True
+    assert fake_db._users["u100"]["isFirstHundred"] is True

@@ -1,3 +1,4 @@
+import anyio
 from fastapi.testclient import TestClient
 from google.cloud import firestore
 
@@ -362,6 +363,16 @@ def test_patch_me_sends_questionnaire_completed_once_on_course_selection_transit
         sent["text"] = text
 
     monkeypatch.setattr(auth, "send_admin_message", _fake_send_admin_message)
+    webhook_calls: list[str] = []
+
+    async def _fake_questionnaire_completed_webhook(uid: str) -> None:
+        webhook_calls.append(uid)
+
+    monkeypatch.setattr(
+        auth,
+        "_call_questionnaire_completed_webhook",
+        _fake_questionnaire_completed_webhook,
+    )
     client = TestClient(app)
 
     response = client.patch(
@@ -379,8 +390,111 @@ def test_patch_me_sends_questionnaire_completed_once_on_course_selection_transit
         users["u1"]["telegramEvents"]["questionnaireCompletedAt"]
         is firestore.SERVER_TIMESTAMP
     )
+    assert webhook_calls == ["u1"]
 
     app.dependency_overrides.clear()
+
+
+def test_patch_me_questionnaire_completed_webhook_failure_logs_and_continues(
+    monkeypatch,
+):
+    users = {
+        "u1": {
+            "displayName": "User One",
+            "email": "u1@example.com",
+            "role": "student",
+            "status": "active",
+            "selectedGoalId": "goal-1",
+            "selectedCourses": [],
+            "profileForm": {
+                "aboutMe": None,
+                "submitted": None,
+                "telegram": None,
+                "socialLinks": [],
+                "socialUrl": None,
+                "experienceLevel": None,
+                "notes": None,
+            },
+        }
+    }
+    fake_db = FakeFirestore(users)
+    monkeypatch.setattr(auth, "get_firestore_client", lambda: fake_db)
+    app.dependency_overrides[auth_deps.get_current_user] = _override_user
+
+    async def _fake_send_admin_message(_text: str) -> None:
+        return None
+
+    monkeypatch.setattr(auth, "send_admin_message", _fake_send_admin_message)
+
+    class _FailingAsyncClient:
+        def __init__(self, **_kwargs):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *_args):
+            return None
+
+        async def get(self, url, *, params):
+            assert url == auth.QUESTIONNAIRE_COMPLETED_WEBHOOK_URL
+            assert params == {"id": "u1"}
+            raise RuntimeError("webhook down")
+
+    log_calls: list[tuple[str, dict]] = []
+
+    def _fake_warning(message, *, extra, exc_info):
+        log_calls.append((message, extra))
+        assert exc_info is True
+
+    monkeypatch.setattr(auth.httpx, "AsyncClient", _FailingAsyncClient)
+    monkeypatch.setattr(auth.logger, "warning", _fake_warning)
+    client = TestClient(app)
+
+    response = client.patch(
+        "/api/me",
+        json={"profileForm": {"submitted": True, "telegram": "@alice"}},
+    )
+
+    assert response.status_code == 200
+    assert log_calls == [
+        (
+            "questionnaire_completed_webhook_failed",
+            {"event": "questionnaire_completed_webhook_failed", "uid": "u1"},
+        )
+    ]
+
+    app.dependency_overrides.clear()
+
+
+def test_call_questionnaire_completed_webhook_sends_user_id(monkeypatch):
+    calls: list[tuple[str, dict[str, str]]] = []
+
+    class _Response:
+        def raise_for_status(self):
+            return None
+
+    class _AsyncClient:
+        def __init__(self, **_kwargs):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *_args):
+            return None
+
+        async def get(self, url, *, params):
+            calls.append((url, params))
+            return _Response()
+
+    monkeypatch.setattr(auth.httpx, "AsyncClient", _AsyncClient)
+
+    anyio.run(auth._call_questionnaire_completed_webhook, "u1")
+
+    assert calls == [
+        (auth.QUESTIONNAIRE_COMPLETED_WEBHOOK_URL, {"id": "u1"}),
+    ]
 
 
 def test_patch_me_does_not_resend_questionnaire_completed_when_already_marked(

@@ -41,6 +41,7 @@ describe("AdminStudents", () => {
             { uid: "a1", displayName: "Admin A", email: "a@x.com", role: "admin" },
             { uid: "e1", displayName: "Expert E", email: "e@x.com", role: "expert" },
           ],
+          nextCursor: null,
         });
       }
       return Promise.resolve({
@@ -53,6 +54,7 @@ describe("AdminStudents", () => {
             isFirstHundred: true,
           },
         ],
+        nextCursor: null,
       });
     });
 
@@ -72,6 +74,8 @@ describe("AdminStudents", () => {
       q: undefined,
       status: undefined,
       role: "student",
+      limit: 20,
+      cursor: undefined,
       sortBy: "createdAt",
       sortDir: "desc",
     });
@@ -79,6 +83,8 @@ describe("AdminStudents", () => {
       q: undefined,
       status: undefined,
       role: "staff",
+      limit: 20,
+      cursor: undefined,
       sortBy: "createdAt",
       sortDir: "desc",
     });
@@ -99,6 +105,7 @@ describe("AdminStudents", () => {
                   isFirstHundred: false,
                 },
               ],
+        nextCursor: null,
       }),
     );
 
@@ -109,7 +116,7 @@ describe("AdminStudents", () => {
   });
 
   it("applies status filter to both student queries and URL state", async () => {
-    listStudentsMock.mockResolvedValue({ items: [] });
+    listStudentsMock.mockResolvedValue({ items: [], nextCursor: null });
 
     render(() => <AdminStudents />);
 
@@ -122,6 +129,8 @@ describe("AdminStudents", () => {
         q: undefined,
         status: "disabled",
         role: "staff",
+        limit: 20,
+        cursor: undefined,
         sortBy: "createdAt",
         sortDir: "desc",
       });
@@ -136,7 +145,7 @@ describe("AdminStudents", () => {
   });
 
   it("applies sort controls to both student queries and URL state", async () => {
-    listStudentsMock.mockResolvedValue({ items: [] });
+    listStudentsMock.mockResolvedValue({ items: [], nextCursor: null });
 
     render(() => <AdminStudents />);
 
@@ -152,6 +161,8 @@ describe("AdminStudents", () => {
         q: undefined,
         status: undefined,
         role: "staff",
+        limit: 20,
+        cursor: undefined,
         sortBy: "progress",
         sortDir: "asc",
       });
@@ -167,7 +178,7 @@ describe("AdminStudents", () => {
 
   it("shows filtered empty states when both sections are empty", async () => {
     searchParamsState = { status: "disabled" };
-    listStudentsMock.mockResolvedValue({ items: [] });
+    listStudentsMock.mockResolvedValue({ items: [], nextCursor: null });
 
     render(() => <AdminStudents />);
 
@@ -177,5 +188,98 @@ describe("AdminStudents", () => {
     expect(
       await screen.findByText("No staff members match the current filters."),
     ).toBeInTheDocument();
+  });
+
+  it("renders pagination controls above and below the students list", async () => {
+    listStudentsMock.mockImplementation(({ role }: { role?: string }) =>
+      Promise.resolve({
+        items:
+          role === "staff"
+            ? []
+            : [
+                {
+                  uid: "s1",
+                  displayName: "Student S",
+                  email: "s@x.com",
+                  role: "student",
+                },
+              ],
+        nextCursor: role === "student" ? "s1" : null,
+      }),
+    );
+
+    render(() => <AdminStudents />);
+
+    expect(await screen.findByText("Student S")).toBeInTheDocument();
+    expect(screen.getAllByText("Students · Page 1")).toHaveLength(2);
+    expect(screen.getAllByRole("button", { name: "Next" })[0]).toBeEnabled();
+    expect(screen.getAllByRole("button", { name: "Previous" })[0]).toBeDisabled();
+  });
+
+  it("loads the next and previous student pages", async () => {
+    listStudentsMock.mockImplementation(
+      ({ role, cursor }: { role?: string; cursor?: string }) => {
+        if (role === "staff") {
+          return Promise.resolve({ items: [], nextCursor: null });
+        }
+        if (cursor === "s1") {
+          return Promise.resolve({
+            items: [
+              {
+                uid: "s2",
+                displayName: "Student Two",
+                email: "s2@x.com",
+                role: "student",
+              },
+            ],
+            nextCursor: null,
+          });
+        }
+        return Promise.resolve({
+          items: [
+            {
+              uid: "s1",
+              displayName: "Student One",
+              email: "s1@x.com",
+              role: "student",
+            },
+          ],
+          nextCursor: "s1",
+        });
+      },
+    );
+
+    render(() => <AdminStudents />);
+
+    expect(await screen.findByText("Student One")).toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole("button", { name: "Next" })[0]);
+
+    expect(await screen.findByText("Student Two")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(listStudentsMock).toHaveBeenCalledWith({
+        q: undefined,
+        status: undefined,
+        role: "student",
+        limit: 20,
+        cursor: "s1",
+        sortBy: "createdAt",
+        sortDir: "desc",
+      });
+    });
+    expect(screen.getAllByText("Students · Page 2")).toHaveLength(2);
+
+    fireEvent.click(screen.getAllByRole("button", { name: "Previous" })[0]);
+
+    await waitFor(() => {
+      expect(listStudentsMock).toHaveBeenCalledWith({
+        q: undefined,
+        status: undefined,
+        role: "student",
+        limit: 20,
+        cursor: undefined,
+        sortBy: "createdAt",
+        sortDir: "desc",
+      });
+    });
   });
 });

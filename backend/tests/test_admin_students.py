@@ -561,6 +561,49 @@ def test_create_student_keeps_first_hundred_false_after_threshold(monkeypatch):
     app.dependency_overrides.clear()
 
 
+def test_create_student_ignores_inactive_students_for_first_hundred(monkeypatch):
+    users = {
+        f"active-student-{index}": {
+            "email": f"active-student-{index}@example.com",
+            "displayName": f"Active Student {index}",
+            "role": "student",
+            "status": "active",
+        }
+        for index in range(99)
+    }
+    users.update(
+        {
+            f"inactive-student-{index}": {
+                "email": f"inactive-student-{index}@example.com",
+                "displayName": f"Inactive Student {index}",
+                "role": "student",
+                "status": "disabled",
+            }
+            for index in range(20)
+        }
+    )
+    fake_db = FakeFirestore(users)
+    monkeypatch.setattr(admin_students, "get_firestore_client", lambda: fake_db)
+    monkeypatch.setattr(
+        admin_students,
+        "get_or_create_user",
+        lambda email, display_name=None: type("AuthUser", (), {"uid": "new-u100"})(),
+    )
+    app.dependency_overrides[require_staff] = _override_staff
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/admin/students",
+        json={"email": "new100@example.com", "displayName": "New Student 100"},
+    )
+
+    assert response.status_code == 201
+    assert response.json()["isFirstHundred"] is True
+    assert users["new-u100"]["isFirstHundred"] is True
+
+    app.dependency_overrides.clear()
+
+
 def test_patch_student_updates_role_for_staff(monkeypatch):
     users = {"s1": {"role": "student", "status": "active", "email": "s1@x.com"}}
     fake_db = FakeFirestore(users)

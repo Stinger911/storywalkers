@@ -80,25 +80,6 @@ export function StudentLayout(props: StudentLayoutProps) {
             "max-w-[1280px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8",
             props.rightRail ? "pb-24 md:pb-8" : "pb-24 md:pb-8",
           )}
-          centerSlot={
-            <div class="hidden md:flex flex-1 justify-center">
-              <div
-                class={cn(
-                  "flex w-full max-w-xs items-center gap-2 rounded-[var(--radius-md)] px-4 py-2.5 text-muted-foreground",
-                  theme() === "dark"
-                    ? "border border-border/70 bg-[rgba(18,29,38,0.9)]"
-                    : "bg-[rgba(223,233,247,0.8)]",
-                )}
-              >
-                <span class="material-symbols-outlined text-[18px]">search</span>
-                <input
-                  type="search"
-                  placeholder={t("student.layout.searchPlaceholder")}
-                  class="w-full border-0 bg-transparent p-0 text-sm text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus:ring-0"
-                />
-              </div>
-            </div>
-          }
           userMenuSlot={
             <div class="flex items-center gap-3">
               <div class="flex items-center gap-3">

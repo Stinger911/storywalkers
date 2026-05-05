@@ -25,6 +25,7 @@ def should_mark_first_hundred_student(db: firestore.Client, *, role: str) -> boo
     student_docs = list(
         db.collection("users")
         .where("role", "==", "student")
+        .where("status", "==", "active")
         .limit(FIRST_HUNDRED_STUDENT_LIMIT)
         .stream()
     )

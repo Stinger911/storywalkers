@@ -38,6 +38,7 @@ const STATUS_OPTIONS = [
   { value: "community_only", label: "Community only" },
   { value: "expired", label: "Expired" },
 ];
+const PAGE_SIZE = 20;
 
 function normalizeQueryParam(value: string | string[] | undefined): string {
   return typeof value === "string" ? value : "";
@@ -55,6 +56,16 @@ export function AdminStudents() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [students, setStudents] = createSignal<Student[]>([]);
   const [staff, setStaff] = createSignal<Student[]>([]);
+  const [studentCursor, setStudentCursor] = createSignal<string | undefined>();
+  const [staffCursor, setStaffCursor] = createSignal<string | undefined>();
+  const [studentCursorHistory, setStudentCursorHistory] = createSignal<
+    (string | undefined)[]
+  >([]);
+  const [staffCursorHistory, setStaffCursorHistory] = createSignal<
+    (string | undefined)[]
+  >([]);
+  const [studentNextCursor, setStudentNextCursor] = createSignal<string | null>(null);
+  const [staffNextCursor, setStaffNextCursor] = createSignal<string | null>(null);
   const [loading, setLoading] = createSignal(true);
   const [error, setError] = createSignal<string | null>(null);
   const [query, setQuery] = createSignal(normalizeQueryParam(searchParams.q));
@@ -68,6 +79,14 @@ export function AdminStudents() {
     normalizeSortDir(normalizeQueryParam(searchParams.sortDir)),
   );
   const hasActiveFilters = () => Boolean(query().trim() || statusFilter());
+  const resetPagination = () => {
+    setStudentCursor(undefined);
+    setStaffCursor(undefined);
+    setStudentCursorHistory([]);
+    setStaffCursorHistory([]);
+    setStudentNextCursor(null);
+    setStaffNextCursor(null);
+  };
 
   const syncSearchParams = (next: {
     q?: string;
@@ -94,6 +113,8 @@ export function AdminStudents() {
           q: search,
           status,
           role: "student",
+          limit: PAGE_SIZE,
+          cursor: studentCursor(),
           sortBy: sortBy(),
           sortDir: sortDir(),
         }),
@@ -101,12 +122,16 @@ export function AdminStudents() {
           q: search,
           status,
           role: "staff",
+          limit: PAGE_SIZE,
+          cursor: staffCursor(),
           sortBy: sortBy(),
           sortDir: sortDir(),
         }),
       ]);
       setStudents(studentData.items);
       setStaff(staffData.items);
+      setStudentNextCursor(studentData.nextCursor ?? null);
+      setStaffNextCursor(staffData.nextCursor ?? null);
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -120,6 +145,7 @@ export function AdminStudents() {
 
   const updateQuery = (value: string) => {
     setQuery(value);
+    resetPagination();
     syncSearchParams({
       q: value,
       status: statusFilter(),
@@ -130,6 +156,7 @@ export function AdminStudents() {
 
   const updateStatus = (value: string) => {
     setStatusFilter(value);
+    resetPagination();
     syncSearchParams({
       q: query(),
       status: value,
@@ -140,6 +167,7 @@ export function AdminStudents() {
 
   const updateSortBy = (value: SortBy) => {
     setSortBy(value);
+    resetPagination();
     syncSearchParams({
       q: query(),
       status: statusFilter(),
@@ -150,6 +178,7 @@ export function AdminStudents() {
 
   const updateSortDir = (value: SortDir) => {
     setSortDir(value);
+    resetPagination();
     syncSearchParams({
       q: query(),
       status: statusFilter(),
@@ -157,6 +186,67 @@ export function AdminStudents() {
       sortDir: value,
     });
   };
+
+  const goToNextStudentsPage = () => {
+    const next = studentNextCursor();
+    if (!next) return;
+    setStudentCursorHistory((history) => [...history, studentCursor()]);
+    setStudentCursor(next);
+  };
+
+  const goToPreviousStudentsPage = () => {
+    const history = studentCursorHistory();
+    if (history.length === 0) return;
+    const previous = history[history.length - 1];
+    setStudentCursorHistory(history.slice(0, -1));
+    setStudentCursor(previous);
+  };
+
+  const goToNextStaffPage = () => {
+    const next = staffNextCursor();
+    if (!next) return;
+    setStaffCursorHistory((history) => [...history, staffCursor()]);
+    setStaffCursor(next);
+  };
+
+  const goToPreviousStaffPage = () => {
+    const history = staffCursorHistory();
+    if (history.length === 0) return;
+    const previous = history[history.length - 1];
+    setStaffCursorHistory(history.slice(0, -1));
+    setStaffCursor(previous);
+  };
+
+  const PaginationControls = (props: {
+    label: string;
+    page: number;
+    hasPrevious: boolean;
+    hasNext: boolean;
+    onPrevious: () => void;
+    onNext: () => void;
+  }) => (
+    <div class="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-md)] border border-border/70 px-3 py-2">
+      <div class="text-xs font-medium text-muted-foreground">
+        {props.label} · Page {props.page}
+      </div>
+      <div class="flex items-center gap-2">
+        <Button
+          variant="outline"
+          onClick={props.onPrevious}
+          disabled={loading() || !props.hasPrevious}
+        >
+          Previous
+        </Button>
+        <Button
+          variant="outline"
+          onClick={props.onNext}
+          disabled={loading() || !props.hasNext}
+        >
+          Next
+        </Button>
+      </div>
+    </div>
+  );
 
   return (
     <Page
@@ -262,6 +352,14 @@ export function AdminStudents() {
           <div class="mt-4 grid gap-6 lg:grid-cols-2">
             <div class="space-y-3">
               <div class="text-sm font-semibold text-muted-foreground">Students</div>
+              <PaginationControls
+                label="Students"
+                page={studentCursorHistory().length + 1}
+                hasPrevious={studentCursorHistory().length > 0}
+                hasNext={Boolean(studentNextCursor())}
+                onPrevious={goToPreviousStudentsPage}
+                onNext={goToNextStudentsPage}
+              />
               <Show
                 when={students().length > 0}
                 fallback={
@@ -315,10 +413,26 @@ export function AdminStudents() {
                   ))}
                 </div>
               </Show>
+              <PaginationControls
+                label="Students"
+                page={studentCursorHistory().length + 1}
+                hasPrevious={studentCursorHistory().length > 0}
+                hasNext={Boolean(studentNextCursor())}
+                onPrevious={goToPreviousStudentsPage}
+                onNext={goToNextStudentsPage}
+              />
             </div>
 
             <div class="space-y-3">
               <div class="text-sm font-semibold text-muted-foreground">Staff</div>
+              <PaginationControls
+                label="Staff"
+                page={staffCursorHistory().length + 1}
+                hasPrevious={staffCursorHistory().length > 0}
+                hasNext={Boolean(staffNextCursor())}
+                onPrevious={goToPreviousStaffPage}
+                onNext={goToNextStaffPage}
+              />
               <Show
                 when={staff().length > 0}
                 fallback={
@@ -353,6 +467,14 @@ export function AdminStudents() {
                   ))}
                 </div>
               </Show>
+              <PaginationControls
+                label="Staff"
+                page={staffCursorHistory().length + 1}
+                hasPrevious={staffCursorHistory().length > 0}
+                hasNext={Boolean(staffNextCursor())}
+                onPrevious={goToPreviousStaffPage}
+                onNext={goToNextStaffPage}
+              />
             </div>
           </div>
         </Show>

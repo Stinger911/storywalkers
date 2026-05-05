@@ -2,6 +2,7 @@ import re
 from typing import Any, Literal
 from urllib.parse import urlparse
 
+import httpx
 from fastapi import APIRouter, Depends, status
 from google.cloud import firestore
 from pydantic import BaseModel, Field, field_validator
@@ -29,6 +30,28 @@ ExperienceLevel = Literal["beginner", "intermediate", "advanced"]
 PreferredCurrency = Literal["USD", "EUR", "PLN", "RUB"]
 TELEGRAM_HANDLE_RE = re.compile(r"^@[A-Za-z0-9_]{1,32}$")
 PHONE_LIKE_RE = re.compile(r"^[0-9+\-\s()]+$")
+QUESTIONNAIRE_COMPLETED_WEBHOOK_URL = (
+    "https://lab18.app.n8n.cloud/webhook/ea0ac1ca-8aca-4267-8111-4ce2f86f3024"
+)
+
+
+async def _call_questionnaire_completed_webhook(uid: str) -> None:
+    try:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(5.0)) as client:
+            response = await client.get(
+                QUESTIONNAIRE_COMPLETED_WEBHOOK_URL,
+                params={"id": uid},
+            )
+        response.raise_for_status()
+    except Exception:
+        logger.warning(
+            "questionnaire_completed_webhook_failed",
+            extra={
+                "event": "questionnaire_completed_webhook_failed",
+                "uid": uid,
+            },
+            exc_info=True,
+        )
 
 
 class ProfileFormModel(BaseModel):
@@ -591,6 +614,7 @@ async def patch_me(
                 },
                 exc_info=True,
             )
+        await _call_questionnaire_completed_webhook(user["uid"])
     return me_response
 
 

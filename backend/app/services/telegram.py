@@ -91,6 +91,7 @@ async def send_admin_message(text: str) -> tuple[bool, str | None]:
             extra={
                 "event": "telegram_admin_message_skipped",
                 "reason": "missing_admin_chat_id",
+                "text": text,
             },
         )
         return False, "missing admin chat id config"
