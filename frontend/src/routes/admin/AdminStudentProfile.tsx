@@ -63,10 +63,14 @@ type StudentProfile = {
   email?: string;
   role?: string;
   status?: string;
+  activeTo?: string | null;
   boostyUserId?: string | null;
   isFirstHundred?: boolean;
   selectedGoalId?: string | null;
   onboardingStep?: string | null;
+  createdAt?: unknown;
+  updatedAt?: unknown;
+  statusChangedAt?: unknown;
   profileForm?: {
     telegram?: string | null;
     socialUrl?: string | null;
@@ -126,8 +130,10 @@ export function AdminStudentProfile() {
   const [nameError, setNameError] = createSignal<string | null>(null);
   const [roleDraft, setRoleDraft] = createSignal("student");
   const [statusDraft, setStatusDraft] = createSignal("active");
+  const [activeToDraft, setActiveToDraft] = createSignal("");
   const [boostyUserIdDraft, setBoostyUserIdDraft] = createSignal("");
   const [telegramDraft, setTelegramDraft] = createSignal("");
+  const [activeToDirty, setActiveToDirty] = createSignal(false);
   const [boostyUserIdDirty, setBoostyUserIdDirty] = createSignal(false);
   const [telegramDirty, setTelegramDirty] = createSignal(false);
   const [isFirstHundredDraft, setIsFirstHundredDraft] = createSignal(false);
@@ -146,6 +152,56 @@ export function AdminStudentProfile() {
   const [deleteOpen, setDeleteOpen] = createSignal(false);
   const [deletingStudent, setDeletingStudent] = createSignal(false);
 
+  const toDate = (value: unknown): Date | null => {
+    if (!value) return null;
+    if (value instanceof Date) {
+      return Number.isNaN(value.getTime()) ? null : value;
+    }
+    if (
+      typeof value === "object" &&
+      value !== null &&
+      "toDate" in value &&
+      typeof (value as { toDate?: () => Date }).toDate === "function"
+    ) {
+      const converted = (value as { toDate: () => Date }).toDate();
+      return Number.isNaN(converted.getTime()) ? null : converted;
+    }
+    if (typeof value === "string") {
+      const trimmed = value.trim();
+      if (!trimmed) return null;
+      const parsed = /^\d{4}-\d{2}-\d{2}$/.test(trimmed)
+        ? new Date(`${trimmed}T00:00:00Z`)
+        : new Date(trimmed);
+      return Number.isNaN(parsed.getTime()) ? null : parsed;
+    }
+    return null;
+  };
+
+  const toDateInputValue = (value: unknown): string => {
+    const parsed = toDate(value);
+    if (!parsed) return "";
+    return parsed.toISOString().slice(0, 10);
+  };
+
+  const addDaysToDateInput = (value: Date, days: number): string => {
+    const next = new Date(
+      Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate()),
+    );
+    next.setUTCDate(next.getUTCDate() + days);
+    return next.toISOString().slice(0, 10);
+  };
+
+  const defaultActiveToValue = (profile: StudentProfile | null): string => {
+    if (!profile) return addDaysToDateInput(new Date(), 30);
+    if (profile.activeTo) return toDateInputValue(profile.activeTo);
+    const baseline =
+      toDate(profile.statusChangedAt) ??
+      toDate(profile.updatedAt) ??
+      toDate(profile.createdAt) ??
+      new Date();
+    return addDaysToDateInput(baseline, 30);
+  };
+
   const load = async () => {
     setLoading(true);
     setError(null);
@@ -161,8 +217,10 @@ export function AdminStudentProfile() {
       setStudent(nextStudent);
       setRoleDraft(nextStudent.role || "student");
       setStatusDraft(nextStudent.status || "active");
+      setActiveToDraft(defaultActiveToValue(nextStudent));
       setBoostyUserIdDraft(nextStudent.boostyUserId || "");
       setTelegramDraft(nextStudent.profileForm?.telegram || "");
+      setActiveToDirty(false);
       setBoostyUserIdDirty(false);
       setTelegramDirty(false);
       setIsFirstHundredDraft(nextStudent.isFirstHundred === true);
@@ -395,6 +453,7 @@ export function AdminStudentProfile() {
       await updateStudent(uid(), {
         role: roleDraft(),
         status: statusDraft(),
+        activeTo: activeToDraft() || null,
         isFirstHundred: isFirstHundredDraft(),
         ...(boostyUserIdDirty()
           ? { boostyUserId: boostyUserIdDraft().trim() || null }
@@ -672,11 +731,18 @@ export function AdminStudentProfile() {
                 <div class="grid gap-2">
                   <Select
                     value={selectedStatusOption()}
-                    onChange={(value) =>
-                      setStatusDraft(
-                        (value as SelectOption | null)?.value ?? "active",
-                      )
-                    }
+                    onChange={(value) => {
+                      const nextStatus =
+                        (value as SelectOption | null)?.value ?? "active";
+                      setStatusDraft(nextStatus);
+                      if (
+                        nextStatus === "active" &&
+                        student()?.status !== "active" &&
+                        !activeToDirty()
+                      ) {
+                        setActiveToDraft(addDaysToDateInput(new Date(), 30));
+                      }
+                    }}
                     options={statusOptions}
                     optionValue={(option) =>
                       (option as unknown as SelectOption).value
@@ -708,6 +774,27 @@ export function AdminStudentProfile() {
                     </SelectTrigger>
                     <SelectContent />
                   </Select>
+                </div>
+              </div>
+              <div class="grid gap-4 md:grid-cols-2">
+                <div aria-hidden="true" />
+                <div class="grid gap-2">
+                  <TextField>
+                    <TextFieldLabel for="active-to-input">Active to</TextFieldLabel>
+                    <TextFieldInput
+                      id="active-to-input"
+                      type="date"
+                      value={activeToDraft()}
+                      onInput={(event) => {
+                        setActiveToDirty(true);
+                        setActiveToDraft(event.currentTarget.value);
+                      }}
+                    />
+                  </TextField>
+                  <div class="text-xs text-muted-foreground">
+                    Defaults to 30 days from the latest status change and is checked on
+                    the next login.
+                  </div>
                 </div>
               </div>
               <div class="grid gap-4 md:grid-cols-2">

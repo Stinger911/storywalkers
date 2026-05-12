@@ -217,6 +217,7 @@ Update student profile/status.
 {
   "displayName": "Alex Doe",
   "status": "disabled",
+  "activeTo": "2026-06-11",
   "role": "expert"
 }
 ```
@@ -230,12 +231,19 @@ Update student profile/status.
   "displayName": "Alex Doe",
   "role": "student",
   "status": "disabled",
+  "activeTo": "2026-06-11",
   "progressPercent": 40,
   "stepsDone": 2,
   "stepsTotal": 5,
   "updatedAt": "2026-02-02T11:00:00Z"
 }
 ```
+
+**Notes**
+
+- `activeTo` is a date-only field in `YYYY-MM-DD` format.
+- When an `active` student logs in after `activeTo`, the backend automatically switches their status to `disabled`.
+- If staff reactivates a student without sending `activeTo`, the backend defaults it to 30 days from that status change.
 
 ---
 

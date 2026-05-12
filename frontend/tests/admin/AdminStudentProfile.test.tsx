@@ -148,6 +148,7 @@ describe("AdminStudentProfile", () => {
       displayName: "Student One",
       email: "s1@x.com",
       role: "student",
+      statusChangedAt: "2026-05-01T00:00:00Z",
     });
     getStudentPlanMock.mockRejectedValue(new Error("no plan"));
     getStudentPlanStepsMock.mockResolvedValue({ items: [] });
@@ -164,7 +165,7 @@ describe("AdminStudentProfile", () => {
 
     renderWithShell();
 
-    expect(await screen.findByText("Student profile")).toBeInTheDocument();
+    expect(await screen.findByText("Student One")).toBeInTheDocument();
 
     const roleSelect = await screen.findByTestId("role-select");
     fireEvent.change(roleSelect, { target: { value: "expert" } });
@@ -176,6 +177,7 @@ describe("AdminStudentProfile", () => {
       expect(updateStudentMock).toHaveBeenCalledWith("u1", {
         role: "expert",
         status: "active",
+        activeTo: "2026-05-31",
         isFirstHundred: false,
       });
     });
@@ -188,6 +190,7 @@ describe("AdminStudentProfile", () => {
       email: "s1@x.com",
       role: "student",
       status: "active",
+      activeTo: "2026-06-10",
     });
     getStudentPlanMock.mockRejectedValue(new Error("no plan"));
     getStudentPlanStepsMock.mockResolvedValue({ items: [] });
@@ -204,6 +207,8 @@ describe("AdminStudentProfile", () => {
 
     renderWithShell();
 
+    expect(await screen.findByText("Student One")).toBeInTheDocument();
+
     const statusSelect = await screen.findByTestId("status-select");
     fireEvent.change(statusSelect, { target: { value: "disabled" } });
 
@@ -214,6 +219,43 @@ describe("AdminStudentProfile", () => {
       expect(updateStudentMock).toHaveBeenCalledWith("u1", {
         role: "student",
         status: "disabled",
+        activeTo: "2026-06-10",
+        isFirstHundred: false,
+      });
+    });
+  });
+
+  it("shows the derived active to default and saves manual changes", async () => {
+    getStudentMock.mockResolvedValue({
+      uid: "u1",
+      displayName: "Student One",
+      email: "s1@x.com",
+      role: "student",
+      status: "active",
+      statusChangedAt: "2026-05-01T00:00:00Z",
+    });
+    getStudentPlanMock.mockRejectedValue(new Error("no plan"));
+    getStudentPlanStepsMock.mockResolvedValue({ items: [] });
+    listGoalsMock.mockResolvedValue({
+      items: [{ id: "goal-42", title: "Portrait Creator" }],
+    });
+    updateStudentMock.mockResolvedValue({ role: "student", status: "active" });
+
+    renderWithShell();
+
+    const activeToInput = await screen.findByLabelText("Active to");
+    await waitFor(() => {
+      expect(activeToInput).toHaveValue("2026-05-31");
+    });
+
+    fireEvent.input(activeToInput, { target: { value: "2026-06-20" } });
+    fireEvent.click(screen.getByText("Save access"));
+
+    await waitFor(() => {
+      expect(updateStudentMock).toHaveBeenCalledWith("u1", {
+        role: "student",
+        status: "active",
+        activeTo: "2026-06-20",
         isFirstHundred: false,
       });
     });
@@ -227,6 +269,7 @@ describe("AdminStudentProfile", () => {
       role: "student",
       status: "active",
       boostyUserId: "21985241",
+      activeTo: "2026-06-10",
       profileForm: { telegram: "@old_handle" },
     });
     getStudentPlanMock.mockRejectedValue(new Error("no plan"));
@@ -249,6 +292,8 @@ describe("AdminStudentProfile", () => {
 
     renderWithShell();
 
+    expect(await screen.findByText("Student One")).toBeInTheDocument();
+
     const boostyInput = await screen.findByLabelText("Boosty User ID");
     fireEvent.input(boostyInput, { target: { value: "43061401" } });
 
@@ -259,6 +304,7 @@ describe("AdminStudentProfile", () => {
       expect(updateStudentMock).toHaveBeenCalledWith("u1", {
         role: "student",
         status: "active",
+        activeTo: "2026-06-10",
         boostyUserId: "43061401",
         isFirstHundred: false,
       });
@@ -273,6 +319,7 @@ describe("AdminStudentProfile", () => {
       role: "student",
       status: "active",
       boostyUserId: "21985241",
+      activeTo: "2026-06-10",
       profileForm: { telegram: "@old_handle" },
     });
     getStudentPlanMock.mockRejectedValue(new Error("no plan"));
@@ -295,6 +342,8 @@ describe("AdminStudentProfile", () => {
 
     renderWithShell();
 
+    expect(await screen.findByText("Student One")).toBeInTheDocument();
+
     const telegramInput = await screen.findByLabelText("Telegram");
     fireEvent.input(telegramInput, { target: { value: "@new_handle" } });
 
@@ -305,6 +354,7 @@ describe("AdminStudentProfile", () => {
       expect(updateStudentMock).toHaveBeenCalledWith("u1", {
         role: "student",
         status: "active",
+        activeTo: "2026-06-10",
         telegram: "@new_handle",
         isFirstHundred: false,
       });
@@ -319,6 +369,7 @@ describe("AdminStudentProfile", () => {
       role: "student",
       status: "active",
       isFirstHundred: false,
+      activeTo: "2026-06-10",
     });
     getStudentPlanMock.mockRejectedValue(new Error("no plan"));
     getStudentPlanStepsMock.mockResolvedValue({ items: [] });
@@ -334,6 +385,8 @@ describe("AdminStudentProfile", () => {
 
     renderWithShell();
 
+    expect(await screen.findByText("Student One")).toBeInTheDocument();
+
     const freeFlag = await screen.findByLabelText(
       "First 100 students: all courses are free",
     );
@@ -346,6 +399,7 @@ describe("AdminStudentProfile", () => {
       expect(updateStudentMock).toHaveBeenCalledWith("u1", {
         role: "student",
         status: "active",
+        activeTo: "2026-06-10",
         isFirstHundred: true,
       });
     });

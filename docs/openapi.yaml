@@ -67,6 +67,11 @@ components:
           type: string
           enum: [active, disabled]
           example: active
+        activeTo:
+          type: string
+          format: date
+          nullable: true
+          example: "2026-06-11"
 
     Paginated:
       type: object
@@ -98,6 +103,11 @@ components:
           type: string
           enum: [active, disabled]
           example: active
+        activeTo:
+          type: string
+          format: date
+          nullable: true
+          example: "2026-06-11"
         createdAt:
           type: string
           format: date-time
@@ -147,9 +157,15 @@ components:
         status:
           type: string
           enum: [active, disabled]
+        activeTo:
+          type: string
+          format: date
+          nullable: true
+          description: "Access is checked on login; an expired activeTo auto-switches the student to disabled."
       example:
         displayName: Alex Doe
         status: disabled
+        activeTo: "2026-06-11"
 
     PlanResponse:
       type: object
@@ -1057,7 +1073,7 @@ paths:
     patch:
       tags: [Admin - Students]
       summary: Update student profile/status
-      description: Best-effort side effect: when status changes, sends a Telegram status-change notification.
+      description: Best-effort side effect: when status changes, sends a Telegram status-change notification. Reactivating without activeTo sets it to 30 days from the status change.
       operationId: adminPatchStudent
       parameters:
         - in: path

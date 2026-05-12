@@ -1,4 +1,5 @@
 import time
+from datetime import date, timedelta
 from typing import Any
 
 from fastapi import APIRouter, Depends, Query, Request, status
@@ -39,6 +40,7 @@ class CreateStudentRequest(BaseModel):
 class PatchStudentRequest(BaseModel):
     displayName: str | None = None
     status: UserStatus | None = None
+    activeTo: date | None = None
     role: str | None = None
     boostyUserId: str | None = None
     telegram: str | None = None
@@ -468,6 +470,7 @@ async def update_student(
     current = _doc_or_404(doc_ref)
     current_status = ensure_user_status_with_migration(doc_ref, current)
     updates = payload.model_dump(exclude_unset=True)
+    active_to_provided = "activeTo" in updates
 
     if not updates:
         raise AppError(
@@ -510,6 +513,9 @@ async def update_student(
         updates["profileForm"] = profile_form
     status = updates.get("status")
     new_status: UserStatus | None = None
+    if active_to_provided:
+        active_to = updates.get("activeTo")
+        updates["activeTo"] = active_to.isoformat() if active_to is not None else None
     if status is not None:
         new_status = validate_user_status_or_400(status)
         updates["status"] = new_status
@@ -518,6 +524,8 @@ async def update_student(
     if status_changed:
         updates["statusChangedAt"] = firestore.SERVER_TIMESTAMP
         updates["statusChangedBy"] = actor_uid
+        if new_status == "active" and not active_to_provided:
+            updates["activeTo"] = (date.today() + timedelta(days=30)).isoformat()
     updates["updatedAt"] = firestore.SERVER_TIMESTAMP
     doc_ref.update(updates)
     data = _doc_or_404(doc_ref)

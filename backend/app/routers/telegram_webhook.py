@@ -341,8 +341,28 @@ async def telegram_webhook(request: Request) -> dict[str, bool]:
         f"UTC: {utc_now}"
     )
     try:
-        ok, _ = await send_admin_message(relay_text)
+        logger.info(
+            "telegram_webhook_relay_attempt",
+            extra={
+                "event": "telegram_webhook_relay_attempt",
+                "update_id": payload.get("update_id"),
+                "telegram_user_id": telegram_user_id,
+                "source_chat_id": chat_id,
+                "has_admin_chat_id": bool(admin_chat_id),
+                "text_length": len(text),
+            },
+        )
+        ok, error_summary = await send_admin_message(relay_text)
         if ok:
+            logger.info(
+                "telegram_webhook_relay_sent",
+                extra={
+                    "event": "telegram_webhook_relay_sent",
+                    "update_id": payload.get("update_id"),
+                    "telegram_user_id": telegram_user_id,
+                    "source_chat_id": chat_id,
+                },
+            )
             try:
                 db = get_firestore_client()
                 db.collection("telegram_users").document(telegram_user_id).set(
@@ -359,6 +379,17 @@ async def telegram_webhook(request: Request) -> dict[str, bool]:
                     },
                     exc_info=True,
                 )
+        else:
+            logger.warning(
+                "telegram_webhook_relay_send_failed",
+                extra={
+                    "event": "telegram_webhook_relay_send_failed",
+                    "update_id": payload.get("update_id"),
+                    "telegram_user_id": telegram_user_id,
+                    "source_chat_id": chat_id,
+                    "error_summary": error_summary,
+                },
+            )
     except Exception:
         logger.warning(
             "telegram_webhook_relay_failed",

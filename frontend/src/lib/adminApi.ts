@@ -101,6 +101,7 @@ type Student = {
   displayName?: string
   role?: string
   status?: string
+  activeTo?: string | null
   boostyUserId?: string | null
   profileForm?: {
     telegram?: string | null
@@ -420,6 +421,7 @@ export async function updateStudent(
   payload: {
     displayName?: string
     status?: string
+    activeTo?: string | null
     role?: string
     boostyUserId?: string | null
     telegram?: string | null

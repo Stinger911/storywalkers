@@ -31,6 +31,11 @@ class _FakeDoc:
     def set(self, data):
         self._store[self.id] = data
 
+    def update(self, data):
+        if self.id not in self._store:
+            raise KeyError("missing doc")
+        self._store[self.id].update(data)
+
 
 class _FakeQuery:
     def __init__(self, store):
@@ -300,3 +305,72 @@ def test_get_current_user_bootstrap_ignores_inactive_students_for_first_hundred(
 
     assert payload["isFirstHundred"] is True
     assert fake_db._users["u100"]["isFirstHundred"] is True
+
+
+def test_get_current_user_auto_disables_student_after_active_to_expiration(monkeypatch):
+    fake_db = _FakeFirestore()
+    fake_db._users["u1"] = {
+        "email": "u1@example.com",
+        "displayName": "User One",
+        "role": "student",
+        "status": "active",
+        "activeTo": "2026-05-11",
+    }
+    monkeypatch.setattr(auth_deps, "get_firestore_client", lambda: fake_db)
+    monkeypatch.setattr(auth_deps, "get_settings", lambda: _Settings())
+    monkeypatch.setattr(
+        auth_deps,
+        "verify_id_token",
+        lambda _token: {
+            "uid": "u1",
+            "email": "u1@example.com",
+            "name": "User One",
+        },
+    )
+
+    async def _fake_send_admin_message(_text: str):
+        return True, None
+
+    monkeypatch.setattr(auth_deps, "send_admin_message", _fake_send_admin_message)
+
+    request = Request({"type": "http", "headers": []})
+    creds = HTTPAuthorizationCredentials(scheme="Bearer", credentials="token")
+    payload = asyncio.run(auth_deps.get_current_user(request, creds))
+
+    assert payload["status"] == "disabled"
+    assert fake_db._users["u1"]["status"] == "disabled"
+    assert fake_db._users["u1"]["statusChangedBy"] == "system:auto_expire"
+
+
+def test_get_current_user_keeps_active_student_when_active_to_is_today(monkeypatch):
+    fake_db = _FakeFirestore()
+    fake_db._users["u1"] = {
+        "email": "u1@example.com",
+        "displayName": "User One",
+        "role": "student",
+        "status": "active",
+        "activeTo": "2026-05-12",
+    }
+    monkeypatch.setattr(auth_deps, "get_firestore_client", lambda: fake_db)
+    monkeypatch.setattr(auth_deps, "get_settings", lambda: _Settings())
+    monkeypatch.setattr(
+        auth_deps,
+        "verify_id_token",
+        lambda _token: {
+            "uid": "u1",
+            "email": "u1@example.com",
+            "name": "User One",
+        },
+    )
+
+    async def _fake_send_admin_message(_text: str):
+        return True, None
+
+    monkeypatch.setattr(auth_deps, "send_admin_message", _fake_send_admin_message)
+
+    request = Request({"type": "http", "headers": []})
+    creds = HTTPAuthorizationCredentials(scheme="Bearer", credentials="token")
+    payload = asyncio.run(auth_deps.get_current_user(request, creds))
+
+    assert payload["status"] == "active"
+    assert fake_db._users["u1"]["status"] == "active"

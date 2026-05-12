@@ -7,6 +7,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from app.auth.firebase import verify_id_token
 from app.auth.user_status import (
     DEFAULT_NEW_USER_STATUS,
+    disable_user_if_active_to_expired,
     ensure_user_status_with_migration,
 )
 from app.core.config import get_settings
@@ -111,6 +112,7 @@ def _build_user_payload(uid: str, decoded: dict, profile: dict | None) -> dict:
         "displayName": display_name,
         "role": role,
         "status": status,
+        "activeTo": _sanitize_optional_text(profile.get("activeTo")),
         "roleRaw": role_raw,
         "level": _normalize_level(profile.get("level")),
         "selectedGoalId": _sanitize_optional_text(profile.get("selectedGoalId")),
@@ -232,6 +234,7 @@ async def get_current_user(
 
     profile = doc.to_dict() or {}
     ensure_user_status_with_migration(user_ref, profile)
+    disable_user_if_active_to_expired(user_ref, profile)
 
     selected_goal_id = _sanitize_optional_text(profile.get("selectedGoalId"))
     selected_goal_title = None

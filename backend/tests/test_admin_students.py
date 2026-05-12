@@ -706,6 +706,42 @@ def test_patch_student_status_change_logs_and_emits_hook(monkeypatch):
     app.dependency_overrides.clear()
 
 
+def test_patch_student_sets_default_active_to_when_reactivated(monkeypatch):
+    users = {"s1": {"role": "student", "status": "disabled", "email": "s1@x.com"}}
+    fake_db = FakeFirestore(users)
+    monkeypatch.setattr(admin_students, "get_firestore_client", lambda: fake_db)
+    app.dependency_overrides[get_current_user] = _override_staff
+    client = TestClient(app)
+
+    response = client.patch("/api/admin/students/s1", json={"status": "active"})
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "active"
+    assert response.json()["activeTo"] == "2026-06-11"
+    assert users["s1"]["activeTo"] == "2026-06-11"
+
+    app.dependency_overrides.clear()
+
+
+def test_patch_student_accepts_explicit_active_to(monkeypatch):
+    users = {"s1": {"role": "student", "status": "active", "email": "s1@x.com"}}
+    fake_db = FakeFirestore(users)
+    monkeypatch.setattr(admin_students, "get_firestore_client", lambda: fake_db)
+    app.dependency_overrides[get_current_user] = _override_staff
+    client = TestClient(app)
+
+    response = client.patch(
+        "/api/admin/students/s1",
+        json={"status": "active", "activeTo": "2026-06-20"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["activeTo"] == "2026-06-20"
+    assert users["s1"]["activeTo"] == "2026-06-20"
+
+    app.dependency_overrides.clear()
+
+
 def test_patch_student_does_not_send_telegram_when_status_unchanged(monkeypatch):
     users = {
         "s1": {
