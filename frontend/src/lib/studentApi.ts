@@ -28,6 +28,18 @@ export type PlanStep = {
   doneLink?: string | null
 }
 
+export type StudentGoal = {
+  id: string
+  title: string
+  description?: string | null
+}
+
+export type StudentDashboardResponse = {
+  plan: PlanResponse
+  goal: StudentGoal | null
+  steps: { items: PlanStep[] }
+}
+
 export type CompleteStepRequest = {
   comment?: string
   link?: string
@@ -46,6 +58,11 @@ export async function getMyPlan() {
 export async function getMyPlanSteps() {
   const response = await apiFetch('/api/me/plan/steps')
   return handleJson<{ items: PlanStep[] }>(response)
+}
+
+export async function getMyDashboard() {
+  const response = await apiFetch('/api/me/dashboard')
+  return handleJson<StudentDashboardResponse>(response)
 }
 
 export async function updateMyStepProgress(stepId: string, isDone: boolean) {

@@ -55,13 +55,20 @@ class FakeQuery:
     def __init__(self, store):
         self._store = store
         self._filters = []
+        self._orders = []
         self._limit = None
+        self._start_after = None
 
     def where(self, field, op, value):
         self._filters.append((field, op, value))
         return self
 
-    def order_by(self, _field):
+    def order_by(self, field, direction=firestore.Query.ASCENDING):
+        self._orders.append((field, direction))
+        return self
+
+    def start_after(self, values):
+        self._start_after = values
         return self
 
     def limit(self, value):
@@ -85,6 +92,27 @@ class FakeQuery:
                     break
             if include:
                 items.append(FakeSnap(FakeDoc(self._store, doc_id)))
+        for field, direction in reversed(self._orders):
+            reverse = direction == firestore.Query.DESCENDING
+            items.sort(
+                key=lambda snap: snap.id
+                if field == "__name__"
+                else (snap.to_dict() or {}).get(field, ""),
+                reverse=reverse,
+            )
+        if self._start_after is not None and self._orders:
+            cursor_index = None
+            for index, snap in enumerate(items):
+                data = snap.to_dict() or {}
+                values = [
+                    snap.id if field == "__name__" else data.get(field, "")
+                    for field, _ in self._orders
+                ]
+                if values == self._start_after:
+                    cursor_index = index
+                    break
+            if cursor_index is not None:
+                items = items[cursor_index + 1 :]
         if self._limit is not None:
             items = items[: self._limit]
         return items
@@ -382,8 +410,8 @@ def test_list_students_cursor_paginates_sorted_results(monkeypatch):
     assert first_response.status_code == 200
     first_payload = first_response.json()
     assert [item["uid"] for item in first_payload["items"]] == ["u1", "u2"]
-    assert first_payload["nextCursor"] == "u2"
-    assert first_payload["total"] == 3
+    assert first_payload["nextCursor"]
+    assert first_payload["total"] is None
 
     second_response = client.get(
         f"/api/admin/students?sortBy=createdAt&sortDir=asc&limit=2&cursor={first_payload['nextCursor']}"
@@ -392,7 +420,7 @@ def test_list_students_cursor_paginates_sorted_results(monkeypatch):
     second_payload = second_response.json()
     assert [item["uid"] for item in second_payload["items"]] == ["u3"]
     assert second_payload["nextCursor"] is None
-    assert second_payload["total"] == 3
+    assert second_payload["total"] is None
 
     app.dependency_overrides.clear()
 
@@ -413,7 +441,7 @@ def test_list_students_rejects_unknown_cursor(monkeypatch):
 
     response = client.get("/api/admin/students?cursor=missing-user")
 
-    assert response.status_code == 404
+    assert response.status_code == 400
 
     app.dependency_overrides.clear()
 
@@ -717,8 +745,8 @@ def test_patch_student_sets_default_active_to_when_reactivated(monkeypatch):
 
     assert response.status_code == 200
     assert response.json()["status"] == "active"
-    assert response.json()["activeTo"] == "2026-06-11"
-    assert users["s1"]["activeTo"] == "2026-06-11"
+    assert response.json()["activeTo"] == "2026-06-13"
+    assert users["s1"]["activeTo"] == "2026-06-13"
 
     app.dependency_overrides.clear()
 

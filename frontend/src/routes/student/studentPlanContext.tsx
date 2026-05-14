@@ -1,11 +1,10 @@
 import { createContext, createEffect, createMemo, createSignal, useContext, type JSX } from "solid-js";
 
-import { listGoals, type Goal } from "../../lib/adminApi";
+import type { Goal } from "../../lib/adminApi";
 import { useAuth } from "../../lib/auth";
 import {
   completeMyStep,
-  getMyPlan,
-  getMyPlanSteps,
+  getMyDashboard,
   updateMyStepProgress,
   type PlanStep as ApiPlanStep,
 } from "../../lib/studentApi";
@@ -46,19 +45,15 @@ export function StudentPlanProvider(props: { children: JSX.Element }) {
     setLoading(true);
     setError(null);
     try {
-      const [planData, stepsData, goalsData] = await Promise.all([
-        getMyPlan(),
-        getMyPlanSteps(),
-        listGoals(),
-      ]);
+      const dashboard = await getMyDashboard();
+      const planData = dashboard.plan;
       setPlan({
         studentUid: planData.studentUid,
         goalId: planData.goalId,
       });
-      const goalMatch = goalsData.items.find((g) => g.id === planData.goalId) || null;
-      setGoal(goalMatch);
+      setGoal(dashboard.goal);
       setSteps(
-        stepsData.items
+        dashboard.steps.items
           .slice()
           .sort((a, b) => a.order - b.order)
           .map((step: ApiPlanStep) => {

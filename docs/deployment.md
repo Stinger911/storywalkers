@@ -22,7 +22,7 @@ npm run --prefix frontend build
 Deploy:
 
 ```bash
-firebase deploy --project <PROJECT_ID> --only hosting,firestore:rules --config firebase/firebase.json
+firebase deploy --project <PROJECT_ID> --only hosting,firestore:rules,firestore:indexes --config firebase/firebase.json
 ```
 
 Notes:

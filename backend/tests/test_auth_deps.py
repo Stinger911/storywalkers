@@ -202,7 +202,7 @@ def test_get_current_user_sends_registration_when_profile_bootstrapped(monkeypat
     assert "email: u1@example.com" in sent["text"]
 
 
-def test_get_current_user_resolves_selected_goal_title(monkeypatch):
+def test_get_current_user_uses_cached_selected_goal_title(monkeypatch):
     fake_db = _FakeFirestore()
     fake_db._users["u1"] = {
         "email": "u1@example.com",
@@ -210,8 +210,8 @@ def test_get_current_user_resolves_selected_goal_title(monkeypatch):
         "role": "student",
         "status": "active",
         "selectedGoalId": "goal-1",
+        "selectedGoalTitle": "Goal One",
     }
-    fake_db._goals["goal-1"] = {"title": "Goal One"}
     monkeypatch.setattr(auth_deps, "get_firestore_client", lambda: fake_db)
     monkeypatch.setattr(auth_deps, "get_settings", lambda: _Settings())
     monkeypatch.setattr(
@@ -349,7 +349,7 @@ def test_get_current_user_keeps_active_student_when_active_to_is_today(monkeypat
         "displayName": "User One",
         "role": "student",
         "status": "active",
-        "activeTo": "2026-05-12",
+        "activeTo": "2026-05-14",
     }
     monkeypatch.setattr(auth_deps, "get_firestore_client", lambda: fake_db)
     monkeypatch.setattr(auth_deps, "get_settings", lambda: _Settings())

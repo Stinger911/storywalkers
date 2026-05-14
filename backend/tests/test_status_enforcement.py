@@ -45,6 +45,10 @@ def test_plan_endpoints_block_non_active_students():
     assert response_steps.status_code == 403
     assert response_steps.json()["error"]["code"] == "status_blocked"
 
+    response_dashboard = client.get("/api/me/dashboard")
+    assert response_dashboard.status_code == 403
+    assert response_dashboard.json()["error"]["code"] == "status_blocked"
+
     app.dependency_overrides.clear()
 
 

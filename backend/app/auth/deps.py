@@ -236,15 +236,9 @@ async def get_current_user(
     ensure_user_status_with_migration(user_ref, profile)
     disable_user_if_active_to_expired(user_ref, profile)
 
-    selected_goal_id = _sanitize_optional_text(profile.get("selectedGoalId"))
-    selected_goal_title = None
-    if selected_goal_id:
-        goal_ref = firestore.collection("goals").document(selected_goal_id)
-        goal_snap = goal_ref.get()
-        if goal_snap.exists:
-            goal_data = goal_snap.to_dict() or {}
-            selected_goal_title = _sanitize_optional_text(goal_data.get("title"))
-    profile["selectedGoalTitle"] = selected_goal_title
+    profile["selectedGoalTitle"] = _sanitize_optional_text(
+        profile.get("selectedGoalTitle")
+    )
 
     request.state.uid = uid
     return _build_user_payload(uid, decoded, profile)

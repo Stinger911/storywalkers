@@ -488,8 +488,19 @@ async def patch_me(
             )
         updates["displayName"] = display_name
 
+    db = get_firestore_client()
+
     if "selectedGoalId" in payload_data:
-        updates["selectedGoalId"] = _sanitize_optional_text(payload.selectedGoalId)
+        selected_goal_id_update = _sanitize_optional_text(payload.selectedGoalId)
+        updates["selectedGoalId"] = selected_goal_id_update
+        updates["selectedGoalTitle"] = None
+        if selected_goal_id_update:
+            goal_snap = db.collection("goals").document(selected_goal_id_update).get()
+            if goal_snap.exists:
+                goal_data = goal_snap.to_dict() or {}
+                updates["selectedGoalTitle"] = _sanitize_optional_text(
+                    goal_data.get("title")
+                )
 
     if "selectedCourses" in payload_data:
         updates["selectedCourses"] = _sanitize_selected_courses(
@@ -502,7 +513,6 @@ async def patch_me(
     if "subscriptionSelected" in payload_data:
         updates["subscriptionSelected"] = payload.subscriptionSelected
 
-    db = get_firestore_client()
     doc_ref = db.collection("users").document(user["uid"])
     snap = doc_ref.get()
     if not snap.exists:
@@ -548,14 +558,6 @@ async def patch_me(
     doc_ref.update(updates)
 
     response_data = {**current, **updates}
-    selected_goal_id = _sanitize_optional_text(response_data.get("selectedGoalId"))
-    selected_goal_title = None
-    if selected_goal_id:
-        goal_ref = db.collection("goals").document(selected_goal_id)
-        goal_snap = goal_ref.get()
-        if goal_snap.exists:
-            goal_data = goal_snap.to_dict() or {}
-            selected_goal_title = _sanitize_optional_text(goal_data.get("title"))
     role_raw = current.get("role") or user.get("roleRaw") or "student"
     role = "staff" if role_raw in {"admin", "expert"} else "student"
     me_response = {
@@ -575,7 +577,9 @@ async def patch_me(
             else 1
         ),
         "selectedGoalId": _sanitize_optional_text(response_data.get("selectedGoalId")),
-        "selectedGoalTitle": selected_goal_title,
+        "selectedGoalTitle": _sanitize_optional_text(
+            response_data.get("selectedGoalTitle")
+        ),
         "profileForm": _sanitize_profile_form(
             response_data.get("profileForm")
             if isinstance(response_data.get("profileForm"), dict)
@@ -690,6 +694,45 @@ async def get_my_plan_steps(user: dict = Depends(require_active_student)):
         data["stepId"] = snap.id
         items.append(data)
     return {"items": items}
+
+
+@router.get("/me/dashboard")
+async def get_my_dashboard(user: dict = Depends(require_active_student)):
+    db = get_firestore_client()
+    plan_ref = db.collection("student_plans").document(user["uid"])
+    plan = _doc_or_404(plan_ref, "not_found", "Plan not found")
+
+    goal = None
+    goal_id = _sanitize_optional_text(plan.get("goalId"))
+    if goal_id:
+        goal_snap = db.collection("goals").document(goal_id).get()
+        if goal_snap.exists:
+            goal_data = goal_snap.to_dict() or {}
+            goal = {
+                "id": goal_snap.id,
+                "title": goal_data.get("title"),
+                "description": goal_data.get("description"),
+            }
+
+    steps_ref = plan_ref.collection("steps")
+    query = steps_ref.order_by("order", direction=firestore.Query.ASCENDING)
+    steps = []
+    for snap in query.stream():
+        data = snap.to_dict() or {}
+        data["stepId"] = snap.id
+        steps.append(data)
+
+    return {
+        "plan": {
+            "planId": user["uid"],
+            "studentUid": user["uid"],
+            "goalId": plan.get("goalId"),
+            "createdAt": plan.get("createdAt"),
+            "updatedAt": plan.get("updatedAt"),
+        },
+        "goal": goal,
+        "steps": {"items": steps},
+    }
 
 
 class UpdateStepProgressRequest(BaseModel):

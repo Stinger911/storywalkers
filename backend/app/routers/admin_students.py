@@ -1,5 +1,7 @@
+import base64
+import json
 import time
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from typing import Any
 
 from fastapi import APIRouter, Depends, Query, Request, status
@@ -29,6 +31,7 @@ logger = get_logger("app.db")
 ALLOWED_USER_ROLES = {"student", "admin", "expert"}
 ALLOWED_STUDENT_SORT_BY = {"createdAt", "progress"}
 ALLOWED_SORT_DIR = {"asc", "desc"}
+STUDENT_CURSOR_VERSION = 1
 
 
 class CreateStudentRequest(BaseModel):
@@ -211,6 +214,113 @@ def _sort_student_items(
     return sorted_items
 
 
+def _student_sort_field(sort_by: str) -> str:
+    return "progressPercent" if sort_by == "progress" else "createdAt"
+
+
+def _student_sort_direction(sort_dir: str) -> str:
+    return (
+        firestore.Query.ASCENDING
+        if sort_dir == "asc"
+        else firestore.Query.DESCENDING
+    )
+
+
+def _cursor_value(value: Any) -> Any:
+    if hasattr(value, "isoformat"):
+        return {"type": "datetime", "value": value.isoformat()}
+    return value
+
+
+def _decode_cursor_value(value: Any) -> Any:
+    if (
+        isinstance(value, dict)
+        and value.get("type") == "datetime"
+        and isinstance(value.get("value"), str)
+    ):
+        raw = value["value"]
+        if raw.endswith("Z"):
+            raw = f"{raw[:-1]}+00:00"
+        try:
+            return datetime.fromisoformat(raw)
+        except ValueError:
+            return value["value"]
+    return value
+
+
+def _encode_student_cursor(
+    item: dict[str, Any],
+    *,
+    sort_by: str,
+    sort_dir: str,
+) -> str:
+    sort_field = _student_sort_field(sort_by)
+    payload = {
+        "v": STUDENT_CURSOR_VERSION,
+        "sortBy": sort_by,
+        "sortDir": sort_dir,
+        "value": _cursor_value(item.get(sort_field)),
+        "uid": item["uid"],
+    }
+    raw = json.dumps(payload, separators=(",", ":")).encode("utf-8")
+    return base64.urlsafe_b64encode(raw).decode("utf-8")
+
+
+def _decode_student_cursor(cursor: str, *, sort_by: str, sort_dir: str) -> tuple[Any, str]:
+    try:
+        raw = base64.urlsafe_b64decode(cursor.encode("utf-8")).decode("utf-8")
+        payload = json.loads(raw)
+    except Exception as exc:
+        raise AppError(
+            code="validation_error",
+            message="Invalid cursor",
+            status_code=400,
+            details={"reason": str(exc)},
+        ) from exc
+    if (
+        payload.get("v") != STUDENT_CURSOR_VERSION
+        or payload.get("sortBy") != sort_by
+        or payload.get("sortDir") != sort_dir
+        or not isinstance(payload.get("uid"), str)
+        or not payload.get("uid")
+    ):
+        raise AppError(
+            code="validation_error",
+            message="Invalid cursor",
+            status_code=400,
+        )
+    return _decode_cursor_value(payload.get("value")), payload["uid"]
+
+
+def _apply_student_progress_defaults(
+    db: firestore.Client,
+    item: dict[str, Any],
+) -> None:
+    if item.get("role") != "student":
+        item["progressPercent"] = 0
+        item["stepsDone"] = 0
+        item["stepsTotal"] = 0
+        return
+    has_cached_progress = (
+        item.get("stepsDone") is not None and item.get("stepsTotal") is not None
+    )
+    if not has_cached_progress:
+        done, total, percent = _recalculate_progress_from_steps(db, item["uid"])
+        item["stepsDone"] = done
+        item["stepsTotal"] = total
+        item["progressPercent"] = percent
+        return
+    done = int(item.get("stepsDone") or 0)
+    total = int(item.get("stepsTotal") or 0)
+    item["stepsDone"] = done
+    item["stepsTotal"] = total
+    item["progressPercent"] = int(
+        item.get("progressPercent")
+        if item.get("progressPercent") is not None
+        else _progress_percent(done, total)
+    )
+
+
 def _sync_user_progress(
     db: firestore.Client,
     uid: str,
@@ -322,69 +432,91 @@ async def list_students(
             query = query.where("role", "==", role)
     if status_filter:
         query = query.where("status", "==", status_filter)
-    query = query.order_by("createdAt")
 
+    if q or sort_by == "progress":
+        # Substring search is not indexable in Firestore with the current schema.
+        # Progress sorting also needs a one-time backfill before it can safely use
+        # order_by("progressPercent") without omitting legacy docs missing the field.
+        query = query.order_by("createdAt")
+        items = []
+        scanned = 0
+        for snap in query.stream():
+            scanned += 1
+            data = snap.to_dict() or {}
+            ensure_user_status_with_migration(snap.reference, data)
+            data["uid"] = snap.id
+            _apply_student_progress_defaults(db, data)
+            items.append(data)
+
+        if q:
+            q_lower = q.lower()
+            items = [
+                item
+                for item in items
+                if q_lower in (item.get("email") or "").lower()
+                or q_lower in (item.get("displayName") or "").lower()
+            ]
+        items = _sort_student_items(items, sort_by=sort_by, sort_dir=sort_dir)
+        total = len(items)
+
+        if cursor:
+            cursor_index = next(
+                (index for index, item in enumerate(items) if item.get("uid") == cursor),
+                None,
+            )
+            if cursor_index is None:
+                raise AppError(
+                    code="not_found",
+                    message="Cursor not found",
+                    status_code=404,
+                )
+            items = items[cursor_index + 1 :]
+
+        has_more = len(items) > limit
+        page_items = items[:limit]
+        next_cursor = page_items[-1]["uid"] if has_more and page_items else None
+        logger.info(
+            "students_list_db_timing",
+            extra={
+                "duration_ms": round((time.perf_counter() - started) * 1000, 2),
+                "returned": len(page_items),
+                "limit": limit,
+                "db_reads_estimate": scanned,
+                "db_writes_estimate": 0,
+                "searchMode": "legacy_scan",
+            },
+        )
+        return {"items": page_items, "nextCursor": next_cursor, "total": total}
+
+    sort_field = _student_sort_field(sort_by)
+    query = query.order_by(
+        sort_field,
+        direction=_student_sort_direction(sort_dir),
+    ).order_by("__name__", direction=firestore.Query.ASCENDING)
+    if cursor:
+        cursor_value, cursor_uid = _decode_student_cursor(
+            cursor,
+            sort_by=sort_by,
+            sort_dir=sort_dir,
+        )
+        query = query.start_after([cursor_value, cursor_uid])
+
+    snaps = list(query.limit(limit + 1).stream())
     items = []
-    for snap in query.stream():
+    for snap in snaps:
         data = snap.to_dict() or {}
         ensure_user_status_with_migration(snap.reference, data)
         data["uid"] = snap.id
+        _apply_student_progress_defaults(db, data)
         items.append(data)
-
-    if items:
-        for item in items:
-            if item.get("role") != "student":
-                item["progressPercent"] = 0
-                item["stepsDone"] = 0
-                item["stepsTotal"] = 0
-                continue
-            has_cached_progress = (
-                item.get("stepsDone") is not None and item.get("stepsTotal") is not None
-            )
-            if not has_cached_progress:
-                done, total, percent = _recalculate_progress_from_steps(db, item["uid"])
-                item["stepsDone"] = done
-                item["stepsTotal"] = total
-                item["progressPercent"] = percent
-                continue
-            done = int(item.get("stepsDone") or 0)
-            total = int(item.get("stepsTotal") or 0)
-            item["stepsDone"] = done
-            item["stepsTotal"] = total
-            item["progressPercent"] = int(
-                item.get("progressPercent")
-                if item.get("progressPercent") is not None
-                else _progress_percent(done, total)
-            )
-
-    if q:
-        q_lower = q.lower()
-        items = [
-            item
-            for item in items
-            if q_lower in (item.get("email") or "").lower()
-            or q_lower in (item.get("displayName") or "").lower()
-        ]
-
-    items = _sort_student_items(items, sort_by=sort_by, sort_dir=sort_dir)
-    total = len(items)
-
-    if cursor:
-        cursor_index = next(
-            (index for index, item in enumerate(items) if item.get("uid") == cursor),
-            None,
-        )
-        if cursor_index is None:
-            raise AppError(
-                code="not_found",
-                message="Cursor not found",
-                status_code=404,
-            )
-        items = items[cursor_index + 1 :]
 
     has_more = len(items) > limit
     page_items = items[:limit]
-    next_cursor = page_items[-1]["uid"] if has_more and page_items else None
+    next_cursor = (
+        _encode_student_cursor(page_items[-1], sort_by=sort_by, sort_dir=sort_dir)
+        if has_more and page_items
+        else None
+    )
 
     logger.info(
         "students_list_db_timing",
@@ -392,11 +524,12 @@ async def list_students(
             "duration_ms": round((time.perf_counter() - started) * 1000, 2),
             "returned": len(page_items),
             "limit": limit,
-            "db_reads_estimate": len(items),
+            "db_reads_estimate": len(snaps),
             "db_writes_estimate": 0,
+            "searchMode": "indexed_page",
         },
     )
-    return {"items": page_items, "nextCursor": next_cursor, "total": total}
+    return {"items": page_items, "nextCursor": next_cursor, "total": None}
 
 
 @router.post("/students", status_code=status.HTTP_201_CREATED)
