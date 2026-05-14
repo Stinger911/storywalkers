@@ -47,7 +47,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// make goals map\nconst GOALS = {};\nconst mainWay = $(\"Get goals\").isExecuted;\nif (mainWay) {\n  for (const goal of $(\"Get goals\").all()) {\n    GOALS[goal.json._id] = goal.json.title;\n  }\n}else {\n  for (const goal of $(\"Get goals1\").all()) {\n    GOALS[goal.json._id] = goal.json.title;\n  }\n}\n// Loop over input items and add a new field called 'myNewField' to the JSON of each one\nfor (const item of $input.all()) {\n  item.json.telegram_id = item.json.profileForm ? item.json.profileForm.telegram : \"\";\n  item.json.notes = (item.json.profileForm && item.json.profileForm.notes) ? item.json.profileForm.notes : \"\";\n  const goal = item.json.selectedGoalId;\n  item.json.goal = GOALS[goal] ? GOALS[goal] : goal;\n}\n\nreturn $input.all();"
+        "jsCode": "// Build a goal title lookup from whichever branch reached this node.\nconst GOALS = {};\nconst goalItems = $(\"Get goals\").isExecuted\n  ? $(\"Get goals\").all()\n  : $(\"Get goals1\").all();\nfor (const goal of goalItems) {\n  GOALS[goal.json._id] = goal.json.title;\n}\n\nconst staticData = $getWorkflowStaticData(\"global\");\nstaticData.studentSheetSync = staticData.studentSheetSync || {};\nconst syncCache = staticData.studentSheetSync;\nconst webhookQuery = $(\"Webhook\").isExecuted ? ($(\"Webhook\").item.json.query || {}) : {};\nconst forceSync = webhookQuery.force === \"1\" || webhookQuery.force === \"true\";\n\nfunction normalizeTimestamp(value) {\n  if (!value) return \"\";\n  if (typeof value === \"string\") return value;\n  if (typeof value.toISO === \"function\") return value.toISO();\n  if (typeof value.toMillis === \"function\") return new Date(value.toMillis()).toISOString();\n  if (typeof value.seconds === \"number\") return new Date(value.seconds * 1000).toISOString();\n  if (typeof value._seconds === \"number\") return new Date(value._seconds * 1000).toISOString();\n  return JSON.stringify(value);\n}\n\nfunction stableStringify(value) {\n  if (value === null || typeof value !== \"object\") return JSON.stringify(value);\n  if (Array.isArray(value)) return \"[\" + value.map(stableStringify).join(\",\") + \"]\";\n  return \"{\" + Object.keys(value).sort().map((key) => JSON.stringify(key) + \":\" + stableStringify(value[key])).join(\",\") + \"}\";\n}\n\nfunction hashString(value) {\n  let hash = 0x811c9dc5;\n  for (let index = 0; index < value.length; index++) {\n    hash ^= value.charCodeAt(index);\n    hash = Math.imul(hash, 0x01000193) >>> 0;\n  }\n  return hash.toString(16).padStart(8, \"0\");\n}\n\nconst output = [];\n\nfor (const item of $input.all()) {\n  const profileForm = item.json.profileForm && typeof item.json.profileForm === \"object\"\n    ? item.json.profileForm\n    : {};\n  const goal = item.json.selectedGoalId;\n\n  item.json.telegram_id = profileForm.telegram || \"\";\n  item.json.notes = profileForm.notes || \"\";\n  item.json.goal = GOALS[goal] || goal || \"\";\n\n  const exportedRow = {\n    email: item.json.email || \"\",\n    Registration: normalizeTimestamp(item.json.createdAt),\n    Name: item.json.displayName || \"\",\n    Telegram: item.json.telegram_id,\n    About: item.json.notes,\n    Goals: item.json.goal,\n    Status: item.json.status || \"\",\n  };\n\n  const syncKey = item.json._id || item.json.uid || item.json.email;\n  if (!syncKey) {\n    output.push(item);\n    continue;\n  }\n\n  const signature = hashString(stableStringify(exportedRow));\n  if (forceSync || syncCache[syncKey] !== signature) {\n    item.json._sheetSyncKey = syncKey;\n    item.json._sheetSyncSignature = signature;\n    output.push(item);\n  }\n}\n\nreturn output;"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -168,12 +168,28 @@
       ],
       "id": "6868f50c-0441-48b7-9031-cebb034417d7",
       "name": "Append or update row in sheet",
+      "retryOnFail": true,
+      "maxTries": 5,
+      "waitBetweenTries": 10000,
       "credentials": {
         "googleSheetsOAuth2Api": {
           "id": "SiijwL0Q0hIbbiug",
           "name": "Google Sheets OAuth2 API"
         }
       }
+    },
+    {
+      "parameters": {
+        "jsCode": "const staticData = $getWorkflowStaticData(\"global\");\nstaticData.studentSheetSync = staticData.studentSheetSync || {};\n\nfor (const item of $input.all()) {\n  if (item.json._sheetSyncKey && item.json._sheetSyncSignature) {\n    staticData.studentSheetSync[item.json._sheetSyncKey] = item.json._sheetSyncSignature;\n  }\n}\n\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1568,
+        48
+      ],
+      "id": "b0583c3c-98cf-49d0-8b13-69a92533d0d4",
+      "name": "Remember synced row"
     },
     {
       "parameters": {
@@ -221,7 +237,7 @@
     {
       "parameters": {
         "chatId": "-1003896283228",
-        "text": "=Students records processed.  \nFound {{ $('Flatten Form').all().length }} records.  \nSuccessfully updated [StoryWalkers CRM](https://docs.google.com/spreadsheets/d/19XvhMyXL-1yhPtXF27KMICp9aJ9TE7m4dtUXZN2WsoQ/edit?gid=0#gid=0)",
+        "text": "=Students records processed.  \nUpdated {{ $('Flatten Form').all().length }} changed records.  \nSuccessfully synced [StoryWalkers CRM](https://docs.google.com/spreadsheets/d/19XvhMyXL-1yhPtXF27KMICp9aJ9TE7m4dtUXZN2WsoQ/edit?gid=0#gid=0)",
         "additionalFields": {}
       },
       "type": "n8n-nodes-base.telegram",
@@ -267,7 +283,7 @@
     },
     {
       "parameters": {
-        "batchSize": 5,
+        "batchSize": 1,
         "options": {}
       },
       "type": "n8n-nodes-base.splitInBatches",
@@ -527,6 +543,17 @@
       ]
     },
     "Append or update row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Remember synced row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Remember synced row": {
       "main": [
         [
           {
