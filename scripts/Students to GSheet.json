@@ -7,7 +7,7 @@
       "typeVersion": 1,
       "position": [
         0,
-        0
+        48
       ],
       "id": "ad49c9e9-b34b-40d7-83b9-8d3f18566b74",
       "name": "When clicking ‘Execute workflow’"
@@ -40,20 +40,20 @@
       "typeVersion": 2.3,
       "position": [
         672,
-        0
+        48
       ],
       "id": "ea4a9d10-2ceb-4b81-8885-e8881bcecd3c",
       "name": "Filter"
     },
     {
       "parameters": {
-        "jsCode": "// make goals map\nconst GOALS = {};\nfor (const goal of $(\"Get goals\").all()) {\n  GOALS[goal.json._id] = goal.json.title;\n}\n// Loop over input items and add a new field called 'myNewField' to the JSON of each one\nfor (const item of $input.all()) {\n  item.json.telegram_id = item.json.profileForm ? item.json.profileForm.telegram : \"\";\n  item.json.notes = (item.json.profileForm && item.json.profileForm.notes) ? item.json.profileForm.notes : \"\";\n  const goal = item.json.selectedGoalId;\n  item.json.goal = GOALS[goal] ? GOALS[goal] : goal;\n}\n\nreturn $input.all();"
+        "jsCode": "// make goals map\nconst GOALS = {};\nconst mainWay = $(\"Get goals\").isExecuted;\nif (mainWay) {\n  for (const goal of $(\"Get goals\").all()) {\n    GOALS[goal.json._id] = goal.json.title;\n  }\n}else {\n  for (const goal of $(\"Get goals1\").all()) {\n    GOALS[goal.json._id] = goal.json.title;\n  }\n}\n// Loop over input items and add a new field called 'myNewField' to the JSON of each one\nfor (const item of $input.all()) {\n  item.json.telegram_id = item.json.profileForm ? item.json.profileForm.telegram : \"\";\n  item.json.notes = (item.json.profileForm && item.json.profileForm.notes) ? item.json.profileForm.notes : \"\";\n  const goal = item.json.selectedGoalId;\n  item.json.goal = GOALS[goal] ? GOALS[goal] : goal;\n}\n\nreturn $input.all();"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
         896,
-        0
+        96
       ],
       "id": "44056adb-a687-4e7c-8b2f-900f8eae6fb1",
       "name": "Flatten Form"
@@ -163,8 +163,8 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.7,
       "position": [
-        1120,
-        0
+        1344,
+        48
       ],
       "id": "6868f50c-0441-48b7-9031-cebb034417d7",
       "name": "Append or update row in sheet",
@@ -187,7 +187,7 @@
       "typeVersion": 1.1,
       "position": [
         224,
-        0
+        48
       ],
       "id": "05ca1175-51c5-4193-9be0-fa13feba086d",
       "name": "Get goals",
@@ -221,14 +221,14 @@
     {
       "parameters": {
         "chatId": "-1003896283228",
-        "text": "=Students records processed.  \nFound {{ $input.all().length / $('Get goals').all().length }} records.  \nSuccessfully updated [StoryWalkers CRM](https://docs.google.com/spreadsheets/d/19XvhMyXL-1yhPtXF27KMICp9aJ9TE7m4dtUXZN2WsoQ/edit?gid=0#gid=0)",
+        "text": "=Students records processed.  \nFound {{ $('Flatten Form').all().length }} records.  \nSuccessfully updated [StoryWalkers CRM](https://docs.google.com/spreadsheets/d/19XvhMyXL-1yhPtXF27KMICp9aJ9TE7m4dtUXZN2WsoQ/edit?gid=0#gid=0)",
         "additionalFields": {}
       },
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        1328,
-        0
+        1344,
+        -144
       ],
       "id": "41c5dab2-3f7e-4ab4-985e-c58a80f7bc0e",
       "name": "Send a text message",
@@ -253,7 +253,7 @@
       "typeVersion": 1.1,
       "position": [
         448,
-        0
+        48
       ],
       "id": "18378e83-ea7d-483e-bf20-498b2725dc80",
       "name": "Get students",
@@ -264,9 +264,212 @@
           "name": "Google Firebase Cloud Firestore account"
         }
       }
+    },
+    {
+      "parameters": {
+        "batchSize": 5,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        1120,
+        96
+      ],
+      "id": "01253b83-2685-487a-8843-1b1ea29bf847",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "amount": 10
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1568,
+        96
+      ],
+      "id": "697daef7-229d-4d0e-a698-5f654567a24c",
+      "name": "Wait",
+      "webhookId": "68a05fb0-4be7-4ee0-9a7a-d34aa75e1c3e"
+    },
+    {
+      "parameters": {
+        "path": "ea0ac1ca-8aca-4267-8111-4ce2f86f3024",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        336
+      ],
+      "id": "92e775b2-dd00-480e-82d4-1e034ee23a27",
+      "name": "Webhook",
+      "webhookId": "ea0ac1ca-8aca-4267-8111-4ce2f86f3024"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "projectId": "=storywalkers-b4fdf",
+        "database": "pathways",
+        "collection": "goals",
+        "returnAll": true
+      },
+      "type": "n8n-nodes-base.googleFirebaseCloudFirestore",
+      "typeVersion": 1.1,
+      "position": [
+        224,
+        336
+      ],
+      "id": "645234cb-9838-44d8-912d-23d28552979b",
+      "name": "Get goals1",
+      "credentials": {
+        "googleFirebaseCloudFirestoreOAuth2Api": {
+          "id": "wBd3vVLjHUcvf8sV",
+          "name": "Google Firebase Cloud Firestore account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "projectId": "=storywalkers-b4fdf",
+        "database": "pathways",
+        "collection": "users",
+        "documentId": "={{ $('Webhook').item.json.query.id }}"
+      },
+      "type": "n8n-nodes-base.googleFirebaseCloudFirestore",
+      "typeVersion": 1.1,
+      "position": [
+        448,
+        336
+      ],
+      "id": "b60f20fa-4136-4289-8cfd-9bdc3ca7a2fc",
+      "name": "Get students1",
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleFirebaseCloudFirestoreOAuth2Api": {
+          "id": "wBd3vVLjHUcvf8sV",
+          "name": "Google Firebase Cloud Firestore account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "9c0982fb-cf95-47e1-a851-4e50e137f455",
+              "leftValue": "={{ $json._id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        672,
+        336
+      ],
+      "id": "2ac1f78f-9336-4304-b52d-55ddbfd0cdd9",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "chatId": "-1003782734852",
+        "text": "=The error request come from `{{ $('Webhook').item.json.headers['x-real-ip'] }}` for\n```\n{{ JSON.stringify($('Webhook').item.json.query, 2) }}\n```",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        896,
+        336
+      ],
+      "id": "8d45b36d-7ea6-4024-843d-8db565050199",
+      "name": "Send an error message",
+      "webhookId": "628914bb-d6a2-4fb9-97bc-e56b9a5b823d",
+      "credentials": {
+        "telegramApi": {
+          "id": "SHYvsPbit15MbdDb",
+          "name": "Telegram dev test"
+        }
+      }
     }
   ],
-  "pinData": {},
+  "pinData": {
+    "Schedule Trigger": [
+      {
+        "json": {
+          "timestamp": "2026-04-30T00:00:46.004+02:00",
+          "Readable date": "April 30th 2026, 12:00:46 am",
+          "Readable time": "12:00:46 am",
+          "Day of week": "Thursday",
+          "Year": "2026",
+          "Month": "April",
+          "Day of month": "30",
+          "Hour": "00",
+          "Minute": "00",
+          "Second": "46",
+          "Timezone": "Europe/Warsaw (UTC+02:00)"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ],
+    "Webhook": [
+      {
+        "json": {
+          "headers": {
+            "host": "lab18.app.n8n.cloud",
+            "user-agent": "python-httpx/0.28.1",
+            "accept": "*/*",
+            "accept-encoding": "gzip, br",
+            "cdn-loop": "cloudflare; loops=1; subreqs=1",
+            "cf-connecting-ip": "2600:1900:0:4300::100",
+            "cf-ew-via": "15",
+            "cf-ipcountry": "BE",
+            "cf-ray": "9f7002409f8ed958-LHR",
+            "cf-visitor": "{\"scheme\":\"https\"}",
+            "cf-worker": "n8n.cloud",
+            "x-forwarded-for": "2600:1900:0:4300::100, 172.68.229.149",
+            "x-forwarded-host": "lab18.app.n8n.cloud",
+            "x-forwarded-port": "443",
+            "x-forwarded-proto": "https",
+            "x-forwarded-server": "traefik-prod-users-gwc-103-89f989698-zns27",
+            "x-is-trusted": "yes",
+            "x-real-ip": "2600:1900:0:4300::100"
+          },
+          "params": {},
+          "query": {
+            "id": "RPxrUnmm1pZGzBTOWt6qZEqew2x2"
+          },
+          "body": {},
+          "webhookUrl": "https://lab18.app.n8n.cloud/webhook/ea0ac1ca-8aca-4267-8111-4ce2f86f3024",
+          "executionMode": "production"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
   "connections": {
     "When clicking ‘Execute workflow’": {
       "main": [
@@ -294,7 +497,7 @@
       "main": [
         [
           {
-            "node": "Append or update row in sheet",
+            "node": "Loop Over Items",
             "type": "main",
             "index": 0
           }
@@ -327,7 +530,7 @@
       "main": [
         [
           {
-            "node": "Send a text message",
+            "node": "Wait",
             "type": "main",
             "index": 0
           }
@@ -339,6 +542,86 @@
         [
           {
             "node": "Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Append or update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get goals1": {
+      "main": [
+        [
+          {
+            "node": "Get students1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Get goals1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get students1": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Flatten Form",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send an error message",
             "type": "main",
             "index": 0
           }
@@ -356,7 +639,7 @@
     "availableInMCP": false,
     "timeSavedPerExecution": 60
   },
-  "versionId": "e9b3371b-a520-40b2-bec2-95b914510256",
+  "versionId": "99a161dc-90ba-478f-8ce6-abb9499e40e7",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "899d4ada7c2a91af1ad45b3d93cbd7a60489e825ced40cd449109d52bd341227"

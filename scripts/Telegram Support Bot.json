@@ -1,0 +1,933 @@
+{
+  "name": "Telegram Support Bot",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "id": "a5810c89-1a21-46fa-9b86-34646ae63c30",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1,
+      "position": [
+        -960,
+        416
+      ],
+      "webhookId": "44b4a1cf-53dc-4e1b-9f9a-ce986fa86afe",
+      "credentials": {
+        "telegramApi": {
+          "id": "XnsaD7H3IKuW6PvA",
+          "name": "Telegram account SW"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const msg = $json.message ?? $json.edited_message ?? null;\n\nif (!msg) return [];\n\nconst ADMIN_CHAT_ID = -1003896283228; // <-- REPLACE WITH YOUR ADMIN CHAT ID\nconst FIRESTORE_PROJECT_ID = 'storywalkers-b4fdf'; // <-- REPLACE WITH YOUR GOOGLE CLOUD PROJECT ID\nconst FIRESTORE_DATABASE = 'pathways';\nconst FIRESTORE_COLLECTION = 'tg_support';\n\nreturn [{\n  json: {\n    adminChatId: ADMIN_CHAT_ID,\n    firestoreProjectId: FIRESTORE_PROJECT_ID,\n    firestoreDatabase: FIRESTORE_DATABASE,\n    firestoreCollection: FIRESTORE_COLLECTION,\n    updateId: $json.update_id,\n    messageId: msg.message_id,\n    text: msg.text ?? '',\n    chatId: msg.chat?.id,\n    chatType: msg.chat?.type,\n    fromId: msg.from?.id,\n    username: msg.from?.username ?? '',\n    firstName: msg.from?.first_name ?? '',\n    lastName: msg.from?.last_name ?? '',\n    hasUsername: Boolean(msg.from?.username),\n    isPrivate: msg.chat?.type === 'private',\n    isAdminChat: msg.chat?.id === ADMIN_CHAT_ID\n  }\n}];"
+      },
+      "id": "4093f453-4ed7-41f0-a407-f2360adc6c3b",
+      "name": "Normalize Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -736,
+        416
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.isPrivate }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "e76b64d3-7270-4f60-888a-cd1b4d100153",
+      "name": "IF Private",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -512,
+        416
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chatId }}",
+        "text": "=Ваш user ID: {{ $json.fromId }}\nUsername: {{ $json.username ? '@' + $json.username : 'не указан' }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "c7b044fe-6f20-466e-9b90-c614e4153149",
+      "name": "Send /id",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -64,
+        32
+      ],
+      "webhookId": "c0138547-ea81-4972-840a-d6de87a338c3",
+      "credentials": {
+        "telegramApi": {
+          "id": "XnsaD7H3IKuW6PvA",
+          "name": "Telegram account SW"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chatId }}",
+        "text": "=Доступные команды:\n/id — показать ваш Telegram ID\n/help — показать эту справку\n\nПросто напишите сообщение, и оно будет передано в поддержку.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "1f1f585b-7ec1-4906-aa59-4ed16b55e74c",
+      "name": "Send /help",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -64,
+        224
+      ],
+      "webhookId": "d7bbb280-5f78-4169-b8a9-dda944add4e9",
+      "credentials": {
+        "telegramApi": {
+          "id": "XnsaD7H3IKuW6PvA",
+          "name": "Telegram account SW"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.adminChatId }}",
+        "text": "={{ $json.adminText }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "b576d3ce-daaf-4be1-91a9-41af48f2e9c9",
+      "name": "Forward to Admin Chat",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        608,
+        416
+      ],
+      "webhookId": "b33040f3-e94b-46ea-82ea-5ce6bc1811c6",
+      "credentials": {
+        "telegramApi": {
+          "id": "XnsaD7H3IKuW6PvA",
+          "name": "Telegram account SW"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c4",
+              "leftValue": "={{ $json.isAdminChat }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "54ec3a00-fd02-4679-ae91-2a3996ef79ed",
+      "name": "IF Admin Chat",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -288,
+        752
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c5",
+              "leftValue": "={{ $json.text }}",
+              "rightValue": "/reply",
+              "operator": {
+                "type": "string",
+                "operation": "startsWith"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "0d9f5ceb-db40-47f0-ac9c-bbf173087d88",
+      "name": "IF Starts With /reply",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -64,
+        752
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const text = ($json.text || '').trim();\nconst match = text.match(/^\\/reply\\s+([^\\s]+)\\s+\"([\\s\\S]+)\"$/);\n\nif (!match) {\n  return [{\n    json: {\n      ...$json,\n      parseOk: false,\n      errorText: 'Неверный формат.\\nИспользуй:\\n/reply <userid|username> \"сообщение\"'\n    }\n  }];\n}\n\nlet targetRaw = match[1].trim();\nconst replyText = match[2].trim();\n\nif (targetRaw.startsWith('@')) {\n  targetRaw = targetRaw.slice(1);\n}\n\nconst lookupUsernameNormalized = targetRaw.toLowerCase();\nconst targetIsNumeric = /^\\d+$/.test(targetRaw);\nconst firestoreLookupUrl = `https://firestore.googleapis.com/v1/projects/${$json.firestoreProjectId}/databases/${$json.firestoreDatabase}/documents/${$json.firestoreCollection}/${lookupUsernameNormalized}`;\n\nreturn [{\n  json: {\n    ...$json,\n    parseOk: true,\n    targetRaw,\n    replyText,\n    targetIsNumeric,\n    lookupUsernameNormalized,\n    firestoreLookupUrl,\n  }\n}];"
+      },
+      "id": "9e968301-9c4c-4851-8b28-c2e7a5c60215",
+      "name": "Parse Reply Command",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        160,
+        752
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c6",
+              "leftValue": "={{ $json.parseOk }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "b2659dc1-9bc0-41f0-a5e3-958df607fb5c",
+      "name": "IF Parse OK",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        384,
+        752
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chatId }}",
+        "text": "={{ $json.errorText }}",
+        "additionalFields": {}
+      },
+      "id": "c628c29a-017b-4154-9bb3-487bfb2318fa",
+      "name": "Reply Format Error",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        608,
+        848
+      ],
+      "webhookId": "159a3ec0-2240-478f-84f8-bf2b3b10c086",
+      "credentials": {
+        "telegramApi": {
+          "id": "XnsaD7H3IKuW6PvA",
+          "name": "Telegram account SW"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c7",
+              "leftValue": "={{ $json.resolveOk }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "8422c6b3-3637-4bad-80cf-86dab5659b4b",
+      "name": "IF Resolve OK",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1280,
+        656
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Normalize Input').item.json.adminChatId }}",
+        "text": "={{ $json.errorText }}",
+        "additionalFields": {}
+      },
+      "id": "fb1b7338-d595-4bfc-87f4-f40d25ceef70",
+      "name": "Reply Resolve Error",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1504,
+        752
+      ],
+      "webhookId": "c2b26114-7e3d-42c3-9383-652faf069dbb",
+      "credentials": {
+        "telegramApi": {
+          "id": "XnsaD7H3IKuW6PvA",
+          "name": "Telegram account SW"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.targetUserId }}",
+        "text": "=🛟 Ответ поддержки:\n\n{{ $('Parse Reply Command').item.json.replyText }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "2bfc9777-c168-4725-a524-016a3cdd856a",
+      "name": "Send Reply to User",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1504,
+        560
+      ],
+      "webhookId": "82d31887-d29e-46a5-8d19-45a05abf19de",
+      "credentials": {
+        "telegramApi": {
+          "id": "XnsaD7H3IKuW6PvA",
+          "name": "Telegram account SW"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Normalize Input').item.json.adminChatId }}",
+        "text": "=✅ Ответ отправлен пользователю {{ $json.result.chat.username }} ({{ $json.result.chat.first_name }} {{ $json.result.chat.last_name }})",
+        "additionalFields": {
+          "appendAttribution": false,
+          "reply_to_message_id": "={{ $('Parse Reply Command').item.json.messageId }}"
+        }
+      },
+      "id": "27fbdac5-35cd-46a9-bf91-44afa6ec281c",
+      "name": "Confirm To Admin Chat",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1728,
+        560
+      ],
+      "webhookId": "43ea4524-63cd-45e6-ae94-4896632a0079",
+      "credentials": {
+        "telegramApi": {
+          "id": "XnsaD7H3IKuW6PvA",
+          "name": "Telegram account SW"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const fullName = [$json.firstName, $json.lastName].filter(Boolean).join(' ');\nconst usernameNormalized = ($json.username || '').toLowerCase();\nconst firestoreUpsertUrl = `https://firestore.googleapis.com/v1/projects/${$json.firestoreProjectId}/databases/${$json.firestoreDatabase}/documents/${$json.firestoreCollection}/${usernameNormalized}`;\n\nconst firestoreBody = {\n  fields: {\n    userId: { stringValue: String($json.fromId) },\n    username: { stringValue: usernameNormalized },\n    lastMessage: { stringValue: $json.text || '' },\n    firstName: { stringValue: $json.firstName || '' },\n    lastName: { stringValue: $json.lastName || '' },\n    updatedAt: { timestampValue: new Date().toISOString() },\n  }\n};\n\nconst adminText = `📩 Новое сообщение в саппорт\n\n👤 Пользователь: ${fullName || 'Без имени'}\n🆔 UserID: ${$json.fromId}\n🔗 Username: ${$json.username ? '@' + $json.username : 'нет'}\n💬 Сообщение:\n${$json.text}\n\n↩️ Ответ:\n\\`/reply ${$json.username ? $json.username : $json.fromId} \"текст ответа\"\\`;\n\nreturn [{\n  json: {\n    ...$json,\n    usernameNormalized,\n    firestoreUpsertUrl,\n    firestoreBody,\n    adminText,\n    lastMessage: firestoreBody.fields.lastMessage.stringValue,\n    updatedAt: firestoreBody.fields.updatedAt.timestampValue,\n  }\n}];"
+      },
+      "id": "2444ec98-6a0a-4557-b81d-f6b980f1043a",
+      "name": "Build Admin Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -64,
+        416
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $json || {};\n\nconst firestoreUserId = input.fromId || null;\nconst firestoreLastMessage = input.lastMessage || '';\n\nif (!firestoreUserId) {\n  return [{\n    json: {\n      ...input,\n      resolveOk: false,\n      errorText: `Не удалось найти пользователя: ${input.targetRaw}\\nПроверь username и убедись, что пользователь уже писал боту в личку.`\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    ...input,\n    resolveOk: true,\n    targetUserId: String(firestoreUserId),\n    firestoreLastMessage,\n  }\n}];"
+      },
+      "id": "a51b81a4-005e-45f9-a873-81cd5b2dfb96",
+      "name": "Extract Target User from Firestore",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1056,
+        752
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c_has_username",
+              "leftValue": "={{ $json.hasUsername }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "0803ec39-03e2-4b7f-b33f-f9b806d5d9ec",
+      "name": "IF Has Username",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        160,
+        416
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c_numeric",
+              "leftValue": "={{ $json.targetIsNumeric }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "524c37f6-8b22-4804-926a-3e9235860450",
+      "name": "IF Direct UserID",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        608,
+        656
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    ...$json,\n    resolveOk: true,\n    targetUserId: String($json.targetRaw),\n  }\n}];"
+      },
+      "id": "4fa2cec1-3393-4828-8493-23c2a0873498",
+      "name": "Set Direct Target User",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1056,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "b2ff0de4-44c9-4f79-872a-7f8dd4cf007b",
+                    "leftValue": "={{ $json.text }}",
+                    "rightValue": "/start",
+                    "operator": {
+                      "type": "string",
+                      "operation": "startsWith"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.text }}",
+                    "rightValue": "/id",
+                    "operator": {
+                      "type": "string",
+                      "operation": "startsWith"
+                    },
+                    "id": "f26f9331-e4d2-4a43-9e1b-ddacc4eb88c1"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "ad27541a-da74-4a26-ace9-973da850a1e5",
+                    "leftValue": "={{ $json.text }}",
+                    "rightValue": "/help",
+                    "operator": {
+                      "type": "string",
+                      "operation": "startsWith"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "5005d904-31d9-407f-b679-c410605e2f8f",
+                    "leftValue": "={{ $json.text }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "string",
+                      "operation": "notEmpty",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        -288,
+        96
+      ],
+      "id": "422bb6af-7848-40be-986a-3d7488eb9a46",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "projectId": "={{ $json.firestoreProjectId }}",
+        "database": "={{ $json.firestoreDatabase }}",
+        "collection": "={{ $json.firestoreCollection }}",
+        "updateKey": "=usernameNormalized",
+        "columns": "fromId, username, lastMessage, firstName, lastName, updatedAt"
+      },
+      "type": "n8n-nodes-base.googleFirebaseCloudFirestore",
+      "typeVersion": 1.1,
+      "position": [
+        384,
+        344
+      ],
+      "id": "3bcc24cf-63a5-4a6e-b18e-796c99ba5bd2",
+      "name": "Store TG user",
+      "credentials": {
+        "googleFirebaseCloudFirestoreOAuth2Api": {
+          "id": "wBd3vVLjHUcvf8sV",
+          "name": "Google Firebase Cloud Firestore account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "projectId": "={{ $json.firestoreProjectId }}",
+        "database": "={{ $json.firestoreDatabase }}",
+        "collection": "={{ $json.firestoreCollection }}",
+        "documentId": "={{ $json.lookupUsernameNormalized }}"
+      },
+      "type": "n8n-nodes-base.googleFirebaseCloudFirestore",
+      "typeVersion": 1.1,
+      "position": [
+        832,
+        752
+      ],
+      "id": "8ecc6147-1837-4d59-91b9-bd1c723e3bcb",
+      "name": "Get a document",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleFirebaseCloudFirestoreOAuth2Api": {
+          "id": "wBd3vVLjHUcvf8sV",
+          "name": "Google Firebase Cloud Firestore account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chatId }}",
+        "text": "=Добро пожаловать! Я бот команды поддержки проекта StoryWalkers.\n\nДоступные команды:\n/id — показать ваш Telegram ID\n/help — показать эту справку\n\nПросто напишите сообщение, и оно будет передано в поддержку.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "bf07c861-0a48-404a-979e-196a3156cc49",
+      "name": "Send /start",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -64,
+        -160
+      ],
+      "webhookId": "d7bbb280-5f78-4169-b8a9-dda944add4e9",
+      "credentials": {
+        "telegramApi": {
+          "id": "XnsaD7H3IKuW6PvA",
+          "name": "Telegram account SW"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Normalize Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Input": {
+      "main": [
+        [
+          {
+            "node": "IF Private",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Private": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "IF Admin Chat",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Admin Chat": {
+      "main": [
+        [
+          {
+            "node": "IF Starts With /reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Starts With /reply": {
+      "main": [
+        [
+          {
+            "node": "Parse Reply Command",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Reply Command": {
+      "main": [
+        [
+          {
+            "node": "IF Parse OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Parse OK": {
+      "main": [
+        [
+          {
+            "node": "IF Direct UserID",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reply Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Resolve OK": {
+      "main": [
+        [
+          {
+            "node": "Send Reply to User",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reply Resolve Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Reply to User": {
+      "main": [
+        [
+          {
+            "node": "Confirm To Admin Chat",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Admin Message": {
+      "main": [
+        [
+          {
+            "node": "IF Has Username",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Has Username": {
+      "main": [
+        [
+          {
+            "node": "Store TG user",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Forward to Admin Chat",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Direct UserID": {
+      "main": [
+        [
+          {
+            "node": "Set Direct Target User",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get a document",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Direct Target User": {
+      "main": [
+        [
+          {
+            "node": "IF Resolve OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Target User from Firestore": {
+      "main": [
+        [
+          {
+            "node": "IF Resolve OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Send /start",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send /id",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send /help",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build Admin Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Store TG user": {
+      "main": [
+        [
+          {
+            "node": "Forward to Admin Chat",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get a document": {
+      "main": [
+        [
+          {
+            "node": "Extract Target User from Firestore",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "errorWorkflow": "DlW9onTw8HgCl3iS",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "898a7411-a9d4-43a7-8e04-d280ee14c453",
+  "meta": {
+    "instanceId": "899d4ada7c2a91af1ad45b3d93cbd7a60489e825ced40cd449109d52bd341227"
+  },
+  "id": "8U5tSva1QrIRpzT1",
+  "tags": []
+}
