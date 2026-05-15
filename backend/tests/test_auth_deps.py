@@ -1,4 +1,6 @@
 import asyncio
+import logging
+from datetime import date
 
 from fastapi.security import HTTPAuthorizationCredentials
 from starlette.requests import Request
@@ -237,6 +239,47 @@ def test_get_current_user_uses_cached_selected_goal_title(monkeypatch):
     assert payload["selectedGoalTitle"] == "Goal One"
 
 
+def test_get_current_user_does_not_log_token_or_decoded_payload(monkeypatch, caplog):
+    fake_db = _FakeFirestore()
+    fake_db._users["u1"] = {
+        "email": "u1@example.com",
+        "displayName": "User One",
+        "role": "student",
+        "status": "active",
+    }
+    monkeypatch.setattr(auth_deps, "get_firestore_client", lambda: fake_db)
+    monkeypatch.setattr(auth_deps, "get_settings", lambda: _Settings())
+    monkeypatch.setattr(
+        auth_deps,
+        "verify_id_token",
+        lambda _token: {
+            "uid": "u1",
+            "email": "decoded-only@example.com",
+            "name": "Decoded User",
+        },
+    )
+
+    async def _fake_send_admin_message(_text: str):
+        return True, None
+
+    monkeypatch.setattr(auth_deps, "send_admin_message", _fake_send_admin_message)
+
+    caplog.set_level(logging.INFO, logger="app")
+    request = Request({"type": "http", "headers": []})
+    creds = HTTPAuthorizationCredentials(
+        scheme="Bearer",
+        credentials="super-secret-token",
+    )
+
+    payload = asyncio.run(auth_deps.get_current_user(request, creds))
+
+    assert payload["uid"] == "u1"
+    assert "super-secret-token" not in caplog.text
+    assert "decoded-only@example.com" not in caplog.text
+    assert "auth_token_verification_started" in caplog.text
+    assert "user_profile_fetch_started" in caplog.text
+
+
 def test_get_current_user_bootstrap_keeps_first_hundred_false_after_threshold(
     monkeypatch,
 ):
@@ -343,13 +386,14 @@ def test_get_current_user_auto_disables_student_after_active_to_expiration(monke
 
 
 def test_get_current_user_keeps_active_student_when_active_to_is_today(monkeypatch):
+    today = date.today().isoformat()
     fake_db = _FakeFirestore()
     fake_db._users["u1"] = {
         "email": "u1@example.com",
         "displayName": "User One",
         "role": "student",
         "status": "active",
-        "activeTo": "2026-05-14",
+        "activeTo": today,
     }
     monkeypatch.setattr(auth_deps, "get_firestore_client", lambda: fake_db)
     monkeypatch.setattr(auth_deps, "get_settings", lambda: _Settings())

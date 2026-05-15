@@ -2696,8 +2696,8 @@ paths:
       tags: [Auth]
       summary: Receive Telegram webhook update
       description: >
-        No Firebase auth. If TELEGRAM_WEBHOOK_SECRET is configured, requests must provide
-        header X-Telegram-Bot-Api-Secret-Token with matching value.
+        No Firebase auth. In non-local environments TELEGRAM_WEBHOOK_SECRET must be configured,
+        and requests must provide header X-Telegram-Bot-Api-Secret-Token with matching value.
       operationId: telegramWebhook
       security: [] # no auth required
       parameters:
@@ -2706,7 +2706,7 @@ paths:
           required: false
           schema:
             type: string
-          description: Required when TELEGRAM_WEBHOOK_SECRET is set.
+          description: Required in non-local environments and whenever TELEGRAM_WEBHOOK_SECRET is set.
       requestBody:
         required: false
         content:

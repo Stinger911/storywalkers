@@ -109,7 +109,7 @@ def test_patch_me_rejects_extra_fields(monkeypatch):
     app.dependency_overrides.clear()
 
 
-def test_patch_me_logs_validation_errors_with_request_body(monkeypatch):
+def test_patch_me_logs_validation_errors_without_request_body(monkeypatch):
     users = {"u1": {"displayName": "User One", "email": "u1@example.com"}}
     fake_db = FakeFirestore(users)
     log_calls: list[tuple[str, dict]] = []
@@ -131,7 +131,7 @@ def test_patch_me_logs_validation_errors_with_request_body(monkeypatch):
     assert message == "request_validation_failed"
     assert extra["path"] == "/api/me"
     assert extra["method"] == "PATCH"
-    assert '"unknown":"x"' in extra["request_body"].replace(" ", "")
+    assert "request_body" not in extra
     assert extra["errors"]
 
     app.dependency_overrides.clear()

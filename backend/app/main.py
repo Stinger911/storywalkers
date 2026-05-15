@@ -1,7 +1,7 @@
 from pathlib import Path
 
 import yaml
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, Response
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -42,12 +42,21 @@ logger.info(
 )
 
 OPENAPI_PATH = Path(__file__).with_name("openapi.yaml")
+OPENAPI_ENABLED_ENVS = {"local", "development", "test", "testing"}
+
+
+def _openapi_enabled(env: str) -> bool:
+    return env.lower() in OPENAPI_ENABLED_ENVS
+
+
+openapi_enabled = _openapi_enabled(settings.ENV)
 
 app = FastAPI(
     title=settings.APP_NAME,
     version=settings.APP_VERSION,
-    docs_url="/docs",
-    openapi_url="/openapi.json",
+    docs_url="/docs" if openapi_enabled else None,
+    redoc_url="/redoc" if openapi_enabled else None,
+    openapi_url="/openapi.json" if openapi_enabled else None,
 )
 
 
@@ -73,16 +82,12 @@ app.add_middleware(RequestLoggingMiddleware)
 
 
 async def _validation_log_context(request: Request) -> dict:
-    context = {
+    return {
         "event": "request_validation_failed",
         "method": request.method,
         "path": request.url.path,
         "query": str(request.url.query or ""),
     }
-    if request.url.path == "/api/me":
-        body_bytes = await request.body()
-        context["request_body"] = body_bytes.decode("utf-8", errors="replace")
-    return context
 
 
 @app.exception_handler(AppError)
@@ -144,6 +149,8 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
 
 @app.get("/openapi.yaml", include_in_schema=False)
 async def openapi_yaml():
+    if not openapi_enabled:
+        raise HTTPException(status_code=404, detail="Not found")
     return Response(content=_load_openapi_text(), media_type="text/yaml")
 
 

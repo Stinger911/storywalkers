@@ -172,11 +172,20 @@ async def get_current_user(
         return dev_user
 
     token = credentials.credentials
-    logger.warning(f"Verifying auth token {token}")
+    logger.info(
+        "auth_token_verification_started",
+        extra={"event": "auth_token_verification_started"},
+    )
     try:
         decoded = verify_id_token(token)
     except Exception as e:  # pragma: no cover - depends on firebase
-        logger.warning(f"Auth token verification failed: {e}")
+        logger.warning(
+            "auth_token_verification_failed",
+            extra={
+                "event": "auth_token_verification_failed",
+                "errorType": type(e).__name__,
+            },
+        )
         raise AppError(
             code="unauthenticated",
             message="Invalid auth token",
@@ -188,7 +197,10 @@ async def get_current_user(
         raise unauthorized_error("Invalid auth token payload")
 
     firestore = get_firestore_client()
-    logger.warning(f"Fetching user profile for uid {uid} from Firestore {decoded}")
+    logger.info(
+        "user_profile_fetch_started",
+        extra={"event": "user_profile_fetch_started", "uid": uid},
+    )
     user_ref = firestore.collection("users").document(uid)
     doc = user_ref.get()
     if not doc.exists:

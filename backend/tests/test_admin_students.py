@@ -1,3 +1,5 @@
+from datetime import date, timedelta
+
 from fastapi.testclient import TestClient
 from google.cloud import firestore
 
@@ -735,6 +737,7 @@ def test_patch_student_status_change_logs_and_emits_hook(monkeypatch):
 
 
 def test_patch_student_sets_default_active_to_when_reactivated(monkeypatch):
+    expected_active_to = (date.today() + timedelta(days=30)).isoformat()
     users = {"s1": {"role": "student", "status": "disabled", "email": "s1@x.com"}}
     fake_db = FakeFirestore(users)
     monkeypatch.setattr(admin_students, "get_firestore_client", lambda: fake_db)
@@ -745,8 +748,8 @@ def test_patch_student_sets_default_active_to_when_reactivated(monkeypatch):
 
     assert response.status_code == 200
     assert response.json()["status"] == "active"
-    assert response.json()["activeTo"] == "2026-06-13"
-    assert users["s1"]["activeTo"] == "2026-06-13"
+    assert response.json()["activeTo"] == expected_active_to
+    assert users["s1"]["activeTo"] == expected_active_to
 
     app.dependency_overrides.clear()
 

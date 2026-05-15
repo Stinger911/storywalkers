@@ -137,7 +137,7 @@ describe("OnboardingCheckout", () => {
     });
   });
 
-  it("shows crossed out prices and zero total for first hundred students", async () => {
+  it("shows crossed out course prices and community total for first hundred students", async () => {
     meState = {
       ...meState,
       isFirstHundred: true,
@@ -169,7 +169,7 @@ describe("OnboardingCheckout", () => {
     expect(screen.getByRole("link", { name: "Go to Boosty" })).toBeInTheDocument();
     expect(
       screen.getByText(
-        "You are in the first 100 students cohort. No payment is required. The team will confirm your access manually.",
+        "You are in the first 100 students cohort. The team will confirm your access manually.",
       ),
     ).toBeInTheDocument();
     expect(screen.getByText("Congratulations!")).toBeInTheDocument();

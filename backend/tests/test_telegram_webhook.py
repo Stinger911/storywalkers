@@ -9,9 +9,15 @@ from app.routers import telegram_webhook
 
 
 class _Settings:
-    def __init__(self, secret: str | None, admin_chat_id: str | int | None = None):
+    def __init__(
+        self,
+        secret: str | None,
+        admin_chat_id: str | int | None = None,
+        env: str = "local",
+    ):
         self.TELEGRAM_WEBHOOK_SECRET = secret
         self.TELEGRAM_ADMIN_CHAT_ID = admin_chat_id
+        self.ENV = env
 
 
 class _FakeSnap:
@@ -138,6 +144,33 @@ def test_webhook_accepts_without_secret(monkeypatch):
     assert stored["chatId"] == 77
     assert stored["firstSeenAt"] == "SERVER_TIMESTAMP"
     assert stored["lastSeenAt"] == "SERVER_TIMESTAMP"
+
+
+def test_webhook_rejects_missing_secret_in_production(monkeypatch):
+    monkeypatch.setattr(
+        telegram_webhook,
+        "get_settings",
+        lambda: _Settings(None, 999, env="production"),
+    )
+    client = TestClient(app)
+
+    response = client.post(
+        "/webhooks/telegram",
+        json={
+            "update_id": 1001,
+            "message": {
+                "from": {"id": 42},
+                "chat": {"id": 77, "type": "private"},
+                "message_id": 7,
+                "text": "hello",
+            },
+        },
+    )
+
+    assert response.status_code == 403
+    payload = response.json()["error"]
+    assert payload["code"] == "forbidden"
+    assert payload["message"] == "Telegram webhook secret is not configured"
 
 
 def test_webhook_rejects_invalid_secret(monkeypatch):

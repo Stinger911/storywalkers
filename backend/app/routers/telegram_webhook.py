@@ -16,6 +16,7 @@ router = APIRouter(tags=["Webhooks"])
 logger = get_logger("app.webhooks.telegram")
 MAX_TELEGRAM_TEXT_LEN = 3500
 FORWARD_COOLDOWN_SECONDS = 2
+SECRET_OPTIONAL_ENVS = {"local", "development", "test", "testing"}
 
 
 def _normalize_telegram_username(value: str) -> str | None:
@@ -57,9 +58,22 @@ def _as_utc_datetime(value: Any) -> datetime | None:
 @router.post("/webhooks/telegram", include_in_schema=False)
 async def telegram_webhook(request: Request) -> dict[str, bool]:
     settings = get_settings()
-    expected_secret = settings.TELEGRAM_WEBHOOK_SECRET
+    expected_secret = (settings.TELEGRAM_WEBHOOK_SECRET or "").strip()
+    env = getattr(settings, "ENV", "local").lower()
+    if not expected_secret and env not in SECRET_OPTIONAL_ENVS:
+        logger.error(
+            "telegram_webhook_secret_missing",
+            extra={"event": "telegram_webhook_secret_missing", "env": env},
+        )
+        raise AppError(
+            code="forbidden",
+            message="Telegram webhook secret is not configured",
+            status_code=403,
+        )
     if expected_secret:
-        provided_secret = request.headers.get("X-Telegram-Bot-Api-Secret-Token")
+        provided_secret = (
+            request.headers.get("X-Telegram-Bot-Api-Secret-Token") or ""
+        ).strip()
         if provided_secret != expected_secret:
             raise AppError(
                 code="forbidden",
