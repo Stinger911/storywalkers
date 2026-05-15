@@ -2,6 +2,7 @@ import type { JSX } from "solid-js";
 import { A, useLocation } from "@solidjs/router";
 import { AppShell } from "../../components/AppShell";
 import { Avatar, AvatarFallback } from "../../components/ui/avatar";
+import { Icon } from "../../components/ui/icon";
 import { useAuth } from "../../lib/auth";
 import { useTheme } from "../../lib/theme";
 import { RequireAuth } from "../RequireAuth";
@@ -94,9 +95,7 @@ export function AdminLayout(props: AdminLayoutProps) {
                 <div class="px-2">
                   <div class="flex items-center gap-3">
                     <div class="flex h-11 w-11 items-center justify-center rounded-[var(--radius-md)] bg-primary text-primary-foreground">
-                      <span class="material-symbols-outlined text-[22px]">
-                        auto_stories
-                      </span>
+                      <Icon name="auto_stories" class="text-[22px]" />
                     </div>
                     <div>
                       <div class="text-[1.05rem] font-extrabold tracking-[-0.03em]">
@@ -125,9 +124,7 @@ export function AdminLayout(props: AdminLayoutProps) {
                           : "",
                       )}
                     >
-                      <span class="material-symbols-outlined text-[20px]">
-                        dashboard
-                      </span>
+                      <Icon name="dashboard" class="text-[20px]" />
                       <span>Overview</span>
                     </A>
                     {adminNavItems.map((item) => (
@@ -143,9 +140,7 @@ export function AdminLayout(props: AdminLayoutProps) {
                             : "",
                         )}
                       >
-                        <span class="material-symbols-outlined text-[20px]">
-                          {item.icon}
-                        </span>
+                        <Icon name={item.icon} class="text-[20px]" />
                         <span>{item.label}</span>
                       </A>
                     ))}
@@ -158,9 +153,7 @@ export function AdminLayout(props: AdminLayoutProps) {
                   target="blank"
                   class="flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors duration-300 hover:text-primary"
                 >
-                  <span class="material-symbols-outlined text-[18px]">
-                    bug_report
-                  </span>
+                  <Icon name="bug_report" class="text-[18px]" />
                   <span>Report bug</span>
                 </a>
               </div>

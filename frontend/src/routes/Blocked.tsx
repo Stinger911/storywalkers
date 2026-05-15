@@ -1,6 +1,7 @@
 import { useSearchParams } from "@solidjs/router";
 import { Show } from "solid-js";
 import { Button } from "../components/ui/button";
+import { Icon } from "../components/ui/icon";
 import { useAuth } from "../lib/auth";
 import { useI18n } from "../lib/i18n";
 import { getNextOnboardingStep, onboardingPath } from "./onboarding/onboardingState";
@@ -132,7 +133,7 @@ export function Blocked() {
                   : "flex items-center justify-between rounded-[var(--radius-md)] border border-border/70 bg-[rgba(237,244,255,0.62)] px-4 py-3 text-sm font-semibold text-primary transition-colors duration-300 hover:bg-[rgba(223,233,247,0.9)]"}
               >
                 <span>{t("common.contactSupport")}</span>
-                <span class="material-symbols-outlined text-[18px]">open_in_new</span>
+                <Icon name="open_in_new" class="text-[18px]" />
               </a>
               <Show when={TELEGRAM_URL}>
                 <a
@@ -142,7 +143,7 @@ export function Blocked() {
                   class="flex items-center justify-between rounded-[var(--radius-md)] border border-border/70 bg-card px-4 py-3 text-sm text-foreground transition-colors duration-300 hover:border-primary/30 hover:text-primary"
                 >
                   <span class="truncate">{TELEGRAM_LABEL}</span>
-                  <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+                  <Icon name="arrow_forward" class="text-[18px]" />
                 </a>
               </Show>
             </CardContent>

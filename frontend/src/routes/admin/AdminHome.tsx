@@ -1,6 +1,7 @@
 import { A } from "@solidjs/router";
 import { Card, CardContent } from "../../components/ui/card";
 import { Col, Grid } from "../../components/ui/grid";
+import { Icon } from "../../components/ui/icon";
 
 type AdminCard = {
   title: string;
@@ -140,9 +141,7 @@ export function AdminHome() {
                   <div class="flex h-full flex-col justify-between p-5 sm:p-6">
                     <div>
                       <div class="mb-6 flex h-12 w-12 items-center justify-center rounded-[var(--radius-md)] bg-[rgba(237,244,255,0.95)] text-primary transition-transform duration-300 group-hover:scale-105">
-                        <span class="material-symbols-outlined text-[22px]">
-                          {card.icon}
-                        </span>
+                        <Icon name={card.icon} class="text-[22px]" />
                       </div>
                       <h2 class="text-[1.85rem] font-semibold tracking-[-0.04em] text-foreground sm:text-[2rem] lg:text-[1.9rem]">
                         {card.title}
@@ -168,9 +167,7 @@ export function AdminHome() {
                         class="inline-flex items-center gap-1 text-sm font-bold text-secondary transition-all duration-300 group-hover:gap-2"
                       >
                         <span>{card.cta}</span>
-                        <span class="material-symbols-outlined text-[18px]">
-                          arrow_forward
-                        </span>
+                        <Icon name="arrow_forward" class="text-[18px]" />
                       </A>
                     </div>
                   </div>
@@ -205,9 +202,7 @@ export function AdminHome() {
                     <div
                       class={`flex h-10 w-10 items-center justify-center rounded-full bg-white ${item.accent}`}
                     >
-                      <span class="material-symbols-outlined text-[18px]">
-                        {item.icon}
-                      </span>
+                      <Icon name={item.icon} class="text-[18px]" />
                     </div>
                     <div>
                       <p class="text-sm font-bold text-foreground">
@@ -264,19 +259,3 @@ export function AdminHome() {
     </section>
   );
 }
-
-// function ButtonLink(props: {
-//   href: string;
-//   icon: string;
-//   children: string;
-// }) {
-//   return (
-//     <A
-//       href={props.href}
-//       class="inline-flex items-center gap-2 rounded-[var(--radius-md)] bg-[linear-gradient(135deg,#2f5f8d_0%,#4a78a7_100%)] px-5 py-3 text-sm font-bold text-white shadow-card transition-all duration-300 hover:opacity-95 active:scale-[0.98]"
-//     >
-//       <span class="material-symbols-outlined text-[18px]">{props.icon}</span>
-//       <span>{props.children}</span>
-//     </A>
-//   );
-// }

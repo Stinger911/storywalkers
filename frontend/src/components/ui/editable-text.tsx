@@ -1,6 +1,7 @@
 import { createEffect, createSignal, Show } from "solid-js";
 
 import { Button } from "./button";
+import { Icon } from "./icon";
 import { TextField, TextFieldInput } from "./text-field";
 
 export type EditableTextProps = {
@@ -91,7 +92,7 @@ export function EditableText(props: EditableTextProps) {
                   onClick={startEdit}
                   aria-label="Edit"
                 >
-                  <span class="material-symbols-outlined text-[18px]">edit</span>
+                  <Icon name="edit" class="text-[18px]" />
                 </Button>
               </Show>
             </>
@@ -113,7 +114,7 @@ export function EditableText(props: EditableTextProps) {
             disabled={saving()}
             aria-label="Cancel"
           >
-            <span class="material-symbols-outlined text-[18px]">close</span>
+            <Icon name="close" class="text-[18px]" />
           </Button>
           <Button
             variant="ghost"
@@ -122,7 +123,7 @@ export function EditableText(props: EditableTextProps) {
             disabled={saving()}
             aria-label="Save"
           >
-            <span class="material-symbols-outlined text-[18px]">check</span>
+            <Icon name="check" class="text-[18px]" />
           </Button>
         </Show>
       </div>

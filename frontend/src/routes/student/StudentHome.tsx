@@ -1,5 +1,6 @@
 import { Show, createEffect, createMemo, createSignal, onCleanup } from 'solid-js'
 import { Button } from '../../components/ui/button'
+import { Icon } from '../../components/ui/icon'
 import {
   Dialog,
   DialogContent,
@@ -99,9 +100,10 @@ export function StudentHome(props: { readOnly?: boolean }) {
                   </div>
                 </Show>
               </div>
-              <span class={`material-symbols-outlined text-3xl ${item.iconClass} ${item.emphasis ? '!text-white/80' : ''}`}>
-                {item.icon}
-              </span>
+              <Icon
+                name={item.icon}
+                class={`text-3xl ${item.iconClass} ${item.emphasis ? '!text-white/80' : ''}`}
+              />
             </div>
           </div>
         ))}

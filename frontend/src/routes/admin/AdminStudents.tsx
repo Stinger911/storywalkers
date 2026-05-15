@@ -9,6 +9,7 @@ import {
   BreadcrumbSeparator,
 } from "../../components/ui/breadcrumb";
 import { Button } from "../../components/ui/button";
+import { Icon } from "../../components/ui/icon";
 import { Page } from "../../components/ui/page";
 import { SectionCard } from "../../components/ui/section-card";
 import { Skeleton } from "../../components/ui/skeleton";
@@ -392,9 +393,7 @@ export function AdminStudents() {
                                 title="First 100 student"
                                 aria-label="First 100 student"
                               >
-                                <span class="material-symbols-outlined text-[16px]">
-                                  workspace_premium
-                                </span>
+                                <Icon name="workspace_premium" class="text-[16px]" />
                               </span>
                             </Show>
                           </div>

@@ -1,6 +1,7 @@
 import { For, Show, createEffect, createMemo, createSignal } from "solid-js";
 
 import { Button, buttonVariants } from "../../components/ui/button";
+import { Icon } from "../../components/ui/icon";
 import {
   Dialog,
   DialogContent,
@@ -195,12 +196,11 @@ export function StudentPathVisualization(props: StudentPathVisualizationProps) {
                           height="20"
                         >
                           <div class="flex h-5 w-5 items-center justify-center">
-                            <span
+                            <Icon
                               aria-label="Current step"
-                              class="material-symbols-outlined text-[12px] leading-none text-white"
-                            >
-                              auto_stories
-                            </span>
+                              name="auto_stories"
+                              class="text-[12px] leading-none text-white"
+                            />
                           </div>
                         </foreignObject>
                       </Show>
@@ -242,9 +242,10 @@ export function StudentPathVisualization(props: StudentPathVisualizationProps) {
                             </p>
                             <Show when={isCurrent() && !point.step.isDone}>
                               <span class="inline-flex items-center gap-1 rounded-full bg-[rgba(74,120,167,0.12)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-primary">
-                                <span class="material-symbols-outlined text-[12px] leading-none">
-                                  auto_stories
-                                </span>
+                                <Icon
+                                  name="auto_stories"
+                                  class="text-[12px] leading-none"
+                                />
                                 Current step
                               </span>
                             </Show>
@@ -342,7 +343,7 @@ export function StudentPathVisualization(props: StudentPathVisualizationProps) {
                         onClick={() => props.onOpenMaterial(step().materialUrl)}
                         disabled={step().isLocked}
                       >
-                        <span class="material-symbols-outlined text-[18px]">open_in_new</span>
+                        <Icon name="open_in_new" class="text-[18px]" />
                         {props.materialLabel}
                       </button>
                     </Show>

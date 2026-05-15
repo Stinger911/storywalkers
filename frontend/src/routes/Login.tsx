@@ -28,6 +28,7 @@ import {
   TextFieldLabel,
 } from "../components/ui/text-field";
 import { Button } from "../components/ui/button";
+import { Icon } from "../components/ui/icon";
 import { type MeProfile } from "../lib/auth";
 import { apiFetch } from "../lib/api";
 import { useI18n } from "../lib/i18n";
@@ -389,9 +390,7 @@ export function Login() {
                 class="h-10 rounded-[var(--radius-md)] border-0 bg-[rgba(223,233,247,0.95)] px-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-foreground shadow-none transition-colors duration-300 hover:bg-[rgba(217,227,241,0.95)] focus:ring-2 focus:ring-primary/20 focus:ring-offset-0"
               >
                 <div class="flex min-w-0 items-center gap-2">
-                  <span class="material-symbols-outlined text-base text-foreground/70">
-                    language
-                  </span>
+                  <Icon name="language" class="text-base text-foreground/70" />
                   <SelectValue<string>>
                     {(state) =>
                       (

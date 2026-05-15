@@ -2,6 +2,7 @@ import { For, createEffect, createMemo, createSignal, Show } from "solid-js";
 import { useNavigate, useParams } from "@solidjs/router";
 
 import { Button } from "../../components/ui/button";
+import { Icon } from "../../components/ui/icon";
 import { Page } from "../../components/ui/page";
 import { RightRail } from "../../components/ui/right-rail";
 import { RailCard } from "../../components/ui/rail-card";
@@ -590,7 +591,7 @@ export function AdminStudentProfile() {
                             target="_blank"
                             rel="noreferrer"
                           >
-                            <span class="material-symbols-outlined text-[16px]">open_in_new</span>
+                            <Icon name="open_in_new" class="text-[16px]" />
                             Open material
                           </a>
                         </Show>

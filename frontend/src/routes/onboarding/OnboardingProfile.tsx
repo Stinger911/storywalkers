@@ -2,6 +2,7 @@ import { useNavigate } from "@solidjs/router";
 import { createEffect, createSignal, For } from "solid-js";
 
 import { Button } from "../../components/ui/button";
+import { Icon } from "../../components/ui/icon";
 import { SectionCard } from "../../components/ui/section-card";
 import {
   TextField,
@@ -289,7 +290,7 @@ export function OnboardingProfile() {
                     disabled={saving()}
                     aria-label={t("student.onboarding.profile.removeSocialLink")}
                   >
-                    <span class="material-symbols-outlined text-[18px]">close</span>
+                    <Icon name="close" class="text-[18px]" />
                   </Button>
                 </div>
               )}

@@ -9,6 +9,7 @@ import {
 } from "solid-js";
 import { Button } from "../components/ui/button";
 import { Avatar, AvatarFallback } from "../components/ui/avatar";
+import { Icon } from "../components/ui/icon";
 import {
   Dialog,
   DialogContent,
@@ -201,9 +202,10 @@ export function AppShell(props: AppShellProps) {
                 >
                   {props.userMenuSlot}
                 </Show>
-                <span class="material-symbols-outlined text-[18px] text-muted-foreground">
-                  expand_more
-                </span>
+                <Icon
+                  name="expand_more"
+                  class="text-[18px] text-muted-foreground"
+                />
               </button>
               <Show when={userMenuOpen()}>
                 <div class="absolute right-0 top-[calc(100%+0.5rem)] z-40 min-w-[220px] rounded-[calc(var(--radius-md)+2px)] border border-border/70 bg-background p-2 shadow-card">
@@ -212,9 +214,7 @@ export function AppShell(props: AppShellProps) {
                     class="flex w-full items-center gap-3 rounded-[var(--radius-md)] px-3 py-2 text-sm font-medium text-foreground transition-colors duration-200 hover:bg-accent"
                     onClick={openRenameDialog}
                   >
-                    <span class="material-symbols-outlined text-[18px] text-muted-foreground">
-                      edit
-                    </span>
+                    <Icon name="edit" class="text-[18px] text-muted-foreground" />
                     <span>{t("common.renameUser")}</span>
                   </button>
                   <button
@@ -222,9 +222,10 @@ export function AppShell(props: AppShellProps) {
                     class="flex w-full items-center gap-3 rounded-[var(--radius-md)] px-3 py-2 text-sm font-medium text-foreground transition-colors duration-200 hover:bg-accent"
                     onClick={openSettingsPanel}
                   >
-                    <span class="material-symbols-outlined text-[18px] text-muted-foreground">
-                      settings
-                    </span>
+                    <Icon
+                      name="settings"
+                      class="text-[18px] text-muted-foreground"
+                    />
                     <span>{t("common.settings")}</span>
                   </button>
                   <button
@@ -232,9 +233,10 @@ export function AppShell(props: AppShellProps) {
                     class="flex w-full items-center gap-3 rounded-[var(--radius-md)] px-3 py-2 text-sm font-medium text-foreground transition-colors duration-200 hover:bg-accent"
                     onClick={logout}
                   >
-                    <span class="material-symbols-outlined text-[18px] text-muted-foreground">
-                      logout
-                    </span>
+                    <Icon
+                      name="logout"
+                      class="text-[18px] text-muted-foreground"
+                    />
                     <span>{t("common.logout")}</span>
                   </button>
                 </div>

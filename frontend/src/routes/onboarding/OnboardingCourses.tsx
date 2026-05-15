@@ -2,6 +2,7 @@ import { useNavigate } from "@solidjs/router";
 import { createEffect, createMemo, createSignal, For, Show } from "solid-js";
 
 import { Button, buttonVariants } from "../../components/ui/button";
+import { Icon } from "../../components/ui/icon";
 import { SectionCard } from "../../components/ui/section-card";
 import { SmallStatBadge } from "../../components/ui/small-stat-badge";
 import {
@@ -295,7 +296,7 @@ export function OnboardingCourses() {
                   : "border-border bg-background text-transparent"
               }`}
             >
-              <span class="material-symbols-outlined text-[16px]">check</span>
+              <Icon name="check" class="text-[16px]" />
             </span>
             <div class="min-w-0 flex-1 space-y-2">
               <div class="flex flex-wrap items-center gap-2">
@@ -499,7 +500,7 @@ export function OnboardingCourses() {
                   <div class="flex flex-wrap items-center gap-2">
                     <div class="font-medium">{t(COMMUNITY_CARD.titleKey)}</div>
                     <SmallStatBadge class="bg-background">
-                      <span class="material-symbols-outlined text-[14px]">lock</span>
+                      <Icon name="lock" class="text-[14px]" />
                       {t("student.onboarding.courses.communityRequiredBadge")}
                     </SmallStatBadge>
                   </div>

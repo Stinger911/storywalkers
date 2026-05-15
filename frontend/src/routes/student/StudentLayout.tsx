@@ -2,6 +2,7 @@ import { A, useLocation } from "@solidjs/router";
 import { Show, createContext, createMemo, createSignal, type JSX, useContext } from "solid-js";
 import { AppShell } from "../../components/AppShell";
 import { Avatar, AvatarFallback } from "../../components/ui/avatar";
+import { Icon } from "../../components/ui/icon";
 import { useAuth } from "../../lib/auth";
 import { useI18n } from "../../lib/i18n";
 import { useTheme } from "../../lib/theme";
@@ -151,9 +152,7 @@ export function StudentLayout(props: StudentLayoutProps) {
                           : "",
                       )}
                     >
-                      <span class="material-symbols-outlined text-[18px]">
-                        {item.icon}
-                      </span>
+                      <Icon name={item.icon} class="text-[18px]" />
                       <span>{item.label}</span>
                     </A>
                   ))}
@@ -184,7 +183,7 @@ export function StudentLayout(props: StudentLayoutProps) {
               isActive(item.href) ? "text-secondary" : "",
             )}
           >
-            <span class="material-symbols-outlined text-[20px]">{item.icon}</span>
+            <Icon name={item.icon} class="text-[20px]" />
             <span>{item.label}</span>
           </A>
         ))}

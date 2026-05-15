@@ -1,6 +1,7 @@
 import { createEffect, createSignal, Show } from "solid-js";
 
 import { Button } from "../../components/ui/button";
+import { Icon } from "../../components/ui/icon";
 import { Page } from "../../components/ui/page";
 import { SectionCard } from "../../components/ui/section-card";
 import {
@@ -262,12 +263,7 @@ export function AdminStepCompletions() {
                         class="inline-flex items-center gap-1 font-medium text-primary underline"
                       >
                         <span>{item.studentDisplayName || "Student"}</span>
-                        <span
-                          class="material-symbols-outlined text-[14px]"
-                          aria-hidden="true"
-                        >
-                          open_in_new
-                        </span>
+                        <Icon name="open_in_new" class="text-[14px]" />
                       </a>
                     </TableCell>
                     <TableCell class="w-[16%]">
@@ -363,7 +359,7 @@ export function AdminStepCompletions() {
                           onClick={() => openEditor(item)}
                           disabled={Boolean(savingId()) || Boolean(revokingId())}
                         >
-                          <span class="material-symbols-outlined text-[18px]">edit</span>
+                          <Icon name="edit" class="text-[18px]" />
                         </Button>
                         <Show when={item.status === "completed"}>
                           <Button
