@@ -834,7 +834,7 @@ const dictionaries: Record<Locale, RawDictionary> = {
           afterPaymentManual:
             "Access is activated manually after review. Please wait for confirmation from the team.",
           afterPaymentFree:
-            "You are in the first 100 students cohort. No payment is required. The team will confirm your access manually.",
+            "You are in the first 100 students cohort. The team will confirm your access manually.",
           afterPaymentContactLabel: "If you have paid, message support:",
         },
       },
@@ -1269,7 +1269,7 @@ const dictionaries: Record<Locale, RawDictionary> = {
           afterPaymentManual:
             "Доступ активируется вручную после проверки. Пожалуйста, дождитесь подтверждения от команды.",
           afterPaymentFree:
-            "Вы входите в первую сотню учеников. Оплата не требуется. Команда подтвердит доступ вручную.",
+            "Вы входите в первую сотню учеников. Команда подтвердит доступ вручную.",
           afterPaymentContactLabel: "Если вы оплатили, напишите в поддержку:",
         },
       },
