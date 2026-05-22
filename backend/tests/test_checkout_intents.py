@@ -90,10 +90,11 @@ class FakeCollection(FakeQuery):
 
 
 class FakeFirestore:
-    def __init__(self, courses=None, payments=None, config=None):
+    def __init__(self, courses=None, payments=None, config=None, users=None):
         self._courses = courses or {}
         self._payments = payments or {}
         self._config = config or {}
+        self._users = users or {}
 
     def collection(self, name):
         if name == "courses":
@@ -102,6 +103,8 @@ class FakeFirestore:
             return FakeCollection(self._payments)
         if name == "config":
             return FakeCollection(self._config)
+        if name == "users":
+            return FakeCollection(self._users)
         raise ValueError(f"unsupported collection {name}")
 
 
@@ -147,13 +150,23 @@ def test_checkout_intent_allows_active_students(monkeypatch):
     app.dependency_overrides.clear()
 
 
-def test_checkout_intent_zeroes_amount_for_first_hundred_students(monkeypatch):
+def test_checkout_intent_auto_activates_zero_amount_for_first_hundred_students(
+    monkeypatch,
+):
     fake_db = FakeFirestore(
         courses={
             "c1": {"priceUsdCents": 1200, "isActive": True},
-        }
+        },
+        users={"u1": {"status": "disabled"}},
     )
     monkeypatch.setattr(checkout, "get_firestore_client", lambda: fake_db)
+    append_calls: list[tuple[str, list[str]]] = []
+    monkeypatch.setattr(
+        checkout,
+        "append_courses_to_student_plan",
+        lambda db, uid, course_ids: append_calls.append((uid, course_ids))
+        or {"addedCourseIds": course_ids, "createdSteps": 1},
+    )
     app.dependency_overrides[auth_deps.get_current_user] = lambda: {
         **_student("active"),
         "isFirstHundred": True,
@@ -165,7 +178,17 @@ def test_checkout_intent_zeroes_amount_for_first_hundred_students(monkeypatch):
 
     assert response.status_code == 201
     assert response.json()["amount"] == 0
+    assert (
+        response.json()["instructionsText"]
+        == "No payment is required. Access is activated automatically for this checkout."
+    )
     assert fake_db._payments["doc_1"]["amount"] == 0
+    assert fake_db._payments["doc_1"]["status"] == "activated"
+    assert fake_db._payments["doc_1"]["activatedBy"] == "system:auto_zero_amount"
+    assert fake_db._payments["doc_1"]["activatedAt"] == "SERVER_TIMESTAMP"
+    assert fake_db._users["u1"]["status"] == "active"
+    assert fake_db._users["u1"]["updatedAt"] == "SERVER_TIMESTAMP"
+    assert append_calls == [("u1", ["c1"])]
 
     app.dependency_overrides.clear()
 

@@ -11,6 +11,7 @@ from app.core.errors import AppError, forbidden_error
 from app.core.logging import get_logger
 from app.db.firestore import get_firestore_client
 from app.schemas.payments import PaymentStatus
+from app.services.course_plan_sync import append_courses_to_student_plan
 
 router = APIRouter(prefix="/api", tags=["Checkout"])
 logger = get_logger("app")
@@ -20,6 +21,9 @@ _PAYMENT_PROVIDER = "boosty"
 _PAYMENT_INSTRUCTIONS = (
     "Complete payment on Boosty, then contact support with this activation code."
 )
+_FREE_PAYMENT_INSTRUCTIONS = (
+    "No payment is required. Access is activated automatically for this checkout."
+)
 _ACTIVATION_PREFIX = "SW-"
 _ACTIVATION_LENGTH = 8
 _ACTIVATION_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
@@ -27,6 +31,7 @@ _SUPPORTED_CURRENCIES = {"USD", "EUR", "PLN", "RUB"}
 _FX_DOC_COLLECTION = "config"
 _FX_DOC_ID = "fx_rates"
 _MAX_ACTIVATION_RETRIES = 10
+_AUTO_ACTIVATED_BY = "system:auto_zero_amount"
 
 
 class CheckoutIntentRequest(BaseModel):
@@ -161,6 +166,10 @@ def _normalize_selected_courses(value: object) -> list[str]:
     return normalized
 
 
+def _should_auto_activate_payment(user: dict[str, Any], amount: int) -> bool:
+    return _has_free_courses(user) and amount == 0
+
+
 @router.post(
     "/checkout/intents", response_model=CheckoutIntentResponse, status_code=201
 )
@@ -214,32 +223,53 @@ async def create_checkout_intent(
     fx_rate = _get_fx_rate(db, currency)
     amount = int(round(total_usd_cents * fx_rate))
     activation_code = _generate_unique_activation_code(db)
+    should_auto_activate = _should_auto_activate_payment(user, amount)
 
     now = firestore.SERVER_TIMESTAMP
     doc_ref = db.collection("payments").document()
-    doc_ref.set(
-        {
-            "userUid": user["uid"],
-            "email": user.get("email") or "",
-            "provider": _PAYMENT_PROVIDER,
-            "selectedCourses": payload.selectedCourses,
-            "amount": amount,
-            "currency": currency,
-            "activationCode": activation_code,
-            "status": PaymentStatus.created.value,
-            "emailEvidence": None,
-            "createdAt": now,
-            "updatedAt": now,
-            "activatedAt": None,
-        }
-    )
+    payment_payload = {
+        "userUid": user["uid"],
+        "email": user.get("email") or "",
+        "provider": _PAYMENT_PROVIDER,
+        "selectedCourses": payload.selectedCourses,
+        "amount": amount,
+        "currency": currency,
+        "activationCode": activation_code,
+        "status": PaymentStatus.created.value,
+        "emailEvidence": None,
+        "createdAt": now,
+        "updatedAt": now,
+        "activatedAt": None,
+        "activatedBy": None,
+        "rejectedAt": None,
+        "rejectedBy": None,
+        "rejectionReason": None,
+    }
+    if should_auto_activate:
+        payment_payload["status"] = PaymentStatus.activated.value
+        payment_payload["activatedAt"] = now
+        payment_payload["activatedBy"] = _AUTO_ACTIVATED_BY
+    doc_ref.set(payment_payload)
+
+    if should_auto_activate:
+        append_courses_to_student_plan(db, user["uid"], payload.selectedCourses)
+        db.collection("users").document(user["uid"]).set(
+            {
+                "status": "active",
+                "updatedAt": firestore.SERVER_TIMESTAMP,
+            },
+            merge=True,
+        )
 
     logger.info(
-        "checkout_intent_created",
+        "checkout_intent_auto_activated" if should_auto_activate else "checkout_intent_created",
         extra={
-            "event": "checkout_intent_created",
+            "event": "checkout_intent_auto_activated"
+            if should_auto_activate
+            else "checkout_intent_created",
             "paymentId": doc_ref.id,
             "uid": user.get("uid"),
+            "autoActivated": should_auto_activate,
         },
     )
 
@@ -249,5 +279,7 @@ async def create_checkout_intent(
         amount=amount,
         currency=currency,
         activationCode=activation_code,
-        instructionsText=_PAYMENT_INSTRUCTIONS,
+        instructionsText=(
+            _FREE_PAYMENT_INSTRUCTIONS if should_auto_activate else _PAYMENT_INSTRUCTIONS
+        ),
     )

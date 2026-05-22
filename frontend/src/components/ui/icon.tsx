@@ -7,26 +7,26 @@ type IconProps = JSX.SvgSVGAttributes<SVGSVGElement> & {
   title?: string;
 };
 
-const icons: Record<string, JSX.Element> = {
-  add: (
+const icons: Record<string, () => JSX.Element> = {
+  add: () => (
     <>
       <path d="M12 5v14" />
       <path d="M5 12h14" />
     </>
   ),
-  arrow_forward: (
+  arrow_forward: () => (
     <>
       <path d="M5 12h14" />
       <path d="m13 6 6 6-6 6" />
     </>
   ),
-  auto_stories: (
+  auto_stories: () => (
     <>
       <path d="M4 19.5V6.5A2.5 2.5 0 0 1 6.5 4H11v15H6.5A2.5 2.5 0 0 0 4 21.5" />
       <path d="M20 19.5V6.5A2.5 2.5 0 0 0 17.5 4H13v15h4.5A2.5 2.5 0 0 1 20 21.5" />
     </>
   ),
-  bug_report: (
+  bug_report: () => (
     <>
       <path d="M8 6.5 6.5 5" />
       <path d="M16 6.5 17.5 5" />
@@ -38,7 +38,7 @@ const icons: Record<string, JSX.Element> = {
       <path d="M10 5V3h4v2" />
     </>
   ),
-  category: (
+  category: () => (
     <>
       <path d="M4 4h6v6H4z" />
       <path d="M14 4h6v6h-6z" />
@@ -46,14 +46,14 @@ const icons: Record<string, JSX.Element> = {
       <path d="M14 14h6v6h-6z" />
     </>
   ),
-  check: <path d="m5 12 4 4L19 6" />,
-  close: (
+  check: () => <path d="m5 12 4 4L19 6" />,
+  close: () => (
     <>
       <path d="M18 6 6 18" />
       <path d="m6 6 12 12" />
     </>
   ),
-  dashboard: (
+  dashboard: () => (
     <>
       <path d="M4 4h7v7H4z" />
       <path d="M13 4h7v4h-7z" />
@@ -61,14 +61,14 @@ const icons: Record<string, JSX.Element> = {
       <path d="M4 13h7v7H4z" />
     </>
   ),
-  edit: (
+  edit: () => (
     <>
       <path d="M4 20h4l10.5-10.5a2.1 2.1 0 0 0-3-3L5 17z" />
       <path d="m14 7 3 3" />
     </>
   ),
-  expand_more: <path d="m6 9 6 6 6-6" />,
-  fact_check: (
+  expand_more: () => <path d="m6 9 6 6 6-6" />,
+  fact_check: () => (
     <>
       <path d="M4 5h16v14H4z" />
       <path d="m7 9 1.5 1.5L11 8" />
@@ -77,13 +77,13 @@ const icons: Record<string, JSX.Element> = {
       <path d="M13 14h4" />
     </>
   ),
-  flag: (
+  flag: () => (
     <>
       <path d="M5 21V4" />
       <path d="M5 5h12l-1.5 4L17 13H5" />
     </>
   ),
-  group: (
+  group: () => (
     <>
       <path d="M16 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2" />
       <circle cx="9.5" cy="7" r="4" />
@@ -91,7 +91,7 @@ const icons: Record<string, JSX.Element> = {
       <path d="M16 3.13a4 4 0 0 1 0 7.75" />
     </>
   ),
-  language: (
+  language: () => (
     <>
       <circle cx="12" cy="12" r="9" />
       <path d="M3 12h18" />
@@ -99,27 +99,27 @@ const icons: Record<string, JSX.Element> = {
       <path d="M12 3a14 14 0 0 0 0 18" />
     </>
   ),
-  local_library: (
+  local_library: () => (
     <>
       <path d="M4 19.5V6a2 2 0 0 1 2-2h5v16H6a2 2 0 0 0-2 2" />
       <path d="M20 19.5V6a2 2 0 0 0-2-2h-5v16h5a2 2 0 0 1 2 2" />
       <path d="M12 6v14" />
     </>
   ),
-  lock: (
+  lock: () => (
     <>
       <rect x="5" y="10" width="14" height="10" rx="2" />
       <path d="M8 10V7a4 4 0 0 1 8 0v3" />
     </>
   ),
-  logout: (
+  logout: () => (
     <>
       <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
       <path d="M16 17l5-5-5-5" />
       <path d="M21 12H9" />
     </>
   ),
-  menu_book: (
+  menu_book: () => (
     <>
       <path d="M4 19.5V6.5A2.5 2.5 0 0 1 6.5 4H11v15H6.5A2.5 2.5 0 0 0 4 21.5" />
       <path d="M20 19.5V6.5A2.5 2.5 0 0 0 17.5 4H13v15h4.5A2.5 2.5 0 0 1 20 21.5" />
@@ -129,14 +129,14 @@ const icons: Record<string, JSX.Element> = {
       <path d="M15 12h2" />
     </>
   ),
-  open_in_new: (
+  open_in_new: () => (
     <>
       <path d="M14 4h6v6" />
       <path d="m10 14 10-10" />
       <path d="M20 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h5" />
     </>
   ),
-  payments: (
+  payments: () => (
     <>
       <rect x="3" y="6" width="18" height="12" rx="2" />
       <path d="M3 10h18" />
@@ -144,7 +144,7 @@ const icons: Record<string, JSX.Element> = {
       <path d="M15 15h2" />
     </>
   ),
-  pending_actions: (
+  pending_actions: () => (
     <>
       <path d="M8 3h8" />
       <path d="M9 3v3h6V3" />
@@ -154,45 +154,45 @@ const icons: Record<string, JSX.Element> = {
       <path d="m15 16 1.5 1.5L20 14" />
     </>
   ),
-  play_circle: (
+  play_circle: () => (
     <>
       <circle cx="12" cy="12" r="9" />
       <path d="m10 8 6 4-6 4z" />
     </>
   ),
-  quiz: (
+  quiz: () => (
     <>
       <circle cx="12" cy="12" r="9" />
       <path d="M9.5 9a2.5 2.5 0 1 1 3.9 2.1c-.9.6-1.4 1.1-1.4 2.4" />
       <path d="M12 17h.01" />
     </>
   ),
-  school: (
+  school: () => (
     <>
       <path d="m3 10 9-5 9 5-9 5z" />
       <path d="M7 12.5V17c3 2 7 2 10 0v-4.5" />
       <path d="M21 10v5" />
     </>
   ),
-  settings: (
+  settings: () => (
     <>
       <circle cx="12" cy="12" r="3" />
       <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1A2 2 0 1 1 4.2 17l.1-.1A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.6-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1A2 2 0 1 1 7 4.2l.1.1A1.7 1.7 0 0 0 9 4.6 1.7 1.7 0 0 0 10 3V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1A2 2 0 1 1 19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.1a2 2 0 1 1 0 4H21a1.7 1.7 0 0 0-1.6 1" />
     </>
   ),
-  task_alt: (
+  task_alt: () => (
     <>
       <circle cx="12" cy="12" r="9" />
       <path d="m8 12 3 3 5-6" />
     </>
   ),
-  trending_up: (
+  trending_up: () => (
     <>
       <path d="m3 17 6-6 4 4 7-7" />
       <path d="M14 8h6v6" />
     </>
   ),
-  workspace_premium: (
+  workspace_premium: () => (
     <>
       <circle cx="12" cy="8" r="4" />
       <path d="m8.5 12.5-1 8 4.5-2.5 4.5 2.5-1-8" />
@@ -202,6 +202,7 @@ const icons: Record<string, JSX.Element> = {
 
 export function Icon(props: IconProps) {
   const label = () => props["aria-label"] || props.title;
+  const paths = () => (icons[props.name] ?? icons.category)();
 
   return (
     <svg
@@ -216,7 +217,7 @@ export function Icon(props: IconProps) {
       stroke-width="2"
       viewBox="0 0 24 24"
     >
-      {icons[props.name] ?? icons.category}
+      {paths()}
     </svg>
   );
 }

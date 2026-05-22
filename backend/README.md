@@ -38,6 +38,23 @@ cd backend
 pytest
 ```
 
+## Subscription extension script
+
+Mass-extend subscription access (`activeTo`) for all active students
+(`users` where `role=student` and `status=active`).
+
+- `dev` targets Firestore database `testing`
+- `prod` targets Firestore database `pathways`
+- default mode is dry-run (no writes), use `--apply` to commit changes
+
+```bash
+cd backend
+uv run python scripts/extend_active_students_subscription.py --env dev --duration 1d
+uv run python scripts/extend_active_students_subscription.py --env prod --duration 5d --apply
+```
+
+Supported durations: arbitrary `Nd` or `Nw` (for example: `1d`, `10d`, `2w`, `12w`).
+
 ## Migration note (user status)
 
 - User status enum is now: `disabled | active | community_only | expired`.
