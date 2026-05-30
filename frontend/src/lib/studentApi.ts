@@ -18,6 +18,7 @@ export type PlanResponse = {
 
 export type PlanStep = {
   stepId: string
+  courseId?: string | null
   title: string
   description: string
   materialUrl: string
@@ -34,9 +35,18 @@ export type StudentGoal = {
   description?: string | null
 }
 
+export type StudentCourse = {
+  id: string
+  title: string
+  shortDescription?: string | null
+  trialLessonUrl?: string | null
+  isActive?: boolean
+}
+
 export type StudentDashboardResponse = {
   plan: PlanResponse
   goal: StudentGoal | null
+  courses?: { items: StudentCourse[] }
   steps: { items: PlanStep[] }
 }
 

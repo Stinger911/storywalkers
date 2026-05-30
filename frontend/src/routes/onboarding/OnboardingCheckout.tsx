@@ -6,7 +6,6 @@ import { SectionCard } from "../../components/ui/section-card";
 import { useAuth } from "../../lib/auth";
 import {
   convertRubCentsToCurrencyCents,
-  convertUsdCentsToCurrencyCents,
   formatCents,
   listCourses,
   type Course,
@@ -27,28 +26,16 @@ export function OnboardingCheckout() {
   const auth = useAuth();
   const { t } = useI18n();
   const [goalTitle, setGoalTitle] = createSignal<string | null>(null);
-  const [coursesById, setCoursesById] = createSignal<Record<string, Course>>(
-    {},
-  );
-  const [fxRates, setFxRates] = createSignal<Record<string, number>>({
-    USD: 1,
-  });
+  const [coursesById, setCoursesById] = createSignal<Record<string, Course>>({});
+  const [fxRates, setFxRates] = createSignal<Record<string, number>>({ USD: 1 });
+  const [saving, setSaving] = createSignal(false);
+  const [error, setError] = createSignal<string | null>(null);
   const me = () => auth.me();
   const isFirstHundred = createMemo(() => me()?.isFirstHundred === true);
   const preferredCurrency = createMemo(() => me()?.preferredCurrency || "USD");
-  const currencyRate = createMemo(() => {
-    const rate = fxRates()[preferredCurrency()];
-    return typeof rate === "number" && rate > 0 ? rate : 1;
-  });
 
   const selectedCourseIds = createMemo(() => me()?.selectedCourses || []);
   const communitySelected = createMemo(() => true);
-
-  const formatPrice = (usdCents: number) =>
-    formatCents(
-      convertUsdCentsToCurrencyCents(usdCents, currencyRate()),
-      preferredCurrency(),
-    );
 
   const communityPriceCents = createMemo(() =>
     convertRubCentsToCurrencyCents(
@@ -64,23 +51,13 @@ export function OnboardingCheckout() {
       return {
         id,
         title: course?.title || id,
-        priceUsdCents: course?.priceUsdCents || 0,
       };
     }),
   );
 
-  const totalPrice = createMemo(() => {
-    const coursesTotal = selectedCourseItems().reduce(
-      (sum, item) => sum + item.priceUsdCents,
-      0,
-    );
-    return (
-      convertUsdCentsToCurrencyCents(
-        isFirstHundred() ? 0 : coursesTotal,
-        currencyRate(),
-      ) + (communitySelected() ? communityPriceCents() : 0)
-    );
-  });
+  const totalPrice = createMemo(() =>
+    communitySelected() ? communityPriceCents() : 0,
+  );
 
   onMount(() => {
     void (async () => {
@@ -115,14 +92,19 @@ export function OnboardingCheckout() {
       t("student.onboarding.checkout.goalEmpty"),
   );
 
-  const FreePrice = (props: { usdCents: number }) => (
-    <span class="flex items-center gap-2 font-medium">
-      <span class="text-muted-foreground line-through">
-        {formatPrice(props.usdCents)}
-      </span>
-      <span>{formatCents(0, preferredCurrency())}</span>
-    </span>
-  );
+  const removeCourse = async (courseId: string) => {
+    setSaving(true);
+    setError(null);
+    try {
+      const nextCourses = selectedCourseIds().filter((id) => id !== courseId);
+      await auth.patchMe({ selectedCourses: nextCourses });
+    } catch (err) {
+      const message = (err as Error).message?.trim();
+      setError(message || t("student.onboarding.checkout.removeError"));
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <OnboardingLayout
@@ -153,34 +135,35 @@ export function OnboardingCheckout() {
             <Show
               when={selectedCourseItems().length > 0}
               fallback={
-                <div class="mt-2 text-muted-foreground">
-                  {t("student.onboarding.checkout.coursesEmpty")}
+                <div class="mt-2 rounded-md border border-warning/40 bg-warning/10 p-3 text-warning-foreground">
+                  <div>{t("student.onboarding.checkout.coursesEmpty")}</div>
+                  <div class="mt-3">
+                    <Button as={A} href="/onboarding/courses" variant="outline">
+                      {t("student.onboarding.checkout.backToCourses")}
+                    </Button>
+                  </div>
                 </div>
               }
             >
               <div class="mt-2 space-y-2">
                 <For each={selectedCourseItems()}>
                   {(course) => (
-                    <div class="flex items-center justify-between rounded-md border border-border/70 bg-card px-3 py-2">
+                    <div class="flex items-center justify-between gap-3 rounded-md border border-border/70 bg-card px-3 py-2">
                       <span>{course.title}</span>
-                      <Show
-                        when={isFirstHundred()}
-                        fallback={
-                          <span class="font-medium">
-                            {formatPrice(course.priceUsdCents)}
-                          </span>
-                        }
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => void removeCourse(course.id)}
+                        disabled={saving()}
                       >
-                        <FreePrice usdCents={course.priceUsdCents} />
-                      </Show>
+                        {t("student.onboarding.checkout.removeCourse")}
+                      </Button>
                     </div>
                   )}
                 </For>
                 <Show when={communitySelected()}>
                   <div class="flex items-center justify-between rounded-md border border-border/70 bg-card px-3 py-2">
-                    <span>
-                      {t("student.onboarding.checkout.communityLabel")}
-                    </span>
+                    <span>{t("student.onboarding.checkout.communityLabel")}</span>
                     <span class="font-medium">
                       {formatCents(communityPriceCents(), preferredCurrency())}
                     </span>
@@ -197,11 +180,16 @@ export function OnboardingCheckout() {
               {formatCents(totalPrice(), preferredCurrency())}
             </span>
           </div>
+          <Show when={error()}>
+            <div class="rounded-md border border-error bg-error/10 p-3 text-sm text-error-foreground">
+              {error()}
+            </div>
+          </Show>
           <div class="flex flex-wrap gap-2">
             <Button as={A} href="/onboarding/courses" variant="outline">
               {t("student.onboarding.profile.back")}
             </Button>
-            <Show when={totalPrice() > 0}>
+            <Show when={totalPrice() > 0 && selectedCourseItems().length > 0}>
               <Button
                 as="a"
                 href={BOOSTY_URL}
@@ -223,7 +211,7 @@ export function OnboardingCheckout() {
               : t("student.onboarding.checkout.afterPaymentManual")}
           </p>
           <p class="text-muted-foreground">
-            {t("student.onboarding.checkout.afterPaymentContactLabel")}{" "}
+            {t("student.onboarding.checkout.afterPaymentContactLabel")} {" "}
             <a
               class="font-medium text-primary underline-offset-4 hover:underline"
               href={SUPPORT_TELEGRAM_URL}

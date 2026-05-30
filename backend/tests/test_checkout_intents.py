@@ -164,8 +164,10 @@ def test_checkout_intent_auto_activates_zero_amount_for_first_hundred_students(
     monkeypatch.setattr(
         checkout,
         "append_courses_to_student_plan",
-        lambda db, uid, course_ids: append_calls.append((uid, course_ids))
-        or {"addedCourseIds": course_ids, "createdSteps": 1},
+        lambda db, uid, course_ids: (
+            append_calls.append((uid, course_ids))
+            or {"addedCourseIds": course_ids, "createdSteps": 1}
+        ),
     )
     app.dependency_overrides[auth_deps.get_current_user] = lambda: {
         **_student("active"),

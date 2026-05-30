@@ -82,7 +82,9 @@ def _build_client(environment: str, project_id: str | None) -> firestore.Client:
     return firestore.Client(**kwargs)
 
 
-def run(environment: str, duration: str, *, project_id: str | None, apply: bool) -> Stats:
+def run(
+    environment: str, duration: str, *, project_id: str | None, apply: bool
+) -> Stats:
     duration_days = get_days_for_duration(duration)
     client = _build_client(environment, project_id)
     query = (
@@ -106,7 +108,11 @@ def run(environment: str, duration: str, *, project_id: str | None, apply: bool)
         current_active_to = user_data.get("activeTo")
         current_updated_at = user_data.get("updatedAt")
         email_raw = user_data.get("email")
-        email = email_raw.strip() if isinstance(email_raw, str) and email_raw.strip() else "<no-email>"
+        email = (
+            email_raw.strip()
+            if isinstance(email_raw, str) and email_raw.strip()
+            else "<no-email>"
+        )
         extension = extend_active_to(
             current_active_to,
             current_updated_at=current_updated_at,
@@ -157,7 +163,9 @@ def run(environment: str, duration: str, *, project_id: str | None, apply: bool)
     print(f"- scanned active students: {stats.scanned}")
     print(f"- planned/updated records: {stats.changed}")
     print(f"- extended from future activeTo: {stats.active_to_future_extended}")
-    print(f"- extended from today (missing/past activeTo): {stats.active_to_missing_or_past}")
+    print(
+        f"- extended from today (missing/past activeTo): {stats.active_to_missing_or_past}"
+    )
     print(f"- invalid activeTo normalized from today: {stats.invalid_active_to}")
     print(f"- mode: {'APPLY' if apply else 'DRY-RUN'}")
     return stats

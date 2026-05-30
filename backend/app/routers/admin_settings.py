@@ -2,7 +2,8 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, Query, status
 from google.cloud import firestore
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator
+from pydantic_core import PydanticCustomError
 
 from app.auth.deps import get_current_user, require_staff
 from app.core.errors import AppError
@@ -23,15 +24,78 @@ class PatchCategoryRequest(BaseModel):
     type: str | None = None
 
 
+class GoalIntakeQuestion(BaseModel):
+    id: str
+    label: str
+    type: str
+    options: list[str] = Field(default_factory=list)
+    required: bool = False
+    order: int = Field(ge=0)
+    isActive: bool = True
+
+    @field_validator("id", "label")
+    @classmethod
+    def _validate_required_text(cls, value: str) -> str:
+        trimmed = value.strip()
+        if not trimmed:
+            raise PydanticCustomError("string_empty", "value must not be empty")
+        if len(trimmed) > 200:
+            raise PydanticCustomError(
+                "string_max_length", "value must be 200 characters or fewer"
+            )
+        return trimmed
+
+    @field_validator("type")
+    @classmethod
+    def _validate_type(cls, value: str) -> str:
+        if value not in {"text", "multi_select"}:
+            raise PydanticCustomError(
+                "invalid_question_type", "type must be text or multi_select"
+            )
+        return value
+
+    @field_validator("options", mode="before")
+    @classmethod
+    def _normalize_options(cls, value: object) -> list[str]:
+        if not isinstance(value, list):
+            return []
+        normalized: list[str] = []
+        seen: set[str] = set()
+        for item in value:
+            if not isinstance(item, str):
+                continue
+            trimmed = item.strip()
+            if not trimmed or trimmed in seen:
+                continue
+            if len(trimmed) > 120:
+                raise PydanticCustomError(
+                    "option_max_length", "options must be 120 characters or fewer"
+                )
+            seen.add(trimmed)
+            normalized.append(trimmed)
+        return normalized
+
+    @field_validator("options")
+    @classmethod
+    def _validate_options(cls, value: list[str]) -> list[str]:
+        if len(value) > 20:
+            raise PydanticCustomError(
+                "options_max_items", "options must contain at most 20 items"
+            )
+        return value
+
+
 class CreateGoalRequest(BaseModel):
     title: str
     description: str | None = None
+    intakeQuestions: list[GoalIntakeQuestion] = Field(default_factory=list)
     isActive: bool = True
 
 
 class PatchGoalRequest(BaseModel):
     title: str | None = None
     description: str | None = None
+    intakeQuestions: list[GoalIntakeQuestion] | None = None
     isActive: bool | None = None
 
 
@@ -51,6 +115,37 @@ class PatchStepTemplateRequest(BaseModel):
     categoryId: str | None = None
     tags: list[str] | None = None
     isActive: bool | None = None
+
+
+def _normalize_goal_intake_questions(
+    value: object, *, staff: bool
+) -> list[dict[str, Any]]:
+    if not isinstance(value, list):
+        return []
+    items: list[dict[str, Any]] = []
+    for item in value:
+        if not isinstance(item, dict):
+            continue
+        try:
+            question = GoalIntakeQuestion.model_validate(item).model_dump()
+        except Exception:
+            continue
+        if not staff and question.get("isActive") is False:
+            continue
+        items.append(question)
+    return sorted(
+        items,
+        key=lambda question: (question.get("order") or 0, question.get("label") or ""),
+    )
+
+
+def _goal_payload(data: dict[str, Any], *, staff: bool) -> dict[str, Any]:
+    payload = dict(data)
+    payload["intakeQuestions"] = _normalize_goal_intake_questions(
+        payload.get("intakeQuestions"),
+        staff=staff,
+    )
+    return payload
 
 
 def _doc_or_404(doc_ref: firestore.DocumentReference) -> dict[str, Any]:
@@ -142,12 +237,15 @@ async def list_goals(
         goal_is_active = data.get("isActive")
         if user.get("role") == "staff":
             expected_is_active = True if is_active is None else is_active
-            if bool(goal_is_active if goal_is_active is not None else True) != expected_is_active:
+            if (
+                bool(goal_is_active if goal_is_active is not None else True)
+                != expected_is_active
+            ):
                 continue
         elif data.get("isActive") is False:
             continue
         data["id"] = snap.id
-        items.append(data)
+        items.append(_goal_payload(data, staff=user.get("role") == "staff"))
         if len(items) >= limit:
             break
     return {"items": items}
@@ -163,13 +261,14 @@ async def create_goal(
     data = {
         "title": payload.title,
         "description": payload.description,
+        "intakeQuestions": [item.model_dump() for item in payload.intakeQuestions],
         "isActive": payload.isActive,
         "createdAt": now,
         "updatedAt": now,
     }
     doc_ref = db.collection("goals").document()
     doc_ref.set(data)
-    return _doc_or_404(doc_ref)
+    return _goal_payload(_doc_or_404(doc_ref), staff=True)
 
 
 @router.patch("/goals/{id}")
@@ -184,7 +283,7 @@ async def update_goal(
     updates = payload.model_dump(exclude_unset=True)
     updates["updatedAt"] = firestore.SERVER_TIMESTAMP
     doc_ref.update(updates)
-    return _doc_or_404(doc_ref)
+    return _goal_payload(_doc_or_404(doc_ref), staff=True)
 
 
 @router.delete("/goals/{id}", status_code=status.HTTP_204_NO_CONTENT)

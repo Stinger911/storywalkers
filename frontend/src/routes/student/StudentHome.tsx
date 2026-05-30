@@ -1,4 +1,4 @@
-import { Show, createEffect, createMemo, createSignal, onCleanup } from 'solid-js'
+import { For, Show, createEffect, createMemo, createSignal, onCleanup } from 'solid-js'
 import { Button } from '../../components/ui/button'
 import { Icon } from '../../components/ui/icon'
 import {
@@ -19,10 +19,24 @@ import { useMyPlan } from './studentPlanContext'
 import { useStudentLayoutRail } from './StudentLayout'
 import { StudentPathVisualization } from './StudentPathVisualization'
 
+const LEGACY_COURSE_ID = "__legacy__"
+
 export function StudentHome(props: { readOnly?: boolean }) {
   const { me } = useMe()
-  const { plan, steps, loading, error, progress, markStepDone, completeStep, openMaterial } = useMyPlan()
+  const {
+    plan,
+    courses,
+    steps,
+    stepsByCourseId,
+    loading,
+    error,
+    progress,
+    markStepDone,
+    completeStep,
+    openMaterial,
+  } = useMyPlan()
   const { t } = useI18n()
+  const [activeCourseId, setActiveCourseId] = createSignal<string | null>(null)
   const [completeDialogOpen, setCompleteDialogOpen] = createSignal(false)
   const [pendingStepId, setPendingStepId] = createSignal<string | null>(null)
   const [doneComment, setDoneComment] = createSignal('')
@@ -34,6 +48,53 @@ export function StudentHome(props: { readOnly?: boolean }) {
     return raw.trim().split(' ')[0] || t('student.home.fallbackName')
   })
   const currentStep = createMemo(() => steps().find((step) => !step.isDone) ?? null)
+  const courseTabs = createMemo(() => {
+    const grouped = stepsByCourseId()
+    const tabs = courses().map((course) => ({
+      id: course.id,
+      title: course.title,
+      description: course.shortDescription ?? null,
+      trialLessonUrl: course.trialLessonUrl ?? null,
+      steps: grouped.get(course.id) ?? [],
+    }))
+    const knownCourseIds = new Set(tabs.map((course) => course.id))
+
+    for (const [courseId, courseSteps] of grouped) {
+      if (knownCourseIds.has(courseId)) continue
+      tabs.push({
+        id: courseId,
+        title: courseId === LEGACY_COURSE_ID ? t('student.home.legacyCourseTitle') : courseId,
+        description: null,
+        trialLessonUrl: null,
+        steps: courseSteps,
+      })
+    }
+
+    return tabs
+  })
+  const defaultCourseId = createMemo(() => {
+    const tabs = courseTabs()
+    if (tabs.length === 0) return null
+    const nextStep = steps().find((step) => !step.isDone)
+    const nextCourseId = nextStep?.courseId?.trim() || (nextStep ? LEGACY_COURSE_ID : null)
+    if (nextCourseId && tabs.some((course) => course.id === nextCourseId)) {
+      return nextCourseId
+    }
+    return tabs[0]?.id ?? null
+  })
+  const activeCourse = createMemo(
+    () => courseTabs().find((course) => course.id === activeCourseId()) ?? null,
+  )
+  const activeCourseSteps = createMemo(() => activeCourse()?.steps ?? [])
+  const activeCourseCurrentStep = createMemo(
+    () => activeCourseSteps().find((step) => !step.isDone) ?? null,
+  )
+  const activeCourseProgress = createMemo(() => {
+    const total = activeCourseSteps().length
+    const done = activeCourseSteps().filter((step) => step.isDone).length
+    const percent = total ? Math.round((done / total) * 100) : 0
+    return { total, done, percent }
+  })
   const ownedCoursesCount = createMemo(
     () => me()?.selectedCourses?.filter((value) => typeof value === "string").length ?? 0,
   )
@@ -60,6 +121,18 @@ export function StudentHome(props: { readOnly?: boolean }) {
       emphasis: true,
     },
   ])
+
+  createEffect(() => {
+    const nextCourseId = defaultCourseId()
+    const currentCourseId = activeCourseId()
+    if (!nextCourseId) {
+      if (currentCourseId !== null) setActiveCourseId(null)
+      return
+    }
+    if (!currentCourseId || !courseTabs().some((course) => course.id === currentCourseId)) {
+      setActiveCourseId(nextCourseId)
+    }
+  })
 
   createEffect(() => {
     if (!setStudentRail) return
@@ -216,45 +289,117 @@ export function StudentHome(props: { readOnly?: boolean }) {
             description={t('student.home.stepsDescription')}
           >
             <Show
-              when={steps().length > 0}
+              when={courseTabs().length > 0}
               fallback={
                 <div class="flex flex-wrap items-center justify-between gap-4 text-sm text-muted-foreground">
-                  <span>{t('student.home.stepsEmpty')}</span>
+                  <span>{t('student.home.coursesEmpty')}</span>
                   <div class="flex items-center gap-3">
-                    <a href="/student/questions" class="text-primary underline">
-                      {t('student.home.stepsAskQuestion')}
-                    </a>
-                    <a href="/student/library" class="text-primary underline">
-                      {t('student.home.stepsBrowseLibrary')}
+                    <a href="/student/courses" class="text-primary underline">
+                      {t('student.home.chooseCourses')}
                     </a>
                   </div>
                 </div>
               }
             >
-              <StudentPathVisualization
-                steps={steps()}
-                initialStepId={currentStep()?.id ?? steps()[0]?.id ?? null}
-                currentStepId={currentStep()?.id ?? null}
-                ariaLabel={t('student.home.pathMapAriaLabel')}
-                openLabel={t('common.open')}
-                markDoneLabel={t('student.home.markDone')}
-                markNotDoneLabel={t('student.home.markNotDone')}
-                lockedLabel={t('student.home.stepLocked')}
-                doneCommentLabel={t('student.home.doneCommentLabel')}
-                doneLinkLabel={t('student.home.doneLinkLabel')}
-                materialLabel={t('student.home.currentStepMaterial')}
-                onOpenMaterial={openMaterial}
-                toggleDisabled={props.readOnly}
-                onToggleStep={(step) => {
-                  if (props.readOnly) return
-                  if (step.isLocked) return
-                  if (step.isDone) {
-                    void markStepDone(step.id, false)
-                    return
-                  }
-                  openCompleteDialog(step.id)
-                }}
-              />
+              <div class="space-y-5">
+                <div class="flex gap-2 overflow-x-auto rounded-[calc(var(--radius-lg)+2px)] border border-border/70 bg-muted/30 p-1">
+                  <For each={courseTabs()}>
+                    {(course) => (
+                      <button
+                        type="button"
+                        class={
+                          activeCourseId() === course.id
+                            ? "whitespace-nowrap rounded-[var(--radius-md)] bg-background px-4 py-2 text-sm font-semibold text-foreground shadow-sm"
+                            : "whitespace-nowrap rounded-[var(--radius-md)] px-4 py-2 text-sm font-semibold text-muted-foreground transition hover:text-foreground"
+                        }
+                        onClick={() => setActiveCourseId(course.id)}
+                      >
+                        {course.title}
+                      </button>
+                    )}
+                  </For>
+                </div>
+
+                <Show when={activeCourse()}>
+                  {(course) => (
+                    <div class="space-y-5">
+                      <div class="rounded-[calc(var(--radius-lg)+2px)] border border-border/70 bg-card p-4">
+                        <div class="flex flex-wrap items-start justify-between gap-4">
+                          <div class="min-w-0 space-y-2">
+                            <div class="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">
+                              {t('student.home.courseTabEyebrow')}
+                            </div>
+                            <h2 class="text-2xl font-bold tracking-[-0.03em] text-foreground">
+                              {course().title}
+                            </h2>
+                            <Show when={course().description}>
+                              <p class="max-w-2xl text-sm leading-6 text-muted-foreground">
+                                {course().description}
+                              </p>
+                            </Show>
+                          </div>
+                          <div class="flex flex-wrap items-center gap-2">
+                            <div class="rounded-full border border-border/70 bg-muted/30 px-3 py-1 text-xs font-semibold text-muted-foreground">
+                              {t('student.home.courseProgress', activeCourseProgress())}
+                            </div>
+                            <Show when={course().trialLessonUrl}>
+                              {(trialLessonUrl) => (
+                                <Button
+                                  as="a"
+                                  href={trialLessonUrl()}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  variant="outline"
+                                  size="sm"
+                                >
+                                  {t('student.home.trialLesson')}
+                                </Button>
+                              )}
+                            </Show>
+                          </div>
+                        </div>
+                      </div>
+
+                      <Show
+                        when={activeCourseSteps().length > 0}
+                        fallback={
+                          <div class="flex flex-wrap items-center justify-between gap-4 rounded-[calc(var(--radius-md)+2px)] border border-border/70 p-4 text-sm text-muted-foreground">
+                            <span>{t('student.home.courseStepsEmpty')}</span>
+                            <a href="/student/questions" class="text-primary underline">
+                              {t('student.home.stepsAskQuestion')}
+                            </a>
+                          </div>
+                        }
+                      >
+                        <StudentPathVisualization
+                          steps={activeCourseSteps()}
+                          initialStepId={activeCourseCurrentStep()?.id ?? activeCourseSteps()[0]?.id ?? null}
+                          currentStepId={activeCourseCurrentStep()?.id ?? null}
+                          ariaLabel={t('student.home.pathMapAriaLabel')}
+                          openLabel={t('common.open')}
+                          markDoneLabel={t('student.home.markDone')}
+                          markNotDoneLabel={t('student.home.markNotDone')}
+                          lockedLabel={t('student.home.stepLocked')}
+                          doneCommentLabel={t('student.home.doneCommentLabel')}
+                          doneLinkLabel={t('student.home.doneLinkLabel')}
+                          materialLabel={t('student.home.currentStepMaterial')}
+                          onOpenMaterial={openMaterial}
+                          toggleDisabled={props.readOnly}
+                          onToggleStep={(step) => {
+                            if (props.readOnly) return
+                            if (step.isLocked) return
+                            if (step.isDone) {
+                              void markStepDone(step.id, false)
+                              return
+                            }
+                            openCompleteDialog(step.id)
+                          }}
+                        />
+                      </Show>
+                    </div>
+                  )}
+                </Show>
+              </div>
             </Show>
           </SectionCard>
 

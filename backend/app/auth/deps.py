@@ -117,6 +117,9 @@ def _build_user_payload(uid: str, decoded: dict, profile: dict | None) -> dict:
         "level": _normalize_level(profile.get("level")),
         "selectedGoalId": _sanitize_optional_text(profile.get("selectedGoalId")),
         "selectedGoalTitle": _sanitize_optional_text(profile.get("selectedGoalTitle")),
+        "goalIntakeAnswers": profile.get("goalIntakeAnswers")
+        if isinstance(profile.get("goalIntakeAnswers"), dict)
+        else None,
         "profileForm": {
             "firstName": _sanitize_optional_text(profile_form.get("firstName")),
             "lastName": _sanitize_optional_text(profile_form.get("lastName")),

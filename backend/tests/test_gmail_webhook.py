@@ -278,7 +278,9 @@ def test_gmail_webhook_direct_payload_logs_processed_event(monkeypatch):
     fake_db = _FakeFirestore()
     monkeypatch.setattr(gmail_webhook, "get_settings", lambda: _Settings())
     monkeypatch.setattr(gmail_webhook, "get_firestore_client", lambda: fake_db)
-    monkeypatch.setattr(gmail_webhook, "activate_by_code", lambda *_args, **_kwargs: True)
+    monkeypatch.setattr(
+        gmail_webhook, "activate_by_code", lambda *_args, **_kwargs: True
+    )
 
     log_calls: list[tuple[str, dict]] = []
 
@@ -318,7 +320,9 @@ def test_gmail_webhook_direct_payload_logs_processed_event(monkeypatch):
     ]
 
 
-def test_gmail_webhook_notifies_when_processed_email_has_no_activation_code(monkeypatch):
+def test_gmail_webhook_notifies_when_processed_email_has_no_activation_code(
+    monkeypatch,
+):
     fake_db = _FakeFirestore()
     monkeypatch.setattr(gmail_webhook, "get_settings", lambda: _Settings())
     monkeypatch.setattr(gmail_webhook, "get_firestore_client", lambda: fake_db)
@@ -456,7 +460,9 @@ def test_gmail_webhook_parses_subscription_without_link_noise(monkeypatch):
     assert "comment:" not in sent_messages[0]
 
 
-def test_gmail_webhook_parses_donation_with_merged_name_email_without_comment(monkeypatch):
+def test_gmail_webhook_parses_donation_with_merged_name_email_without_comment(
+    monkeypatch,
+):
     fake_db = _FakeFirestore()
     fake_db._users["u1"] = {
         "email": "maria16392@gmail.com",

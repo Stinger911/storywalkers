@@ -393,9 +393,7 @@ def test_onboarding_user_can_list_active_lessons(monkeypatch):
     assert response.status_code == 200
     payload = response.json()
     assert [item["id"] for item in payload["items"]] == ["l1"]
-    assert payload["items"][0]["content"] == " ".join(
-        f"word{i}" for i in range(1, 21)
-    )
+    assert payload["items"][0]["content"] == " ".join(f"word{i}" for i in range(1, 21))
     assert payload["items"][0]["materialUrl"] is None
 
     app.dependency_overrides.clear()
@@ -463,9 +461,7 @@ def test_community_only_student_lesson_list_is_redacted(monkeypatch):
 
     assert response.status_code == 200
     payload = response.json()
-    assert payload["items"][0]["content"] == " ".join(
-        f"word{i}" for i in range(1, 21)
-    )
+    assert payload["items"][0]["content"] == " ".join(f"word{i}" for i in range(1, 21))
     assert payload["items"][0]["materialUrl"] is None
 
     app.dependency_overrides.clear()

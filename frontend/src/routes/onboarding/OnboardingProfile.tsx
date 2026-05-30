@@ -157,7 +157,7 @@ export function OnboardingProfile() {
   const next = async () => {
     const ok = await save();
     if (ok) {
-      void navigate("/onboarding/goal");
+      void navigate("/onboarding/courses");
     }
   };
 

@@ -220,9 +220,7 @@ def _student_sort_field(sort_by: str) -> str:
 
 def _student_sort_direction(sort_dir: str) -> str:
     return (
-        firestore.Query.ASCENDING
-        if sort_dir == "asc"
-        else firestore.Query.DESCENDING
+        firestore.Query.ASCENDING if sort_dir == "asc" else firestore.Query.DESCENDING
     )
 
 
@@ -266,7 +264,9 @@ def _encode_student_cursor(
     return base64.urlsafe_b64encode(raw).decode("utf-8")
 
 
-def _decode_student_cursor(cursor: str, *, sort_by: str, sort_dir: str) -> tuple[Any, str]:
+def _decode_student_cursor(
+    cursor: str, *, sort_by: str, sort_dir: str
+) -> tuple[Any, str]:
     try:
         raw = base64.urlsafe_b64decode(cursor.encode("utf-8")).decode("utf-8")
         payload = json.loads(raw)
@@ -461,7 +461,11 @@ async def list_students(
 
         if cursor:
             cursor_index = next(
-                (index for index, item in enumerate(items) if item.get("uid") == cursor),
+                (
+                    index
+                    for index, item in enumerate(items)
+                    if item.get("uid") == cursor
+                ),
                 None,
             )
             if cursor_index is None:
@@ -640,7 +644,9 @@ async def update_student(
     if "telegram" in updates:
         existing_profile_form = current.get("profileForm")
         profile_form = (
-            dict(existing_profile_form) if isinstance(existing_profile_form, dict) else {}
+            dict(existing_profile_form)
+            if isinstance(existing_profile_form, dict)
+            else {}
         )
         profile_form["telegram"] = updates.pop("telegram")
         updates["profileForm"] = profile_form

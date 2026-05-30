@@ -56,17 +56,17 @@ def append_courses_to_student_plan(
     total_count = 0
     max_order = -1
     for step_snap in steps_ref.stream():
-      step_data = step_snap.to_dict() or {}
-      source_course_id = step_data.get("sourceCourseId")
-      source_lesson_id = step_data.get("sourceLessonId")
-      if isinstance(source_course_id, str) and isinstance(source_lesson_id, str):
-          existing_pairs.add((source_course_id, source_lesson_id))
-      total_count += 1
-      if step_data.get("isDone"):
-          done_count += 1
-      order = step_data.get("order")
-      if isinstance(order, int) and order > max_order:
-          max_order = order
+        step_data = step_snap.to_dict() or {}
+        source_course_id = step_data.get("sourceCourseId")
+        source_lesson_id = step_data.get("sourceLessonId")
+        if isinstance(source_course_id, str) and isinstance(source_lesson_id, str):
+            existing_pairs.add((source_course_id, source_lesson_id))
+        total_count += 1
+        if step_data.get("isDone"):
+            done_count += 1
+        order = step_data.get("order")
+        if isinstance(order, int) and order > max_order:
+            max_order = order
 
     if not plan_snap.exists:
         now = firestore.SERVER_TIMESTAMP
@@ -117,6 +117,7 @@ def append_courses_to_student_plan(
                         "order": next_order,
                         "isDone": False,
                         "doneAt": None,
+                        "courseId": course_id,
                         "sourceCourseId": course_id,
                         "sourceLessonId": lesson.id,
                         "createdAt": now,
@@ -139,7 +140,9 @@ def append_courses_to_student_plan(
             "selectedCourses": selected_courses + added_course_ids,
             "stepsDone": done_count,
             "stepsTotal": total_count + created_steps,
-            "progressPercent": _progress_percent(done_count, total_count + created_steps),
+            "progressPercent": _progress_percent(
+                done_count, total_count + created_steps
+            ),
             "updatedAt": firestore.SERVER_TIMESTAMP,
         }
     )

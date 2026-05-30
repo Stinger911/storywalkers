@@ -240,8 +240,10 @@ def test_activate_by_code_transaction_activates_user_and_payment(monkeypatch):
     monkeypatch.setattr(
         payments_service,
         "append_courses_to_student_plan",
-        lambda db, uid, course_ids: append_calls.append((uid, course_ids))
-        or {"addedCourseIds": course_ids, "createdSteps": 2},
+        lambda db, uid, course_ids: (
+            append_calls.append((uid, course_ids))
+            or {"addedCourseIds": course_ids, "createdSteps": 2}
+        ),
     )
     sent_messages: list[str] = []
     monkeypatch.setattr(payments_service, "_notify_admin_async", sent_messages.append)

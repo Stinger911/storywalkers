@@ -142,6 +142,7 @@ async def list_courses(
             "description": course.description,
             "goalIds": course.goalIds,
             "priceUsdCents": course.priceUsdCents,
+            "trialLessonUrl": course.trialLessonUrl,
             "currencyBase": "USD",
         }
         for course in courses

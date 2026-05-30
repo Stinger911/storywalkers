@@ -687,3 +687,49 @@ def test_patch_me_validates_onboarding_fields(monkeypatch):
         assert response.status_code == 400
 
     app.dependency_overrides.clear()
+
+
+def test_patch_me_saves_goal_intake_answers(monkeypatch):
+    users = {"u1": {"displayName": "User One", "email": "u1@example.com"}}
+    fake_db = FakeFirestore(users)
+    monkeypatch.setattr(auth, "get_firestore_client", lambda: fake_db)
+    app.dependency_overrides[auth_deps.get_current_user] = _override_user
+    client = TestClient(app)
+
+    response = client.patch(
+        "/api/me",
+        json={
+            "goalIntakeAnswers": {
+                "goalId": "goal-1",
+                "answers": [
+                    {
+                        "questionId": "background",
+                        "type": "text",
+                        "value": "  Beginner  ",
+                    },
+                    {
+                        "questionId": "interests",
+                        "type": "multi_select",
+                        "value": ["Editing", "", "Editing", "Writing"],
+                    },
+                ],
+            }
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["goalIntakeAnswers"] == {
+        "goalId": "goal-1",
+        "answers": [
+            {"questionId": "background", "type": "text", "value": "Beginner"},
+            {
+                "questionId": "interests",
+                "type": "multi_select",
+                "value": ["Editing", "Writing"],
+            },
+        ],
+    }
+    assert users["u1"]["goalIntakeAnswers"] == payload["goalIntakeAnswers"]
+
+    app.dependency_overrides.clear()

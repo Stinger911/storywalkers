@@ -35,9 +35,7 @@ _BOOSTY_AMOUNT_INLINE_RE = re.compile(
     r"[+＋]?\s*\d[\d\s.,]*\s*(?:₽|RUB|USD|EUR|€|\$)(?:\s+в\s+месяц)?",
     re.IGNORECASE,
 )
-_EMAIL_RE = re.compile(
-    r"([A-Za-z0-9][A-Za-z0-9._%+-]*@[A-Za-z0-9.-]+\.[A-Za-z]{2,})"
-)
+_EMAIL_RE = re.compile(r"([A-Za-z0-9][A-Za-z0-9._%+-]*@[A-Za-z0-9.-]+\.[A-Za-z]{2,})")
 _BOOSTY_NOISE_LINES = {
     "boosty.",
     "написать сообщение",
@@ -347,7 +345,9 @@ def _parse_subscription_event(message: dict[str, Any]) -> _BoostyEmailEvent | No
         if tier_index >= 0 and tier_index + 1 < len(relevant_lines)
         else None
     )
-    amount = next((line for line in relevant_lines if _is_boosty_amount_line(line)), None)
+    amount = next(
+        (line for line in relevant_lines if _is_boosty_amount_line(line)), None
+    )
     return _BoostyEmailEvent(
         event_type="subscription",
         boosty_name=boosty_name or None,
@@ -392,7 +392,9 @@ def _parse_donation_event(message: dict[str, Any]) -> _BoostyEmailEvent | None:
             suffix_amount = _extract_amount(suffix_text)
             if suffix_amount:
                 amount = suffix_amount
-                suffix_text = _BOOSTY_AMOUNT_INLINE_RE.sub("", suffix_text, count=1).strip()
+                suffix_text = _BOOSTY_AMOUNT_INLINE_RE.sub(
+                    "", suffix_text, count=1
+                ).strip()
             if suffix_text:
                 comment_parts.append(suffix_text)
             continue
@@ -609,7 +611,10 @@ def _notify_admin_async(text: str) -> None:
         except Exception:
             logger.warning(
                 "gmail_webhook_telegram_notify_failed",
-                extra={"event": "gmail_webhook_telegram_notify_failed", "text": text[:200]},
+                extra={
+                    "event": "gmail_webhook_telegram_notify_failed",
+                    "text": text[:200],
+                },
                 exc_info=True,
             )
         return
@@ -620,7 +625,10 @@ def _notify_admin_async(text: str) -> None:
         except Exception:
             logger.warning(
                 "gmail_webhook_telegram_notify_failed",
-                extra={"event": "gmail_webhook_telegram_notify_failed", "text": text[:200]},
+                extra={
+                    "event": "gmail_webhook_telegram_notify_failed",
+                    "text": text[:200],
+                },
                 exc_info=True,
             )
 

@@ -88,3 +88,13 @@ def test_lesson_model_normalizes_material_url_without_scheme():
         materialUrl="drive.google.com/file/d/123",
     )
     assert payload.materialUrl == "https://drive.google.com/file/d/123"
+
+
+def test_course_model_normalizes_trial_lesson_url_without_scheme():
+    payload = CourseCreate(
+        title="Course A",
+        goalIds=["goal-1"],
+        priceUsdCents=1000,
+        trialLessonUrl="example.com/trial",
+    )
+    assert payload.trialLessonUrl == "https://example.com/trial"

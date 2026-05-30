@@ -30,6 +30,7 @@ def _course_payload(course) -> dict:
         "description": course.description,
         "goalIds": course.goalIds,
         "priceUsdCents": course.priceUsdCents,
+        "trialLessonUrl": course.trialLessonUrl,
         "isActive": course.isActive,
         "createdAt": course.createdAt,
         "updatedAt": course.updatedAt,

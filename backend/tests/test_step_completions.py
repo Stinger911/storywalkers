@@ -94,9 +94,9 @@ class FakeQuery:
 
         for field, desc in reversed(self._order_fields):
             docs.sort(
-                key=lambda s: s.id
-                if field == "__name__"
-                else (s.to_dict() or {}).get(field),
+                key=lambda s: (
+                    s.id if field == "__name__" else (s.to_dict() or {}).get(field)
+                ),
                 reverse=desc,
             )
 
@@ -169,13 +169,20 @@ class FakeTransaction:
 
 class FakeFirestore:
     def __init__(
-        self, plans=None, steps=None, goals=None, completions=None, users=None
+        self,
+        plans=None,
+        steps=None,
+        goals=None,
+        completions=None,
+        users=None,
+        courses=None,
     ):
         self._plans = plans or {}
         self._steps = steps or {}
         self._goals = goals or {}
         self._completions = completions or {}
         self._users = users or {}
+        self._courses = courses or {}
 
     def collection(self, name):
         if name == "student_plans":
@@ -189,6 +196,8 @@ class FakeFirestore:
             return FakeCollection(self._completions)
         if name == "users":
             return FakeCollection(self._users)
+        if name == "courses":
+            return FakeCollection(self._courses)
         raise ValueError(f"unsupported collection {name}")
 
     def batch(self):
@@ -317,6 +326,82 @@ def test_student_complete_step_writes_step_and_feed(monkeypatch):
     assert "comment: Done" in telegram_messages[0]
     assert "uid:" not in telegram_messages[0]
     assert "step_id:" not in telegram_messages[0]
+
+    app.dependency_overrides.clear()
+
+
+def test_student_dashboard_returns_course_tabs_payload(monkeypatch):
+    fake_db = FakeFirestore(
+        plans={"u1": {"goalId": "g1", "createdAt": "c", "updatedAt": "u"}},
+        steps={
+            "u1": {
+                "s1": {
+                    "title": "Course One Step",
+                    "description": "Do lesson one",
+                    "materialUrl": "https://example.com/lesson-1",
+                    "order": 0,
+                    "isDone": False,
+                    "sourceCourseId": "course-1",
+                },
+                "s2": {
+                    "title": "Course Two Step",
+                    "description": "Do lesson two",
+                    "materialUrl": "https://example.com/lesson-2",
+                    "order": 1,
+                    "isDone": True,
+                    "courseId": "course-2",
+                },
+            }
+        },
+        goals={"g1": {"title": "Goal One", "description": "Goal description"}},
+        users={"u1": {"selectedCourses": ["course-1", "course-2"]}},
+        courses={
+            "course-1": {
+                "title": "Course One",
+                "description": "First course",
+                "goalIds": [],
+                "priceUsdCents": 0,
+                "trialLessonUrl": "https://example.com/trial-1",
+                "isActive": True,
+            },
+            "course-2": {
+                "title": "Course Two",
+                "description": "Second course",
+                "goalIds": [],
+                "priceUsdCents": 0,
+                "trialLessonUrl": None,
+                "isActive": True,
+            },
+        },
+    )
+    monkeypatch.setattr(auth, "get_firestore_client", lambda: fake_db)
+    app.dependency_overrides[get_current_user] = _override_student
+    client = TestClient(app)
+
+    response = client.get("/api/me/dashboard")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["courses"]["items"] == [
+        {
+            "id": "course-1",
+            "title": "Course One",
+            "shortDescription": "First course",
+            "trialLessonUrl": "https://example.com/trial-1",
+            "isActive": True,
+        },
+        {
+            "id": "course-2",
+            "title": "Course Two",
+            "shortDescription": "Second course",
+            "trialLessonUrl": None,
+            "isActive": True,
+        },
+    ]
+    assert [step["courseId"] for step in payload["steps"]["items"]] == [
+        "course-1",
+        "course-2",
+    ]
 
     app.dependency_overrides.clear()
 

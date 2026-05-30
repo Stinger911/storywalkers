@@ -188,7 +188,9 @@ async def create_checkout_intent(
 
     existing_courses = set(_normalize_selected_courses(user.get("selectedCourses")))
     already_owned = [
-        course_id for course_id in payload.selectedCourses if course_id in existing_courses
+        course_id
+        for course_id in payload.selectedCourses
+        if course_id in existing_courses
     ]
     if already_owned:
         raise AppError(
@@ -262,7 +264,9 @@ async def create_checkout_intent(
         )
 
     logger.info(
-        "checkout_intent_auto_activated" if should_auto_activate else "checkout_intent_created",
+        "checkout_intent_auto_activated"
+        if should_auto_activate
+        else "checkout_intent_created",
         extra={
             "event": "checkout_intent_auto_activated"
             if should_auto_activate
@@ -280,6 +284,8 @@ async def create_checkout_intent(
         currency=currency,
         activationCode=activation_code,
         instructionsText=(
-            _FREE_PAYMENT_INSTRUCTIONS if should_auto_activate else _PAYMENT_INSTRUCTIONS
+            _FREE_PAYMENT_INSTRUCTIONS
+            if should_auto_activate
+            else _PAYMENT_INSTRUCTIONS
         ),
     )

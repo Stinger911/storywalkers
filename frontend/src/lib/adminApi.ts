@@ -9,10 +9,21 @@ type Category = {
   type: string
 }
 
+export type GoalIntakeQuestion = {
+  id: string
+  label: string
+  type: 'text' | 'multi_select'
+  options?: string[]
+  required?: boolean
+  order: number
+  isActive: boolean
+}
+
 export type Goal = {
   id: string
   title: string
   description?: string | null
+  intakeQuestions?: GoalIntakeQuestion[]
 }
 
 export type AdminCourse = {
@@ -21,6 +32,7 @@ export type AdminCourse = {
   description?: string | null
   goalIds: string[]
   priceUsdCents: number
+  trialLessonUrl?: string | null
   isActive: boolean
   createdAt?: unknown
   updatedAt?: unknown
@@ -246,6 +258,7 @@ export async function createAdminCourse(payload: {
   description?: string | null
   goalIds: string[]
   priceUsdCents: number
+  trialLessonUrl?: string | null
   isActive?: boolean
 }) {
   const response = await apiFetch('/api/admin/courses', {
@@ -262,6 +275,7 @@ export async function patchAdminCourse(
     description?: string | null
     goalIds?: string[]
     priceUsdCents?: number
+    trialLessonUrl?: string | null
     isActive?: boolean
   },
 ) {

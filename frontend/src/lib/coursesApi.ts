@@ -5,6 +5,7 @@ export type Course = {
   title: string;
   shortDescription: string;
   priceUsdCents: number;
+  trialLessonUrl: string | null;
   isActive: boolean;
   goalIds: string[];
   lessonCount?: number;
@@ -31,6 +32,7 @@ type RawCourse = {
   description?: unknown;
   priceUsdCents?: unknown;
   price?: unknown;
+  trialLessonUrl?: unknown;
   isActive?: unknown;
   goalIds?: unknown;
   lessonCount?: unknown;
@@ -85,6 +87,10 @@ function normalizeCourse(raw: RawCourse): Course | null {
     title,
     shortDescription,
     priceUsdCents: Number.isFinite(cents) ? Math.max(0, Math.round(cents)) : 0,
+    trialLessonUrl:
+      typeof raw.trialLessonUrl === "string" && raw.trialLessonUrl.trim()
+        ? raw.trialLessonUrl.trim()
+        : null,
     isActive: raw.isActive !== false,
     goalIds,
     lessonCount:

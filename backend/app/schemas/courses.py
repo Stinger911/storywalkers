@@ -62,6 +62,7 @@ class CourseBase(BaseModel):
     description: str | None = None
     goalIds: list[str] = Field(default_factory=list)
     priceUsdCents: StrictInt = Field(ge=0)
+    trialLessonUrl: str | None = None
     isActive: bool = True
 
     @field_validator("title")
@@ -79,6 +80,11 @@ class CourseBase(BaseModel):
     def _validate_goal_ids(cls, value: list[str]) -> list[str]:
         return _unique_preserve_order(value)
 
+    @field_validator("trialLessonUrl")
+    @classmethod
+    def _validate_trial_lesson_url(cls, value: str | None) -> str | None:
+        return _validate_optional_url(value)
+
 
 class CourseCreate(CourseBase):
     pass
@@ -89,6 +95,7 @@ class CourseUpdate(BaseModel):
     description: str | None = None
     goalIds: list[str] | None = None
     priceUsdCents: StrictInt | None = Field(default=None, ge=0)
+    trialLessonUrl: str | None = None
     isActive: bool | None = None
 
     model_config = {"extra": "forbid"}
@@ -111,6 +118,11 @@ class CourseUpdate(BaseModel):
         if value is None:
             return None
         return _unique_preserve_order(value)
+
+    @field_validator("trialLessonUrl")
+    @classmethod
+    def _validate_trial_lesson_url(cls, value: str | None) -> str | None:
+        return _validate_optional_url(value)
 
 
 class Course(CourseBase):

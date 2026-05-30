@@ -35,6 +35,7 @@ type CourseForm = {
   title: string;
   description: string;
   priceUsd: string;
+  trialLessonUrl: string;
   goalIds: string[];
   isActive: boolean;
 };
@@ -64,6 +65,7 @@ export function AdminCourses() {
     title: "",
     description: "",
     priceUsd: "0.00",
+    trialLessonUrl: "",
     goalIds: [],
     isActive: true,
   });
@@ -114,6 +116,7 @@ export function AdminCourses() {
       title: "",
       description: "",
       priceUsd: "0.00",
+      trialLessonUrl: "",
       goalIds: [],
       isActive: true,
     });
@@ -125,6 +128,7 @@ export function AdminCourses() {
       title: item.title,
       description: item.description ?? "",
       priceUsd: centsToDollars(item.priceUsdCents),
+      trialLessonUrl: item.trialLessonUrl ?? "",
       goalIds: item.goalIds,
       isActive: item.isActive,
     });
@@ -157,6 +161,7 @@ export function AdminCourses() {
           description: payload.description.trim() || null,
           goalIds: payload.goalIds,
           priceUsdCents,
+          trialLessonUrl: payload.trialLessonUrl.trim() || null,
           isActive: payload.isActive,
         });
         showToast({ title: "Course updated", variant: "success" });
@@ -166,6 +171,7 @@ export function AdminCourses() {
           description: payload.description.trim() || null,
           goalIds: payload.goalIds,
           priceUsdCents,
+          trialLessonUrl: payload.trialLessonUrl.trim() || null,
           isActive: payload.isActive,
         });
         showToast({ title: "Course created", variant: "success" });
@@ -310,6 +316,11 @@ export function AdminCourses() {
                               ? item.goalIds.map((goalId) => goalName(goalId)).join(", ")
                               : "none"}
                           </div>
+                          <Show when={item.trialLessonUrl}>
+                            <div class="mt-1 text-xs text-muted-foreground">
+                              Trial: {item.trialLessonUrl}
+                            </div>
+                          </Show>
                         </div>
                         <div class="flex flex-wrap gap-2">
                           <Button
@@ -385,6 +396,17 @@ export function AdminCourses() {
                 step="0.01"
                 value={form().priceUsd}
                 onInput={(e) => setForm({ ...form(), priceUsd: e.currentTarget.value })}
+              />
+            </TextField>
+
+            <TextField>
+              <TextFieldLabel for="course-trial-url">Trial lesson URL</TextFieldLabel>
+              <TextFieldInput
+                id="course-trial-url"
+                type="url"
+                value={form().trialLessonUrl}
+                onInput={(e) => setForm({ ...form(), trialLessonUrl: e.currentTarget.value })}
+                placeholder="https://example.com/trial"
               />
             </TextField>
 

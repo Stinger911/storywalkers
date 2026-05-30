@@ -16,6 +16,17 @@ import {
 import { apiFetch, setUnauthorizedHandler } from './api'
 import { auth } from './firebase'
 
+export type GoalIntakeAnswer = {
+  questionId: string
+  type: 'text' | 'multi_select'
+  value: string | string[]
+}
+
+export type GoalIntakeAnswers = {
+  goalId: string
+  answers: GoalIntakeAnswer[]
+}
+
 export type MeProfile = {
   uid: string
   email: string
@@ -26,6 +37,7 @@ export type MeProfile = {
   level?: number
   selectedGoalId?: string | null
   selectedGoalTitle?: string | null
+  goalIntakeAnswers?: GoalIntakeAnswers | null
   profileForm?: {
     firstName?: string | null
     lastName?: string | null
@@ -47,6 +59,7 @@ export type PatchMePayload = {
   displayName?: string
   selectedGoalId?: string | null
   selectedGoalTitle?: string | null
+  goalIntakeAnswers?: GoalIntakeAnswers | null
   profileForm?: {
     firstName?: string | null
     lastName?: string | null

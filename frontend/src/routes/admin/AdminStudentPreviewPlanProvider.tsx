@@ -45,6 +45,7 @@ export function AdminStudentPreviewPlanProvider(props: {
           .sort((a, b) => a.order - b.order)
           .map((step: ApiPlanStep) => ({
             id: step.stepId,
+            courseId: step.courseId ?? null,
             title: step.title,
             description: step.description,
             materialUrl: step.materialUrl,
@@ -77,6 +78,19 @@ export function AdminStudentPreviewPlanProvider(props: {
     return { total, done, percent };
   });
 
+  const courses = () => [];
+
+  const stepsByCourseId = createMemo(() => {
+    const grouped = new Map<string, StudentPathStep[]>();
+    for (const step of steps()) {
+      const courseId = step.courseId?.trim() || "__legacy__";
+      const current = grouped.get(courseId) ?? [];
+      current.push(step);
+      grouped.set(courseId, current);
+    }
+    return grouped;
+  });
+
   const openMaterial = (url?: string | null) => {
     if (!url) return;
     window.open(url, "_blank", "noopener,noreferrer");
@@ -85,7 +99,9 @@ export function AdminStudentPreviewPlanProvider(props: {
   const value: StudentPlanState = {
     plan,
     goal,
+    courses,
     steps,
+    stepsByCourseId,
     loading,
     error,
     progress,

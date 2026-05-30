@@ -50,7 +50,9 @@ def _parse_active_to(value: object) -> tuple[date | None, bool]:
     if isinstance(value, date) and not isinstance(value, datetime):
         return value, False
     if isinstance(value, datetime):
-        aware = value if value.tzinfo is not None else value.replace(tzinfo=timezone.utc)
+        aware = (
+            value if value.tzinfo is not None else value.replace(tzinfo=timezone.utc)
+        )
         return aware.astimezone(timezone.utc).date(), False
     if isinstance(value, str):
         trimmed = value.strip()

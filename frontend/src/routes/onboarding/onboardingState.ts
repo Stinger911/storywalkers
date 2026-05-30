@@ -3,8 +3,8 @@ import type { MeProfile } from "../../lib/auth";
 export type OnboardingStep = "profile" | "goal" | "courses" | "checkout";
 
 export const ONBOARDING_STEPS: OnboardingStep[] = [
-  "profile",
   "goal",
+  "profile",
   "courses",
   "checkout",
 ];
@@ -61,8 +61,8 @@ export function isProfileComplete(me: MeProfile): boolean {
 }
 
 export function getNextOnboardingStep(me: MeProfile): OnboardingStep {
-  if (!isProfileComplete(me)) return "profile";
   if (!me.selectedGoalId) return "goal";
+  if (!isProfileComplete(me)) return "profile";
   if (!me.selectedCourses || me.selectedCourses.length === 0) {
     return me.subscriptionSelected === true ? "checkout" : "courses";
   }

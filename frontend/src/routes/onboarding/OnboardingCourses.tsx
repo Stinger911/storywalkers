@@ -5,146 +5,78 @@ import { Button, buttonVariants } from "../../components/ui/button";
 import { Icon } from "../../components/ui/icon";
 import { SectionCard } from "../../components/ui/section-card";
 import { SmallStatBadge } from "../../components/ui/small-stat-badge";
-import {
-  Select,
-  SelectContent,
-  SelectHiddenSelect,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from "../../components/ui/select";
 import { Skeleton } from "../../components/ui/skeleton";
 import { useAuth } from "../../lib/auth";
 import {
-  convertRubCentsToCurrencyCents,
-  convertUsdCentsToCurrencyCents,
-  formatCents,
   listCourseLessons,
   listCourses,
   type CourseLesson,
   type Course,
 } from "../../lib/coursesApi";
-import { getFxRates } from "../../lib/fxApi";
+import { listGoals, type Goal } from "../../lib/adminApi";
 import { useI18n } from "../../lib/i18n";
 import { OnboardingLayout } from "./OnboardingLayout";
-import {
-  writeCachedOnboardingGoal,
-} from "./onboardingState";
+import { writeCachedOnboardingGoal } from "./onboardingState";
 
-const COMMUNITY_CARD = {
-  id: "community",
-  titleKey: "student.onboarding.courses.communityTitle",
-  descKey: "student.onboarding.courses.communityDescription",
-  priceRubCents: 200000,
-} as const;
+type PathTab = "courses" | "path";
 
-type CurrencyOption = {
-  value: "USD" | "EUR" | "PLN" | "RUB";
-  label: string;
-};
-
-const CURRENCY_OPTIONS: CurrencyOption[] = [
-  { value: "USD", label: "USD" },
-  { value: "EUR", label: "EUR" },
-  { value: "PLN", label: "PLN" },
-  { value: "RUB", label: "RUB" },
-];
+function answerToText(value: string | string[]) {
+  return Array.isArray(value) ? value.join(", ") : value;
+}
 
 export function OnboardingCourses() {
   const auth = useAuth();
   const { t } = useI18n();
   const navigate = useNavigate();
-  const isFirstHundred = createMemo(() => auth.me()?.isFirstHundred === true);
 
   const [loading, setLoading] = createSignal(true);
   const [loadError, setLoadError] = createSignal<string | null>(null);
   const [courses, setCourses] = createSignal<Course[]>([]);
+  const [goals, setGoals] = createSignal<Goal[]>([]);
+  const [activeTab, setActiveTab] = createSignal<PathTab>("courses");
   const [expandedCourseId, setExpandedCourseId] = createSignal<string | null>(null);
   const [lessonsByCourse, setLessonsByCourse] = createSignal<Record<string, CourseLesson[]>>({});
   const [lessonLoadingByCourse, setLessonLoadingByCourse] = createSignal<Record<string, boolean>>({});
   const [lessonErrorByCourse, setLessonErrorByCourse] = createSignal<Record<string, string | null>>({});
-  const [fxRates, setFxRates] = createSignal<Record<string, number>>({ USD: 1 });
-  const initialPreferredCurrency = (): CurrencyOption["value"] => {
-    const current = auth.me()?.preferredCurrency;
-    if (current === "EUR" || current === "PLN" || current === "RUB") {
-      return current;
-    }
-    return "USD";
-  };
-  const [preferredCurrency, setPreferredCurrency] =
-    createSignal<CurrencyOption["value"]>(initialPreferredCurrency());
   const selectedGoalId = createMemo(() => auth.me()?.selectedGoalId || null);
 
   const [saving, setSaving] = createSignal(false);
-  const [currencySaving, setCurrencySaving] = createSignal(false);
   const [saveError, setSaveError] = createSignal<string | null>(null);
-  const [currencyError, setCurrencyError] = createSignal<string | null>(null);
-
   const [selectedCourses, setSelectedCourses] = createSignal<string[]>(
     auth.me()?.selectedCourses || [],
   );
-  const communitySelected = () => true;
 
-  const hasPreferredRate = createMemo(() => {
-    const next = fxRates()[preferredCurrency()];
-    return typeof next === "number" && next > 0;
-  });
-  const displayCurrency = createMemo<CurrencyOption["value"]>(() =>
-    hasPreferredRate() ? preferredCurrency() : "USD",
-  );
-  const currencyRate = createMemo(() =>
-    displayCurrency() === "USD" ? 1 : (fxRates()[displayCurrency()] as number),
-  );
-
-  const formatPrice = (usdCents: number) =>
-    formatCents(
-      convertUsdCentsToCurrencyCents(usdCents, currencyRate()),
-      displayCurrency(),
-    );
-
-  const communityPriceCents = createMemo(() =>
-    convertRubCentsToCurrencyCents(
-      COMMUNITY_CARD.priceRubCents,
-      fxRates(),
-      displayCurrency(),
-    ),
-  );
-
-  const totalPriceCents = createMemo(() => {
-    const selected = new Set(selectedCourses());
-    const coursesTotalUsdCents = courses()
-      .filter((course) => course.isActive)
-      .filter((course) => selected.has(course.id))
-      .reduce((sum, course) => sum + course.priceUsdCents, 0);
-    const communityCents = communitySelected() ? communityPriceCents() : 0;
-    return convertUsdCentsToCurrencyCents(
-      isFirstHundred() ? 0 : coursesTotalUsdCents,
-      currencyRate(),
-    ) + communityCents;
-  });
-
-  const FreePrice = (props: { usdCents: number }) => (
-    <span class="inline-flex items-center gap-2">
-      <span class="text-muted-foreground line-through">
-        {formatPrice(props.usdCents)}
-      </span>
-      <span>{formatCents(0, displayCurrency())}</span>
-    </span>
+  const selectedGoal = createMemo(() =>
+    goals().find((goal) => goal.id === selectedGoalId()) || null,
   );
 
   const activeCourses = createMemo(() => courses().filter((course) => course.isActive));
-  const inactiveCourses = createMemo(() =>
-    courses().filter((course) => !course.isActive),
-  );
   const selectedActiveCourseIds = createMemo(() => {
     const activeIds = new Set(activeCourses().map((course) => course.id));
     return selectedCourses().filter((id) => activeIds.has(id));
   });
+  const selectedCourseItems = createMemo(() => {
+    const selected = new Set(selectedActiveCourseIds());
+    return activeCourses().filter((course) => selected.has(course.id));
+  });
+
+  const answerSummary = createMemo(() => {
+    const stored = auth.me()?.goalIntakeAnswers;
+    const goal = selectedGoal();
+    if (!stored || stored.goalId !== selectedGoalId()) return [];
+    return stored.answers
+      .map((answer) => {
+        const question = goal?.intakeQuestions?.find((item) => item.id === answer.questionId);
+        return {
+          label: question?.label || answer.questionId,
+          value: answerToText(answer.value),
+        };
+      })
+      .filter((item) => item.value.trim().length > 0);
+  });
 
   const toggleCourse = (courseId: string, isActive: boolean) => {
-    if (saving() || currencySaving()) return;
-    if (!isActive) return;
+    if (saving() || !isActive) return;
     setSelectedCourses((prev) =>
       prev.includes(courseId)
         ? prev.filter((id) => id !== courseId)
@@ -158,6 +90,12 @@ export function OnboardingCourses() {
 
   const setLessonsError = (courseId: string, value: string | null) => {
     setLessonErrorByCourse((current) => ({ ...current, [courseId]: value }));
+  };
+
+  const formatError = (err: unknown, fallback: string) => {
+    const message = (err as Error).message?.trim();
+    if (!message || message.toLowerCase() === "request failed") return fallback;
+    return `${fallback} ${message}`;
   };
 
   const loadLessons = async (courseId: string) => {
@@ -183,22 +121,16 @@ export function OnboardingCourses() {
     void loadLessons(courseId);
   };
 
-  const formatError = (err: unknown, fallback: string) => {
-    const message = (err as Error).message?.trim();
-    if (!message || message.toLowerCase() === "request failed") return fallback;
-    return `${fallback} ${message}`;
-  };
-
   const load = async (options?: { force?: boolean }) => {
     setLoading(true);
     setLoadError(null);
     try {
-      const [courseResponse, fxResponse] = await Promise.all([
+      const [courseResponse, goalResponse] = await Promise.all([
         listCourses({ ...options, goalId: selectedGoalId() }),
-        getFxRates(options),
+        listGoals(),
       ]);
       setCourses(courseResponse.items);
-      setFxRates(fxResponse.rates || { USD: 1 });
+      setGoals(goalResponse.items);
     } catch (err) {
       setLoadError(formatError(err, t("student.onboarding.courses.loadError")));
     } finally {
@@ -226,6 +158,10 @@ export function OnboardingCourses() {
       setSaveError(t("student.onboarding.courses.goalMissing"));
       return false;
     }
+    if (selectedActiveCourseIds().length === 0) {
+      setSaveError(t("student.onboarding.courses.selectAtLeastOne"));
+      return false;
+    }
     setSaving(true);
     setSaveError(null);
     try {
@@ -242,29 +178,9 @@ export function OnboardingCourses() {
     }
   };
 
-  const updatePreferredCurrency = async (nextCurrency: CurrencyOption["value"]) => {
-    if (nextCurrency === preferredCurrency()) return;
-    const previous = preferredCurrency();
-    setPreferredCurrency(nextCurrency);
-    setCurrencySaving(true);
-    setCurrencyError(null);
-    try {
-      await auth.patchMe({ preferredCurrency: nextCurrency });
-    } catch (err) {
-      setPreferredCurrency(previous);
-      setCurrencyError(
-        formatError(err, t("student.onboarding.courses.currencySaveError")),
-      );
-    } finally {
-      setCurrencySaving(false);
-    }
-  };
-
   const next = async () => {
     const ok = await save();
-    if (ok) {
-      void navigate("/onboarding/checkout");
-    }
+    if (ok) void navigate("/onboarding/checkout");
   };
 
   const CourseRow = (props: { course: Course; disabled?: boolean }) => {
@@ -287,10 +203,10 @@ export function OnboardingCourses() {
             type="button"
             class="flex min-w-0 flex-1 items-start gap-4 text-left"
             onClick={() => toggleCourse(props.course.id, props.course.isActive)}
-            disabled={saving() || currencySaving() || props.disabled}
+            disabled={saving() || props.disabled}
           >
             <span
-              class={`mt-0.5 inline-flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full border ${
+              class={`mt-0.5 inline-flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-md border ${
                 selected()
                   ? "border-primary bg-primary text-primary-foreground"
                   : "border-border bg-background text-transparent"
@@ -322,15 +238,18 @@ export function OnboardingCourses() {
             </div>
           </button>
 
-          <div class="flex flex-col items-start gap-3 lg:items-end">
-            <div class="text-lg font-semibold text-foreground">
-              <Show
-                when={isFirstHundred()}
-                fallback={formatPrice(props.course.priceUsdCents)}
+          <div class="flex flex-wrap items-center gap-2 lg:justify-end">
+            <Show when={props.course.trialLessonUrl}>
+              <a
+                class={buttonVariants({ variant: "outline", size: "sm" })}
+                href={props.course.trialLessonUrl || undefined}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(event) => event.stopPropagation()}
               >
-                <FreePrice usdCents={props.course.priceUsdCents} />
-              </Show>
-            </div>
+                {t("student.onboarding.courses.trialLesson")}
+              </a>
+            </Show>
             <button
               type="button"
               class={buttonVariants({ variant: "outline", size: "sm" })}
@@ -398,44 +317,43 @@ export function OnboardingCourses() {
         title={t("student.onboarding.courses.cardTitle")}
         description={t("student.onboarding.courses.cardDescription")}
       >
-        <div class="space-y-4">
-          <div class="max-w-[220px]">
-            <Select
-              value={CURRENCY_OPTIONS.find((item) => item.value === preferredCurrency())}
-              onChange={(value) => {
-                const raw = value?.value;
-                if (
-                  raw === "USD" ||
-                  raw === "EUR" ||
-                  raw === "PLN" ||
-                  raw === "RUB"
-                ) {
-                  void updatePreferredCurrency(raw);
-                }
-              }}
-              options={CURRENCY_OPTIONS}
-              optionValue={(option) => (option as CurrencyOption).value}
-              optionTextValue={(option) => (option as CurrencyOption).label}
-              itemComponent={(props) => (
-                <SelectItem item={props.item}>
-                  {(props.item.rawValue as CurrencyOption).label}
-                </SelectItem>
-              )}
-              disabled={currencySaving() || saving()}
+        <div class="space-y-5">
+          <div class="rounded-xl border border-border/70 bg-muted/30 p-4">
+            <div class="text-sm text-muted-foreground">
+              {t("student.onboarding.courses.goalSummaryTitle")}
+            </div>
+            <div class="mt-1 text-lg font-semibold text-foreground">
+              {selectedGoal()?.title || auth.me()?.selectedGoalTitle || selectedGoalId() || t("student.onboarding.checkout.goalEmpty")}
+            </div>
+            <Show when={answerSummary().length > 0}>
+              <div class="mt-3 grid gap-2 text-sm">
+                <For each={answerSummary()}>
+                  {(item) => (
+                    <div class="rounded-md border border-border/70 bg-card px-3 py-2">
+                      <span class="text-muted-foreground">{item.label}: </span>
+                      <span>{item.value}</span>
+                    </div>
+                  )}
+                </For>
+              </div>
+            </Show>
+          </div>
+
+          <div class="inline-flex rounded-full border border-border/70 bg-muted/30 p-1 text-sm">
+            <button
+              type="button"
+              class={`rounded-full px-4 py-2 ${activeTab() === "courses" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
+              onClick={() => setActiveTab("courses")}
             >
-              <SelectLabel for="onboarding-currency">
-                {t("student.onboarding.courses.currencyLabel")}
-              </SelectLabel>
-              <SelectHiddenSelect id="onboarding-currency" />
-              <SelectTrigger aria-label={t("student.onboarding.courses.currencyLabel")}>
-                <SelectValue<CurrencyOption>>
-                  {(state) =>
-                    (state?.selectedOption() as CurrencyOption | undefined)?.label || "USD"
-                  }
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent />
-            </Select>
+              {t("student.onboarding.courses.tabCourses")}
+            </button>
+            <button
+              type="button"
+              class={`rounded-full px-4 py-2 ${activeTab() === "path" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
+              onClick={() => setActiveTab("path")}
+            >
+              {t("student.onboarding.courses.tabPath")}
+            </button>
           </div>
 
           <Show
@@ -463,82 +381,52 @@ export function OnboardingCourses() {
               }
             >
               <Show
-              when={activeCourses().length > 0}
-              fallback={
-                  <div class="rounded-md border border-border/70 p-3 text-sm text-muted-foreground">
-                    {selectedGoalId()
-                      ? t("student.onboarding.courses.empty")
-                      : t("student.onboarding.courses.goalMissing")}
-                  </div>
+                when={activeTab() === "courses"}
+                fallback={
+                  <Show
+                    when={selectedCourseItems().length > 0}
+                    fallback={<div class="rounded-md border border-border/70 p-3 text-sm text-muted-foreground">{t("student.onboarding.courses.selectAtLeastOne")}</div>}
+                  >
+                    <div class="space-y-3">
+                      <For each={selectedCourseItems()}>
+                        {(course) => <CourseRow course={course} />}
+                      </For>
+                    </div>
+                  </Show>
                 }
               >
-                <div class="space-y-3">
-                  <For each={activeCourses()}>
-                    {(course) => <CourseRow course={course} />}
-                  </For>
-                </div>
-              </Show>
-              <Show when={inactiveCourses().length > 0}>
-                <div class="space-y-2">
-                  <div class="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                    {t("student.onboarding.courses.inactiveSectionTitle")}
-                  </div>
+                <Show
+                  when={activeCourses().length > 0}
+                  fallback={
+                    <div class="rounded-md border border-border/70 p-3 text-sm text-muted-foreground">
+                      {selectedGoalId()
+                        ? t("student.onboarding.courses.empty")
+                        : t("student.onboarding.courses.goalMissing")}
+                    </div>
+                  }
+                >
                   <div class="space-y-3">
-                    <For each={inactiveCourses()}>
-                      {(course) => <CourseRow course={course} disabled />}
+                    <For each={activeCourses()}>
+                      {(course) => <CourseRow course={course} />}
                     </For>
                   </div>
-                </div>
+                </Show>
               </Show>
             </Show>
           </Show>
 
-          <div class="rounded-xl border border-border/70 bg-card p-4">
-            <div class="w-full rounded-lg border border-primary bg-primary/5 p-4 text-left">
-              <div class="flex items-start justify-between gap-3">
-                <div>
-                  <div class="flex flex-wrap items-center gap-2">
-                    <div class="font-medium">{t(COMMUNITY_CARD.titleKey)}</div>
-                    <SmallStatBadge class="bg-background">
-                      <Icon name="lock" class="text-[14px]" />
-                      {t("student.onboarding.courses.communityRequiredBadge")}
-                    </SmallStatBadge>
-                  </div>
-                  <div class="mt-1 text-sm text-muted-foreground">
-                    {t(COMMUNITY_CARD.descKey)}
-                  </div>
-                </div>
-                <div class="text-sm font-semibold">
-                  {formatCents(communityPriceCents(), displayCurrency())}
-                </div>
-              </div>
-              <div class="mt-3 text-xs text-muted-foreground">
-                {t("student.onboarding.courses.communityIncludedByDefault")}
-              </div>
-            </div>
-          </div>
-
-          <div class="rounded-xl border border-border/70 bg-muted/30 p-4">
-            <div class="text-sm text-muted-foreground">
-              {t("student.onboarding.courses.totalLabel")}
-            </div>
-            <div class="mt-1 text-xl font-semibold">
-              {formatCents(totalPriceCents(), displayCurrency())}
-            </div>
-          </div>
-
           <div class="flex flex-wrap gap-2">
             <Button
               variant="outline"
-              disabled={saving() || currencySaving()}
-              onClick={() => void navigate("/onboarding/goal")}
+              disabled={saving()}
+              onClick={() => void navigate("/onboarding/profile")}
             >
               {t("student.onboarding.profile.back")}
             </Button>
             <Button
               variant="outline"
               onClick={() => void save()}
-              disabled={saving() || currencySaving() || !selectedGoalId()}
+              disabled={saving() || !selectedGoalId() || selectedActiveCourseIds().length === 0}
             >
               {saving()
                 ? t("student.onboarding.common.saving")
@@ -546,7 +434,7 @@ export function OnboardingCourses() {
             </Button>
             <Button
               onClick={() => void next()}
-              disabled={saving() || currencySaving() || !selectedGoalId()}
+              disabled={saving() || !selectedGoalId() || selectedActiveCourseIds().length === 0}
             >
               {saving()
                 ? t("student.onboarding.common.saving")
@@ -557,11 +445,6 @@ export function OnboardingCourses() {
           <Show when={saveError()}>
             <div class="rounded-md border border-error bg-error/10 p-3 text-sm text-error-foreground">
               {saveError()}
-            </div>
-          </Show>
-          <Show when={currencyError()}>
-            <div class="rounded-md border border-error bg-error/10 p-3 text-sm text-error-foreground">
-              {currencyError()}
             </div>
           </Show>
         </div>

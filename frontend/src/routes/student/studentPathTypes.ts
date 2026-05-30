@@ -1,5 +1,6 @@
 export type StudentPathStep = {
   id: string;
+  courseId?: string | null;
   title: string;
   description: string;
   materialUrl: string;

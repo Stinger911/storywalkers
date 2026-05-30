@@ -238,3 +238,53 @@ def test_reactivate_goal_reappears_in_student_list(monkeypatch):
     assert [item["id"] for item in list_response.json()["items"]] == ["g1"]
 
     app.dependency_overrides.clear()
+
+
+def test_goal_intake_questions_are_saved_and_student_list_filters_inactive(monkeypatch):
+    goals_store = {}
+    fake_db = FakeFirestore(goals_store)
+    monkeypatch.setattr(admin_settings, "get_firestore_client", lambda: fake_db)
+    app.dependency_overrides[auth_deps.get_current_user] = _staff
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/admin/goals",
+        json={
+            "title": "Goal with questions",
+            "intakeQuestions": [
+                {
+                    "id": "background",
+                    "label": "Background",
+                    "type": "text",
+                    "required": True,
+                    "order": 2,
+                    "isActive": True,
+                },
+                {
+                    "id": "hidden",
+                    "label": "Hidden",
+                    "type": "multi_select",
+                    "options": ["A", "B"],
+                    "order": 1,
+                    "isActive": False,
+                },
+            ],
+        },
+    )
+    assert response.status_code == 201
+    goal_id = response.json()["id"]
+    assert [item["id"] for item in response.json()["intakeQuestions"]] == [
+        "hidden",
+        "background",
+    ]
+
+    app.dependency_overrides[auth_deps.get_current_user] = _student
+    student_response = client.get("/api/admin/goals")
+
+    assert student_response.status_code == 200
+    [goal] = [
+        item for item in student_response.json()["items"] if item["id"] == goal_id
+    ]
+    assert [item["id"] for item in goal["intakeQuestions"]] == ["background"]
+
+    app.dependency_overrides.clear()

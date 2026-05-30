@@ -90,9 +90,11 @@ class FakeQuery:
         for field, direction in reversed(self._order_fields):
             reverse = direction == "DESCENDING"
             snaps.sort(
-                key=lambda snap: snap.id
-                if field == "__name__"
-                else (snap.to_dict() or {}).get(field),
+                key=lambda snap: (
+                    snap.id
+                    if field == "__name__"
+                    else (snap.to_dict() or {}).get(field)
+                ),
                 reverse=reverse,
             )
 
@@ -344,8 +346,10 @@ def test_admin_activate_payment_transaction_and_idempotency(monkeypatch):
     monkeypatch.setattr(
         admin_payments,
         "append_courses_to_student_plan",
-        lambda db, uid, course_ids: append_calls.append((uid, course_ids))
-        or {"addedCourseIds": course_ids, "createdSteps": 2},
+        lambda db, uid, course_ids: (
+            append_calls.append((uid, course_ids))
+            or {"addedCourseIds": course_ids, "createdSteps": 2}
+        ),
     )
     app.dependency_overrides[auth_deps.get_current_user] = _staff
     client = TestClient(app)

@@ -84,6 +84,8 @@ components:
           nullable: true
           maxLength: 64
           example: goal_video_editor
+        goalIntakeAnswers:
+          $ref: "#/components/schemas/GoalIntakeAnswers"
         profileForm:
           $ref: "#/components/schemas/ProfileForm"
         selectedCourses:
@@ -101,6 +103,76 @@ components:
           type: boolean
           nullable: true
           example: true
+
+    GoalIntakeAnswer:
+      type: object
+      required: [questionId, type, value]
+      additionalProperties: false
+      properties:
+        questionId:
+          type: string
+          maxLength: 120
+          example: background
+        type:
+          type: string
+          enum: [text, multi_select]
+          example: text
+        value:
+          oneOf:
+            - type: string
+            - type: array
+              items:
+                type: string
+
+    GoalIntakeAnswers:
+      type: object
+      nullable: true
+      required: [goalId, answers]
+      additionalProperties: false
+      properties:
+        goalId:
+          type: string
+          maxLength: 64
+          example: goal_video_editor
+        answers:
+          type: array
+          maxItems: 30
+          items:
+            $ref: "#/components/schemas/GoalIntakeAnswer"
+
+    GoalIntakeQuestion:
+      type: object
+      required: [id, label, type, order, isActive]
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          maxLength: 200
+          example: background
+        label:
+          type: string
+          maxLength: 200
+          example: What is your current experience?
+        type:
+          type: string
+          enum: [text, multi_select]
+          example: text
+        options:
+          type: array
+          maxItems: 20
+          items:
+            type: string
+            maxLength: 120
+          example: [Beginner, Intermediate]
+        required:
+          type: boolean
+          default: false
+        order:
+          type: integer
+          minimum: 0
+        isActive:
+          type: boolean
+          default: true
 
     ProfileForm:
       type: object
@@ -161,6 +233,8 @@ components:
           nullable: true
           maxLength: 64
           example: goal_video_editor
+        goalIntakeAnswers:
+          $ref: "#/components/schemas/GoalIntakeAnswers"
         profileForm:
           $ref: "#/components/schemas/ProfileForm"
         selectedCourses:
@@ -198,6 +272,11 @@ components:
           type: integer
           minimum: 0
           example: 12900
+        trialLessonUrl:
+          type: string
+          nullable: true
+          format: uri
+          example: https://example.com/trial
         goalIds:
           type: array
           items:
@@ -231,6 +310,11 @@ components:
           type: integer
           minimum: 0
           example: 12900
+        trialLessonUrl:
+          type: string
+          nullable: true
+          format: uri
+          example: https://example.com/trial
         isActive:
           type: boolean
           example: true
@@ -765,6 +849,10 @@ components:
           type: string
           nullable: true
           example: "..."
+        intakeQuestions:
+          type: array
+          items:
+            $ref: "#/components/schemas/GoalIntakeQuestion"
         createdAt:
           type: string
           format: date-time
@@ -792,6 +880,10 @@ components:
         description:
           type: string
           nullable: true
+        intakeQuestions:
+          type: array
+          items:
+            $ref: "#/components/schemas/GoalIntakeQuestion"
 
     PatchGoalRequest:
       type: object
@@ -802,6 +894,10 @@ components:
         description:
           type: string
           nullable: true
+        intakeQuestions:
+          type: array
+          items:
+            $ref: "#/components/schemas/GoalIntakeQuestion"
 
     StepTemplate:
       type: object
@@ -1390,7 +1486,7 @@ paths:
     post:
       tags: [Admin - Students]
       summary: Create student user record
-      description: Best-effort side effect: sends a Telegram registration notification only when a new user record is created.
+      description: "Best-effort side effect: sends a Telegram registration notification only when a new user record is created."
       operationId: adminCreateStudent
       requestBody:
         required: true
@@ -1416,7 +1512,7 @@ paths:
     patch:
       tags: [Admin - Students]
       summary: Update student profile/status
-      description: Best-effort side effect: when status changes, sends a Telegram status-change notification. Reactivating without activeTo sets it to 30 days from the status change.
+      description: "Best-effort side effect: when status changes, sends a Telegram status-change notification. Reactivating without activeTo sets it to 30 days from the status change."
       operationId: adminPatchStudent
       parameters:
         - in: path
@@ -1604,7 +1700,7 @@ paths:
           name: cursor
           required: false
           schema: { type: string }
-          description: Optional cursor placeholder (MVP returns `nextCursor: null`).
+          description: "Optional cursor placeholder (MVP returns `nextCursor: null`)."
       responses:
         "200":
           description: OK
@@ -1648,6 +1744,10 @@ paths:
                 priceUsdCents:
                   type: integer
                   minimum: 0
+                trialLessonUrl:
+                  type: string
+                  nullable: true
+                  format: uri
                 isActive:
                   type: boolean
                   default: true
@@ -1836,6 +1936,10 @@ paths:
                 priceUsdCents:
                   type: integer
                   minimum: 0
+                trialLessonUrl:
+                  type: string
+                  nullable: true
+                  format: uri
                 isActive:
                   type: boolean
       responses:
@@ -2628,7 +2732,7 @@ paths:
       tags: [Courses]
       summary: Get FX rates from Firestore config/fx_rates
       operationId: getFxRatesV2
-      description: If `config/fx_rates` is missing, bootstrap it with `{ base: "USD", rates: { USD: 1 } }`.
+      description: "If `config/fx_rates` is missing, bootstrap it with `{ base: 'USD', rates: { USD: 1 } }`."
       responses:
         "200":
           description: OK

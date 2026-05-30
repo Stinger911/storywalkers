@@ -54,8 +54,8 @@ function OnboardingStepper(props: { currentStep: OnboardingStep }) {
                     : "bg-white text-primary shadow-rail"
                   : isDone
                     ? theme() === "dark"
-                      ? "bg-[rgba(16,82,38,0.92)] text-[#b0f2b7]"
-                      : "bg-[#eef7f0] text-[#2a683a]"
+                      ? "bg-[rgba(32,43,53,0.92)] text-muted-foreground"
+                      : "bg-[rgba(217,227,241,0.72)] text-muted-foreground"
                     : theme() === "dark"
                       ? "bg-[rgba(32,43,53,0.92)] text-muted-foreground"
                       : "bg-[rgba(217,227,241,0.72)] text-muted-foreground",
@@ -67,7 +67,9 @@ function OnboardingStepper(props: { currentStep: OnboardingStep }) {
                   isCurrent
                     ? "bg-primary text-primary-foreground"
                     : isDone
-                      ? "bg-emerald-600 text-white"
+                      ? theme() === "dark"
+                        ? "bg-[rgba(9,20,29,0.96)] text-foreground"
+                        : "bg-white text-foreground"
                       : theme() === "dark"
                         ? "bg-[rgba(9,20,29,0.96)] text-foreground"
                         : "bg-white text-foreground",

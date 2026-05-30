@@ -16,6 +16,7 @@ from app.auth.user_status import UserStatus, ensure_user_status_with_migration
 from app.core.errors import AppError
 from app.core.logging import get_logger
 from app.db.firestore import get_firestore_client
+from app.repositories.courses import get_course_by_id
 from app.services.telegram import send_admin_message
 from app.services.telegram_events import (
     fmt_lesson_completed,
@@ -28,6 +29,7 @@ logger = get_logger("app.db")
 
 ExperienceLevel = Literal["beginner", "intermediate", "advanced"]
 PreferredCurrency = Literal["USD", "EUR", "PLN", "RUB"]
+GoalIntakeAnswerType = Literal["text", "multi_select"]
 TELEGRAM_HANDLE_RE = re.compile(r"^@[A-Za-z0-9_]{1,32}$")
 PHONE_LIKE_RE = re.compile(r"^[0-9+\-\s()]+$")
 QUESTIONNAIRE_COMPLETED_WEBHOOK_URL = (
@@ -247,6 +249,80 @@ class ProfileFormModel(BaseModel):
         return value
 
 
+class GoalIntakeAnswer(BaseModel):
+    questionId: str
+    type: GoalIntakeAnswerType
+    value: str | list[str]
+
+    model_config = {"extra": "forbid"}
+
+    @field_validator("questionId", mode="before")
+    @classmethod
+    def _trim_question_id(cls, value: str) -> str:
+        if not isinstance(value, str):
+            raise PydanticCustomError("question_id_required", "questionId is required")
+        trimmed = value.strip()
+        if not trimmed:
+            raise PydanticCustomError("question_id_required", "questionId is required")
+        if len(trimmed) > 120:
+            raise PydanticCustomError(
+                "question_id_max_length", "questionId must be 120 characters or fewer"
+            )
+        return trimmed
+
+    @field_validator("value", mode="before")
+    @classmethod
+    def _normalize_value(cls, value: object) -> str | list[str]:
+        if isinstance(value, str):
+            return value.strip()
+        if isinstance(value, list):
+            normalized: list[str] = []
+            seen: set[str] = set()
+            for item in value:
+                if not isinstance(item, str):
+                    continue
+                trimmed = item.strip()
+                if not trimmed or trimmed in seen:
+                    continue
+                seen.add(trimmed)
+                normalized.append(trimmed)
+            return normalized
+        return ""
+
+
+class GoalIntakeAnswers(BaseModel):
+    goalId: str
+    answers: list[GoalIntakeAnswer] = Field(default_factory=list)
+
+    model_config = {"extra": "forbid"}
+
+    @field_validator("goalId", mode="before")
+    @classmethod
+    def _trim_goal_id(cls, value: str) -> str:
+        if not isinstance(value, str):
+            raise PydanticCustomError("goal_id_required", "goalId is required")
+        trimmed = value.strip()
+        if not trimmed:
+            raise PydanticCustomError("goal_id_required", "goalId is required")
+        if len(trimmed) > 64:
+            raise PydanticCustomError(
+                "goal_id_max_length", "goalId must be 64 characters or fewer"
+            )
+        return trimmed
+
+    @field_validator("answers")
+    @classmethod
+    def _validate_answers(cls, value: list[GoalIntakeAnswer]) -> list[GoalIntakeAnswer]:
+        if len(value) > 30:
+            raise PydanticCustomError(
+                "answers_max_items", "answers must contain at most 30 items"
+            )
+        ids = [answer.questionId for answer in value]
+        if len(set(ids)) != len(ids):
+            raise PydanticCustomError("answers_unique", "questionIds must be unique")
+        return value
+
+
 class MeResponse(BaseModel):
     uid: str
     email: str
@@ -257,6 +333,7 @@ class MeResponse(BaseModel):
     level: int = 1
     selectedGoalId: str | None = None
     selectedGoalTitle: str | None = None
+    goalIntakeAnswers: GoalIntakeAnswers | None = None
     profileForm: ProfileFormModel = Field(default_factory=ProfileFormModel)
     selectedCourses: list[str] = Field(default_factory=list)
     preferredCurrency: PreferredCurrency = "USD"
@@ -272,6 +349,7 @@ async def get_me(user: dict = Depends(get_current_user)) -> MeResponse:
 class PatchMeRequest(BaseModel):
     displayName: str | None = None
     selectedGoalId: str | None = None
+    goalIntakeAnswers: GoalIntakeAnswers | None = None
     profileForm: ProfileFormModel | None = None
     selectedCourses: list[str] | None = None
     preferredCurrency: PreferredCurrency | None = None
@@ -366,7 +444,14 @@ def _sanitize_profile_form(
     merged = dict(existing or {})
     payload = incoming.model_dump(exclude_unset=True)
     for key, value in payload.items():
-        if key in {"firstName", "lastName", "aboutMe", "telegram", "socialUrl", "notes"}:
+        if key in {
+            "firstName",
+            "lastName",
+            "aboutMe",
+            "telegram",
+            "socialUrl",
+            "notes",
+        }:
             merged[key] = _sanitize_optional_text(value)
         else:
             merged[key] = value
@@ -409,6 +494,15 @@ def _sanitize_profile_form(
         }
 
 
+def _sanitize_goal_intake_answers(value: object) -> dict[str, Any] | None:
+    if value is None:
+        return None
+    try:
+        return GoalIntakeAnswers.model_validate(value).model_dump()
+    except Exception:
+        return None
+
+
 def _sanitize_selected_courses(value: list[str]) -> list[str]:
     normalized = [item.strip() for item in value if item.strip()]
     unique: list[str] = []
@@ -418,6 +512,26 @@ def _sanitize_selected_courses(value: list[str]) -> list[str]:
             seen.add(item)
             unique.append(item)
     return unique
+
+
+def _course_id_from_step(data: dict[str, Any]) -> str | None:
+    course_id = _sanitize_optional_text(data.get("courseId"))
+    if course_id:
+        return course_id
+    return _sanitize_optional_text(data.get("sourceCourseId"))
+
+
+def _student_course_payload(db: firestore.Client, course_id: str) -> dict[str, Any] | None:
+    course = get_course_by_id(db, course_id)
+    if not course:
+        return None
+    return {
+        "id": course.id,
+        "title": course.title,
+        "shortDescription": course.description,
+        "trialLessonUrl": course.trialLessonUrl,
+        "isActive": course.isActive,
+    }
 
 
 def _is_profile_complete(data: dict[str, Any]) -> bool:
@@ -431,8 +545,10 @@ def _is_profile_complete(data: dict[str, Any]) -> bool:
     ):
         return True
     return bool(
-        (_sanitize_optional_text(profile_form.get("aboutMe"))
-        or _sanitize_optional_text(profile_form.get("notes")))
+        (
+            _sanitize_optional_text(profile_form.get("aboutMe"))
+            or _sanitize_optional_text(profile_form.get("notes"))
+        )
         and _sanitize_optional_text(profile_form.get("telegram"))
     )
 
@@ -450,10 +566,10 @@ def _validate_submitted_profile_or_400(profile_form: dict[str, Any]) -> None:
 
 
 def _onboarding_step(data: dict[str, Any]) -> str:
-    if not _is_profile_complete(data):
-        return "questionnaire"
     if not _sanitize_optional_text(data.get("selectedGoalId")):
         return "goal_selection"
+    if not _is_profile_complete(data):
+        return "questionnaire"
     selected_courses = data.get("selectedCourses")
     if (
         not isinstance(selected_courses, list)
@@ -501,6 +617,13 @@ async def patch_me(
                 updates["selectedGoalTitle"] = _sanitize_optional_text(
                     goal_data.get("title")
                 )
+
+    if "goalIntakeAnswers" in payload_data:
+        updates["goalIntakeAnswers"] = (
+            payload.goalIntakeAnswers.model_dump()
+            if payload.goalIntakeAnswers
+            else None
+        )
 
     if "selectedCourses" in payload_data:
         updates["selectedCourses"] = _sanitize_selected_courses(
@@ -573,12 +696,16 @@ async def patch_me(
         "roleRaw": role_raw,
         "level": (
             response_data.get("level")
-            if isinstance(response_data.get("level"), int) and response_data.get("level") > 0
+            if isinstance(response_data.get("level"), int)
+            and response_data.get("level") > 0
             else 1
         ),
         "selectedGoalId": _sanitize_optional_text(response_data.get("selectedGoalId")),
         "selectedGoalTitle": _sanitize_optional_text(
             response_data.get("selectedGoalTitle")
+        ),
+        "goalIntakeAnswers": _sanitize_goal_intake_answers(
+            response_data.get("goalIntakeAnswers")
         ),
         "profileForm": _sanitize_profile_form(
             response_data.get("profileForm")
@@ -717,10 +844,32 @@ async def get_my_dashboard(user: dict = Depends(require_active_student)):
     steps_ref = plan_ref.collection("steps")
     query = steps_ref.order_by("order", direction=firestore.Query.ASCENDING)
     steps = []
+    step_course_ids: list[str] = []
+    seen_step_course_ids: set[str] = set()
     for snap in query.stream():
         data = snap.to_dict() or {}
         data["stepId"] = snap.id
+        course_id = _course_id_from_step(data)
+        if course_id:
+            data["courseId"] = course_id
+            if course_id not in seen_step_course_ids:
+                seen_step_course_ids.add(course_id)
+                step_course_ids.append(course_id)
         steps.append(data)
+
+    selected_course_ids = _sanitize_selected_courses(
+        user.get("selectedCourses") if isinstance(user.get("selectedCourses"), list) else []
+    )
+    course_ids = selected_course_ids + [
+        course_id
+        for course_id in step_course_ids
+        if course_id not in set(selected_course_ids)
+    ]
+    courses = [
+        payload
+        for course_id in course_ids
+        if (payload := _student_course_payload(db, course_id)) is not None
+    ]
 
     return {
         "plan": {
@@ -731,6 +880,7 @@ async def get_my_dashboard(user: dict = Depends(require_active_student)):
             "updatedAt": plan.get("updatedAt"),
         },
         "goal": goal,
+        "courses": {"items": courses},
         "steps": {"items": steps},
     }
 

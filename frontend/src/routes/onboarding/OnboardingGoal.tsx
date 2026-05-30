@@ -1,19 +1,38 @@
-import { A } from "@solidjs/router";
-import { createSignal, For, onMount, Show } from "solid-js";
+import { useNavigate } from "@solidjs/router";
+import { createMemo, createSignal, For, onCleanup, onMount, Show } from "solid-js";
 
 import { Button } from "../../components/ui/button";
 import { SectionCard } from "../../components/ui/section-card";
-import { useAuth } from "../../lib/auth";
-import { useI18n } from "../../lib/i18n";
-import { listGoals, type Goal } from "../../lib/adminApi";
-import { OnboardingLayout } from "./OnboardingLayout";
 import {
-  writeCachedOnboardingGoal,
-} from "./onboardingState";
+  TextField,
+  TextFieldInput,
+  TextFieldLabel,
+} from "../../components/ui/text-field";
+import { useAuth, type GoalIntakeAnswer } from "../../lib/auth";
+import { useI18n } from "../../lib/i18n";
+import { listGoals, type Goal, type GoalIntakeQuestion } from "../../lib/adminApi";
+import { OnboardingLayout } from "./OnboardingLayout";
+import { writeCachedOnboardingGoal } from "./onboardingState";
+
+type AnswerValue = string | string[];
+
+function answerIsFilled(value: AnswerValue | undefined) {
+  return Array.isArray(value) ? value.length > 0 : Boolean(value?.trim());
+}
+
+function formatAnswer(question: GoalIntakeQuestion, value: AnswerValue | undefined): GoalIntakeAnswer | null {
+  if (!answerIsFilled(value)) return null;
+  return {
+    questionId: question.id,
+    type: question.type,
+    value: Array.isArray(value) ? value : value?.trim() || "",
+  };
+}
 
 export function OnboardingGoal() {
   const auth = useAuth();
   const { t } = useI18n();
+  const navigate = useNavigate();
   const [loading, setLoading] = createSignal(true);
   const [goals, setGoals] = createSignal<Goal[]>([]);
   const [loadError, setLoadError] = createSignal<string | null>(null);
@@ -21,6 +40,24 @@ export function OnboardingGoal() {
   const [saveError, setSaveError] = createSignal<string | null>(null);
   const [selectedGoalId, setSelectedGoalId] = createSignal(
     auth.me()?.selectedGoalId || "",
+  );
+  const [answers, setAnswers] = createSignal<Record<string, AnswerValue>>({});
+  const [quoteIndex, setQuoteIndex] = createSignal(0);
+
+  const quotes = createMemo(() => [
+    t("student.onboarding.goal.quote1"),
+    t("student.onboarding.goal.quote2"),
+    t("student.onboarding.goal.quote3"),
+  ]);
+
+  const selectedGoal = createMemo(() =>
+    goals().find((goal) => goal.id === selectedGoalId()) || null,
+  );
+
+  const questions = createMemo(() =>
+    [...(selectedGoal()?.intakeQuestions ?? [])]
+      .filter((question) => question.isActive !== false)
+      .sort((a, b) => a.order - b.order),
   );
 
   const toHumanError = (err: unknown, fallbackKey: string) => {
@@ -31,12 +68,27 @@ export function OnboardingGoal() {
     return `${t(fallbackKey)} ${msg}`;
   };
 
+  const hydrateAnswers = (goalId: string) => {
+    const stored = auth.me()?.goalIntakeAnswers;
+    if (!stored || stored.goalId !== goalId) {
+      setAnswers({});
+      return;
+    }
+    const next: Record<string, AnswerValue> = {};
+    for (const answer of stored.answers || []) {
+      next[answer.questionId] = answer.value;
+    }
+    setAnswers(next);
+  };
+
   const load = async () => {
     setLoading(true);
     setLoadError(null);
     try {
       const response = await listGoals();
       setGoals(response.items);
+      const currentGoalId = selectedGoalId();
+      if (currentGoalId) hydrateAnswers(currentGoalId);
     } catch (err) {
       setLoadError(toHumanError(err, "student.onboarding.goal.loadError"));
     } finally {
@@ -46,23 +98,62 @@ export function OnboardingGoal() {
 
   onMount(() => {
     void load();
+    if (typeof window === "undefined") return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const timer = window.setInterval(() => {
+      setQuoteIndex((current) => (current + 1) % quotes().length);
+    }, 5200);
+    onCleanup(() => window.clearInterval(timer));
   });
 
-  const selectGoal = async (goalId: string) => {
+  const selectGoal = (goalId: string) => {
     if (saving()) return;
-    const prev = selectedGoalId();
     setSelectedGoalId(goalId);
     setSaveError(null);
+    hydrateAnswers(goalId);
+  };
+
+  const setTextAnswer = (questionId: string, value: string) => {
+    setAnswers((current) => ({ ...current, [questionId]: value }));
+  };
+
+  const toggleOption = (questionId: string, option: string) => {
+    setAnswers((current) => {
+      const raw = current[questionId];
+      const list = Array.isArray(raw) ? raw : [];
+      return {
+        ...current,
+        [questionId]: list.includes(option)
+          ? list.filter((item) => item !== option)
+          : [...list, option],
+      };
+    });
+  };
+
+  const saveAndContinue = async () => {
+    const goal = selectedGoal();
+    if (!goal) return;
+    const missing = questions().find(
+      (question) => question.required && !answerIsFilled(answers()[question.id]),
+    );
+    if (missing) {
+      setSaveError(t("student.onboarding.goal.requiredError"));
+      return;
+    }
+
     setSaving(true);
+    setSaveError(null);
     try {
-      await auth.patchMe({ selectedGoalId: goalId });
-      const selectedGoal = goals().find((goal) => goal.id === goalId);
-      writeCachedOnboardingGoal({
-        goalId,
-        goalTitle: selectedGoal?.title || null,
+      const answerList = questions()
+        .map((question) => formatAnswer(question, answers()[question.id]))
+        .filter((item): item is GoalIntakeAnswer => Boolean(item));
+      await auth.patchMe({
+        selectedGoalId: goal.id,
+        goalIntakeAnswers: { goalId: goal.id, answers: answerList },
       });
+      writeCachedOnboardingGoal({ goalId: goal.id, goalTitle: goal.title || null });
+      void navigate("/onboarding/profile");
     } catch (err) {
-      setSelectedGoalId(prev);
       setSaveError(toHumanError(err, "student.onboarding.goal.saveError"));
     } finally {
       setSaving(false);
@@ -79,7 +170,11 @@ export function OnboardingGoal() {
         title={t("student.onboarding.goal.cardTitle")}
         description={t("student.onboarding.goal.cardDescription")}
       >
-        <div class="space-y-4">
+        <div class="space-y-5">
+          <div class="rounded-xl border border-border/70 bg-muted/30 p-4 text-sm italic leading-6 text-muted-foreground transition-opacity duration-500">
+            {quotes()[quoteIndex()]}
+          </div>
+
           <Show when={!loading()} fallback={<div class="text-sm text-muted-foreground">{t("common.loading")}</div>}>
             <Show
               when={!loadError()}
@@ -108,12 +203,13 @@ export function OnboardingGoal() {
                       const selected = () => selectedGoalId() === goal.id;
                       return (
                         <button
+                          type="button"
                           class={`rounded-xl border p-4 text-left transition-colors ${
                             selected()
                               ? "border-primary bg-primary/5"
                               : "border-border/70 bg-card hover:border-primary/50"
                           }`}
-                          onClick={() => void selectGoal(goal.id)}
+                          onClick={() => selectGoal(goal.id)}
                           disabled={saving()}
                         >
                           <div class="flex items-start justify-between gap-3">
@@ -138,20 +234,65 @@ export function OnboardingGoal() {
             </Show>
           </Show>
 
+          <Show when={selectedGoal() && questions().length > 0}>
+            <div class="space-y-4 rounded-xl border border-border/70 bg-card p-4">
+              <div>
+                <div class="text-sm font-semibold text-foreground">
+                  {t("student.onboarding.goal.questionsTitle")}
+                </div>
+                <div class="mt-1 text-sm text-muted-foreground">
+                  {t("student.onboarding.goal.questionsDescription")}
+                </div>
+              </div>
+              <For each={questions()}>
+                {(question) => (
+                  <div class="grid gap-2">
+                    <Show
+                      when={question.type === "multi_select"}
+                      fallback={
+                        <TextField>
+                          <TextFieldLabel for={`goal-question-${question.id}`}>
+                            {question.label}{question.required ? " *" : ""}
+                          </TextFieldLabel>
+                          <TextFieldInput
+                            id={`goal-question-${question.id}`}
+                            value={typeof answers()[question.id] === "string" ? answers()[question.id] as string : ""}
+                            onInput={(event) => setTextAnswer(question.id, event.currentTarget.value)}
+                            disabled={saving()}
+                          />
+                        </TextField>
+                      }
+                    >
+                      <div class="text-sm font-medium">
+                        {question.label}{question.required ? " *" : ""}
+                      </div>
+                      <div class="flex flex-wrap gap-2">
+                        <For each={question.options ?? []}>
+                          {(option) => {
+                            const selected = () => Array.isArray(answers()[question.id]) && (answers()[question.id] as string[]).includes(option);
+                            return (
+                              <label class="inline-flex cursor-pointer items-center gap-2 rounded-full border border-border/70 px-3 py-2 text-sm">
+                                <input
+                                  type="checkbox"
+                                  checked={selected()}
+                                  onChange={() => toggleOption(question.id, option)}
+                                  disabled={saving()}
+                                />
+                                <span>{option}</span>
+                              </label>
+                            );
+                          }}
+                        </For>
+                      </div>
+                    </Show>
+                  </div>
+                )}
+              </For>
+            </div>
+          </Show>
+
           <div class="flex gap-2">
-            <Button
-              as={A}
-              href="/onboarding/profile"
-              variant="outline"
-              disabled={saving()}
-            >
-              {t("student.onboarding.profile.back")}
-            </Button>
-            <Button
-              as={A}
-              href="/onboarding/courses"
-              disabled={saving() || !selectedGoalId()}
-            >
+            <Button onClick={() => void saveAndContinue()} disabled={saving() || !selectedGoal()}>
               {saving() ? t("student.onboarding.common.saving") : t("student.onboarding.goal.next")}
             </Button>
           </div>

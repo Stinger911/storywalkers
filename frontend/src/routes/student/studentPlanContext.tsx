@@ -7,6 +7,7 @@ import {
   getMyDashboard,
   updateMyStepProgress,
   type PlanStep as ApiPlanStep,
+  type StudentCourse,
 } from "../../lib/studentApi";
 import type { StudentPathStep } from "./studentPathTypes";
 
@@ -18,7 +19,9 @@ export type StudentPlan = {
 export type StudentPlanState = {
   plan: () => StudentPlan | null;
   goal: () => Goal | null;
+  courses: () => StudentCourse[];
   steps: () => StudentPathStep[];
+  stepsByCourseId: () => Map<string, StudentPathStep[]>;
   loading: () => boolean;
   error: () => string | null;
   progress: () => { total: number; done: number; percent: number };
@@ -34,6 +37,7 @@ export function StudentPlanProvider(props: { children: JSX.Element }) {
   const auth = useAuth();
   const [plan, setPlan] = createSignal<StudentPlan | null>(null);
   const [goal, setGoal] = createSignal<Goal | null>(null);
+  const [courses, setCourses] = createSignal<StudentCourse[]>([]);
   const [steps, setSteps] = createSignal<StudentPathStep[]>([]);
   const [loading, setLoading] = createSignal(true);
   const [error, setError] = createSignal<string | null>(null);
@@ -52,6 +56,7 @@ export function StudentPlanProvider(props: { children: JSX.Element }) {
         goalId: planData.goalId,
       });
       setGoal(dashboard.goal);
+      setCourses(dashboard.courses?.items ?? []);
       setSteps(
         dashboard.steps.items
           .slice()
@@ -61,6 +66,7 @@ export function StudentPlanProvider(props: { children: JSX.Element }) {
             const isLocked = step.order > 0 && false;
             return {
               id: step.stepId,
+              courseId: step.courseId ?? null,
               title: step.title,
               description: step.description,
               materialUrl: step.materialUrl,
@@ -77,6 +83,7 @@ export function StudentPlanProvider(props: { children: JSX.Element }) {
       setError((err as Error).message);
       setPlan(null);
       setGoal(null);
+      setCourses([]);
       setSteps([]);
     } finally {
       setLoading(false);
@@ -90,6 +97,7 @@ export function StudentPlanProvider(props: { children: JSX.Element }) {
     if (!auth.me()) {
       setPlan(null);
       setGoal(null);
+      setCourses([]);
       setSteps([]);
       setLoading(false);
       return;
@@ -102,6 +110,23 @@ export function StudentPlanProvider(props: { children: JSX.Element }) {
     const done = steps().filter((step) => step.isDone).length;
     const percent = total ? Math.round((done / total) * 100) : 0;
     return { total, done, percent };
+  });
+
+  const stepsByCourseId = createMemo(() => {
+    const grouped = new Map<string, StudentPathStep[]>();
+    for (const step of steps()) {
+      const courseId = step.courseId?.trim() || "__legacy__";
+      const current = grouped.get(courseId) ?? [];
+      current.push(step);
+      grouped.set(courseId, current);
+    }
+    for (const [courseId, items] of grouped) {
+      grouped.set(
+        courseId,
+        items.slice().sort((a, b) => a.order - b.order),
+      );
+    }
+    return grouped;
   });
 
   const markStepDone = async (stepId: string, done: boolean) => {
@@ -144,7 +169,9 @@ export function StudentPlanProvider(props: { children: JSX.Element }) {
   const value: StudentPlanState = {
     plan,
     goal,
+    courses,
     steps,
+    stepsByCourseId,
     loading,
     error,
     progress,

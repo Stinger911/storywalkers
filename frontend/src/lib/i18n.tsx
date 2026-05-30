@@ -144,6 +144,13 @@ type RawDictionary = {
       stepsTitle: string;
       stepsDescription: string;
       stepsEmpty: string;
+      coursesEmpty: string;
+      chooseCourses: string;
+      legacyCourseTitle: string;
+      courseTabEyebrow: string;
+      courseProgress: string;
+      courseStepsEmpty: string;
+      trialLesson: string;
       stepsAskQuestion: string;
       stepsBrowseLibrary: string;
       markDone: string;
@@ -328,6 +335,12 @@ type RawDictionary = {
         empty: string;
         loadError: string;
         saveError: string;
+        quote1: string;
+        quote2: string;
+        quote3: string;
+        questionsTitle: string;
+        questionsDescription: string;
+        requiredError: string;
       };
       profile: {
         title: string;
@@ -383,6 +396,11 @@ type RawDictionary = {
         hideLessons: string;
         lessonsTitle: string;
         lessonsEmpty: string;
+        selectAtLeastOne: string;
+        trialLesson: string;
+        goalSummaryTitle: string;
+        tabCourses: string;
+        tabPath: string;
       };
       checkout: {
         title: string;
@@ -401,6 +419,9 @@ type RawDictionary = {
         afterPaymentManual: string;
         afterPaymentFree: string;
         afterPaymentContactLabel: string;
+        removeCourse: string;
+        backToCourses: string;
+        removeError: string;
       };
     };
   };
@@ -564,6 +585,13 @@ const dictionaries: Record<Locale, RawDictionary> = {
         stepsTitle: "Path steps",
         stepsDescription: "Work through your path in order.",
         stepsEmpty: "No steps yet. Ask a question or explore the library.",
+        coursesEmpty: "No courses are available yet.",
+        chooseCourses: "Choose courses",
+        legacyCourseTitle: "General path",
+        courseTabEyebrow: "Course path",
+        courseProgress: "{{ done }} of {{ total }} steps completed · {{ percent }}%",
+        courseStepsEmpty: "No path steps have been added for this course yet.",
+        trialLesson: "Watch trial lesson",
         stepsAskQuestion: "Ask a question",
         stepsBrowseLibrary: "Browse library",
         markDone: "Mark as complete",
@@ -753,6 +781,12 @@ const dictionaries: Record<Locale, RawDictionary> = {
           empty: "No goals available yet.",
           loadError: "Could not load goals.",
           saveError: "Could not save selected goal.",
+          quote1: "A clear goal turns learning into a route, not a pile of lessons.",
+          quote2: "The path works best when it starts from the result you want.",
+          quote3: "Your answers help us remove noise and keep the route practical.",
+          questionsTitle: "A few clarifying questions",
+          questionsDescription: "Answer them so the path can be tuned to your actual situation.",
+          requiredError: "Please answer all required questions.",
         },
         profile: {
           title: "Tell us about yourself",
@@ -815,6 +849,11 @@ const dictionaries: Record<Locale, RawDictionary> = {
           hideLessons: "Hide path",
           lessonsTitle: "Path",
           lessonsEmpty: "No path details available yet.",
+          selectAtLeastOne: "Select at least one path to continue.",
+          trialLesson: "Watch trial lesson",
+          goalSummaryTitle: "Your selected goal",
+          tabCourses: "Courses",
+          tabPath: "Selected path",
         },
         checkout: {
           title: "Payment",
@@ -836,6 +875,9 @@ const dictionaries: Record<Locale, RawDictionary> = {
           afterPaymentFree:
             "You are in the first 100 students cohort. The team will confirm your access manually.",
           afterPaymentContactLabel: "If you have paid, message support:",
+          removeCourse: "Remove",
+          backToCourses: "Back to path selection",
+          removeError: "Could not update selected paths.",
         },
       },
     },
@@ -997,6 +1039,13 @@ const dictionaries: Record<Locale, RawDictionary> = {
         stepsTitle: "Шаги пути",
         stepsDescription: "Проходите путь по порядку.",
         stepsEmpty: "Шагов пока нет. Задайте вопрос или изучите библиотеку.",
+        coursesEmpty: "У вас пока нет доступных курсов.",
+        chooseCourses: "Выбрать курсы",
+        legacyCourseTitle: "Общий путь",
+        courseTabEyebrow: "Путь курса",
+        courseProgress: "Завершено {{ done }} из {{ total }} шагов · {{ percent }}%",
+        courseStepsEmpty: "Для этого курса пока нет шагов пути.",
+        trialLesson: "Посмотреть пробный урок",
         stepsAskQuestion: "Задать вопрос",
         stepsBrowseLibrary: "Открыть библиотеку",
         markDone: "Отметить выполненным",
@@ -1187,6 +1236,12 @@ const dictionaries: Record<Locale, RawDictionary> = {
           empty: "Пока нет доступных целей.",
           loadError: "Не удалось загрузить цели.",
           saveError: "Не удалось сохранить выбранную цель.",
+          quote1: "Четкая цель превращает обучение в маршрут, а не в набор уроков.",
+          quote2: "Путь работает лучше, когда начинается с результата, к которому вы идете.",
+          quote3: "Ваши ответы помогают убрать лишнее и оставить практичный маршрут.",
+          questionsTitle: "Несколько уточняющих вопросов",
+          questionsDescription: "Ответьте на них, чтобы путь был ближе к вашей реальной ситуации.",
+          requiredError: "Ответьте на все обязательные вопросы.",
         },
         profile: {
           title: "Расскажите о себе",
@@ -1250,6 +1305,11 @@ const dictionaries: Record<Locale, RawDictionary> = {
           hideLessons: "Скрыть путь",
           lessonsTitle: "Путь",
           lessonsEmpty: "Детали пути пока недоступны.",
+          selectAtLeastOne: "Выберите хотя бы один путь, чтобы продолжить.",
+          trialLesson: "Посмотреть пробный урок",
+          goalSummaryTitle: "Ваша выбранная цель",
+          tabCourses: "Курсы",
+          tabPath: "Выбранный путь",
         },
         checkout: {
           title: "Оплата",
@@ -1271,6 +1331,9 @@ const dictionaries: Record<Locale, RawDictionary> = {
           afterPaymentFree:
             "Вы входите в первую сотню учеников. Команда подтвердит доступ вручную.",
           afterPaymentContactLabel: "Если вы оплатили, напишите в поддержку:",
+          removeCourse: "Удалить",
+          backToCourses: "Вернуться к выбору пути",
+          removeError: "Не удалось обновить выбранные пути.",
         },
       },
     },

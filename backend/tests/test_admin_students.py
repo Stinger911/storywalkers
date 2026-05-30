@@ -97,9 +97,11 @@ class FakeQuery:
         for field, direction in reversed(self._orders):
             reverse = direction == firestore.Query.DESCENDING
             items.sort(
-                key=lambda snap: snap.id
-                if field == "__name__"
-                else (snap.to_dict() or {}).get(field, ""),
+                key=lambda snap: (
+                    snap.id
+                    if field == "__name__"
+                    else (snap.to_dict() or {}).get(field, "")
+                ),
                 reverse=reverse,
             )
         if self._start_after is not None and self._orders:

@@ -198,7 +198,11 @@ def fmt_boosty_email_event(
         if (event_type or "").strip().lower() == "donation"
         else "⭐ Boosty subscription"
     )
-    lines: list[str] = [title, f"time: {timestamp}", f"event_type: {event_type.strip()}"]
+    lines: list[str] = [
+        title,
+        f"time: {timestamp}",
+        f"event_type: {event_type.strip()}",
+    ]
 
     def _append(label: str, value: str | None) -> None:
         text = (value or "").strip()
