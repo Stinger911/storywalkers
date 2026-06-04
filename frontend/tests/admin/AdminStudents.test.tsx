@@ -53,6 +53,10 @@ describe("AdminStudents", () => {
             email: "s@x.com",
             role: "student",
             isFirstHundred: true,
+            profileForm: {
+              submitted: true,
+              telegram: "@student",
+            },
           },
         ],
         nextCursor: null,
@@ -70,6 +74,7 @@ describe("AdminStudents", () => {
       expect(screen.getByText("Admin A")).toBeInTheDocument();
       expect(screen.getByText("Expert E")).toBeInTheDocument();
       expect(screen.getByLabelText("First 100 student")).toBeInTheDocument();
+      expect(screen.getByLabelText("Questionnaire completed")).toBeInTheDocument();
     });
 
     expect(listStudentsMock).toHaveBeenCalledWith({
@@ -116,6 +121,37 @@ describe("AdminStudents", () => {
 
     expect(await screen.findByText("Student S")).toBeInTheDocument();
     expect(screen.queryByLabelText("First 100 student")).not.toBeInTheDocument();
+  });
+
+  it("shows the questionnaire marker from the completion event", async () => {
+    listStudentsMock.mockImplementation(({ role }: { role?: string }) =>
+      Promise.resolve({
+        items:
+          role === "staff"
+            ? []
+            : [
+                {
+                  uid: "s1",
+                  displayName: "Student S",
+                  email: "s@x.com",
+                  role: "student",
+                  profileForm: {
+                    telegram: null,
+                  },
+                  telegramEvents: {
+                    questionnaireCompletedAt: "2026-06-03T10:00:00Z",
+                  },
+                },
+              ],
+        nextCursor: null,
+        total: role === "staff" ? 0 : 1,
+      }),
+    );
+
+    render(() => <AdminStudents />);
+
+    expect(await screen.findByText("Student S")).toBeInTheDocument();
+    expect(screen.getByLabelText("Questionnaire completed")).toBeInTheDocument();
   });
 
   it("applies status filter to both student queries and URL state", async () => {

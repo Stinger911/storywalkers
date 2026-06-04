@@ -2,9 +2,9 @@ import anyio
 from fastapi.testclient import TestClient
 from google.cloud import firestore
 
+import app.main as app_main
 from app.auth import deps as auth_deps
 from app.main import app
-import app.main as app_main
 from app.routers import auth
 
 

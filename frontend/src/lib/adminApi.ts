@@ -116,8 +116,14 @@ type Student = {
   activeTo?: string | null
   boostyUserId?: string | null
   profileForm?: {
+    aboutMe?: string | null
+    submitted?: boolean | null
     telegram?: string | null
+    notes?: string | null
   }
+  telegramEvents?: {
+    questionnaireCompletedAt?: unknown
+  } | null
   isFirstHundred?: boolean
   progressPercent?: number
   stepsDone?: number

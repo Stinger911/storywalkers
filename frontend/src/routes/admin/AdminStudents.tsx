@@ -53,6 +53,15 @@ function normalizeSortDir(value: string): SortDir {
   return value === "asc" ? "asc" : "desc";
 }
 
+function hasCompletedQuestionnaire(student: Student): boolean {
+  if (student.telegramEvents?.questionnaireCompletedAt) return true;
+  const profile = student.profileForm;
+  if (!profile?.telegram?.trim()) return false;
+  return Boolean(
+    profile.submitted === true || (profile.aboutMe || profile.notes || "").trim(),
+  );
+}
+
 export function AdminStudents() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [students, setStudents] = createSignal<Student[]>([]);
@@ -394,6 +403,15 @@ export function AdminStudents() {
                                 aria-label="First 100 student"
                               >
                                 <Icon name="workspace_premium" class="text-[16px]" />
+                              </span>
+                            </Show>
+                            <Show when={hasCompletedQuestionnaire(student)}>
+                              <span
+                                class="inline-flex items-center justify-center rounded-full bg-emerald-100 p-1 text-emerald-700"
+                                title="Questionnaire completed"
+                                aria-label="Questionnaire completed"
+                              >
+                                <Icon name="assignment_turned_in" class="text-[16px]" />
                               </span>
                             </Show>
                           </div>

@@ -6,10 +6,10 @@
       "type": "n8n-nodes-base.manualTrigger",
       "typeVersion": 1,
       "position": [
-        0,
-        48
+        640,
+        160
       ],
-      "id": "ad49c9e9-b34b-40d7-83b9-8d3f18566b74",
+      "id": "97c8f648-cd4c-4f88-a49b-6b27fbda6880",
       "name": "When clicking ‘Execute workflow’"
     },
     {
@@ -39,23 +39,23 @@
       "type": "n8n-nodes-base.filter",
       "typeVersion": 2.3,
       "position": [
-        672,
-        48
+        1312,
+        160
       ],
-      "id": "ea4a9d10-2ceb-4b81-8885-e8881bcecd3c",
+      "id": "4e46a99f-0bec-4bb2-addc-39cb8f0b91d0",
       "name": "Filter"
     },
     {
       "parameters": {
-        "jsCode": "// Build a goal title lookup from whichever branch reached this node.\nconst GOALS = {};\nconst goalItems = $(\"Get goals\").isExecuted\n  ? $(\"Get goals\").all()\n  : $(\"Get goals1\").all();\nfor (const goal of goalItems) {\n  GOALS[goal.json._id] = goal.json.title;\n}\n\nconst staticData = $getWorkflowStaticData(\"global\");\nstaticData.studentSheetSync = staticData.studentSheetSync || {};\nconst syncCache = staticData.studentSheetSync;\nconst webhookQuery = $(\"Webhook\").isExecuted ? ($(\"Webhook\").item.json.query || {}) : {};\nconst forceSync = webhookQuery.force === \"1\" || webhookQuery.force === \"true\";\n\nfunction normalizeTimestamp(value) {\n  if (!value) return \"\";\n  if (typeof value === \"string\") return value;\n  if (typeof value.toISO === \"function\") return value.toISO();\n  if (typeof value.toMillis === \"function\") return new Date(value.toMillis()).toISOString();\n  if (typeof value.seconds === \"number\") return new Date(value.seconds * 1000).toISOString();\n  if (typeof value._seconds === \"number\") return new Date(value._seconds * 1000).toISOString();\n  return JSON.stringify(value);\n}\n\nfunction stableStringify(value) {\n  if (value === null || typeof value !== \"object\") return JSON.stringify(value);\n  if (Array.isArray(value)) return \"[\" + value.map(stableStringify).join(\",\") + \"]\";\n  return \"{\" + Object.keys(value).sort().map((key) => JSON.stringify(key) + \":\" + stableStringify(value[key])).join(\",\") + \"}\";\n}\n\nfunction hashString(value) {\n  let hash = 0x811c9dc5;\n  for (let index = 0; index < value.length; index++) {\n    hash ^= value.charCodeAt(index);\n    hash = Math.imul(hash, 0x01000193) >>> 0;\n  }\n  return hash.toString(16).padStart(8, \"0\");\n}\n\nconst output = [];\n\nfor (const item of $input.all()) {\n  const profileForm = item.json.profileForm && typeof item.json.profileForm === \"object\"\n    ? item.json.profileForm\n    : {};\n  const goal = item.json.selectedGoalId;\n\n  item.json.telegram_id = profileForm.telegram || \"\";\n  item.json.notes = profileForm.notes || \"\";\n  item.json.goal = GOALS[goal] || goal || \"\";\n\n  const exportedRow = {\n    email: item.json.email || \"\",\n    Registration: normalizeTimestamp(item.json.createdAt),\n    Name: item.json.displayName || \"\",\n    Telegram: item.json.telegram_id,\n    About: item.json.notes,\n    Goals: item.json.goal,\n    Status: item.json.status || \"\",\n  };\n\n  const syncKey = item.json._id || item.json.uid || item.json.email;\n  if (!syncKey) {\n    output.push(item);\n    continue;\n  }\n\n  const signature = hashString(stableStringify(exportedRow));\n  if (forceSync || syncCache[syncKey] !== signature) {\n    item.json._sheetSyncKey = syncKey;\n    item.json._sheetSyncSignature = signature;\n    output.push(item);\n  }\n}\n\nreturn output;"
+        "jsCode": "// Build a goal title lookup from whichever branch reached this node.\nconst GOALS = {};\nconst goalItems = $(\"Get goals\").isExecuted\n  ? $(\"Get goals\").all()\n  : $(\"Get goals1\").all();\nfor (const goal of goalItems) {\n  GOALS[goal.json._id] = goal.json.title;\n}\n\nconst staticData = $getWorkflowStaticData(\"global\");\nstaticData.studentSheetSync = staticData.studentSheetSync || {};\nconst syncCache = staticData.studentSheetSync;\nconst webhookQuery = $(\"Webhook\").isExecuted ? ($(\"Webhook\").item.json.query || {}) : {};\nconst forceSync = webhookQuery.force === \"1\" || webhookQuery.force === \"true\";\n\nfunction normalizeTimestamp(value) {\n  if (!value) return \"\";\n  if (typeof value === \"string\") return value;\n  if (typeof value.toISO === \"function\") return value.toISO();\n  if (typeof value.toMillis === \"function\") return new Date(value.toMillis()).toISOString();\n  if (typeof value.seconds === \"number\") return new Date(value.seconds * 1000).toISOString();\n  if (typeof value._seconds === \"number\") return new Date(value._seconds * 1000).toISOString();\n  return JSON.stringify(value);\n}\n\nfunction hasCompletedQuestionnaire(user, profileForm) {\n  if (user.telegramEvents && typeof user.telegramEvents === \"object\" && user.telegramEvents.questionnaireCompletedAt) {\n    return true;\n  }\n  const telegram = typeof profileForm.telegram === \"string\" ? profileForm.telegram.trim() : \"\";\n  if (!telegram) return false;\n  const about = typeof profileForm.aboutMe === \"string\" ? profileForm.aboutMe.trim() : \"\";\n  const notes = typeof profileForm.notes === \"string\" ? profileForm.notes.trim() : \"\";\n  return profileForm.submitted === true || Boolean(about || notes);\n}\n\nfunction stableStringify(value) {\n  if (value === null || typeof value !== \"object\") return JSON.stringify(value);\n  if (Array.isArray(value)) return \"[\" + value.map(stableStringify).join(\",\") + \"]\";\n  return \"{\" + Object.keys(value).sort().map((key) => JSON.stringify(key) + \":\" + stableStringify(value[key])).join(\",\") + \"}\";\n}\n\nfunction hashString(value) {\n  let hash = 0x811c9dc5;\n  for (let index = 0; index < value.length; index++) {\n    hash ^= value.charCodeAt(index);\n    hash = Math.imul(hash, 0x01000193) >>> 0;\n  }\n  return hash.toString(16).padStart(8, \"0\");\n}\n\nconst output = [];\n\nfor (const item of $input.all()) {\n  const profileForm = item.json.profileForm && typeof item.json.profileForm === \"object\"\n    ? item.json.profileForm\n    : {};\n  const goal = item.json.selectedGoalId;\n\n  item.json.telegram_id = profileForm.telegram || \"\";\n  item.json.notes = profileForm.notes || profileForm.aboutMe || \"\";\n  item.json.goal = GOALS[goal] || goal || \"\";\n  item.json.registration = normalizeTimestamp(item.json.createdAt);\n  item.json.questionnaireCompleted = hasCompletedQuestionnaire(item.json, profileForm) ? \"Yes\" : \"No\";\n\n  const exportedRow = {\n    email: item.json.email || \"\",\n    Registration: item.json.registration,\n    Name: item.json.displayName || \"\",\n    Telegram: item.json.telegram_id,\n    About: item.json.notes,\n    Goals: item.json.goal,\n    Status: item.json.status || \"\",\n    questionnaireCompleted: item.json.questionnaireCompleted,\n  };\n\n  const syncKey = item.json._id || item.json.uid || item.json.email;\n  if (!syncKey) {\n    output.push(item);\n    continue;\n  }\n\n  const signature = hashString(stableStringify(exportedRow));\n  if (forceSync || syncCache[syncKey] !== signature) {\n    item.json._sheetSyncKey = syncKey;\n    item.json._sheetSyncSignature = signature;\n    output.push(item);\n  }\n}\n\nreturn output;"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        896,
-        96
+        1536,
+        208
       ],
-      "id": "44056adb-a687-4e7c-8b2f-900f8eae6fb1",
+      "id": "a03fde1d-5be5-448b-ab47-dadad6b3bcea",
       "name": "Flatten Form"
     },
     {
@@ -79,12 +79,13 @@
           "mappingMode": "defineBelow",
           "value": {
             "email": "={{ $json.email }}",
-            "Registration": "={{ $json.createdAt.toDateTime().format('yyyy-MM-dd HH:mm:ss') }}",
+            "Registration": "={{ $json.registration }}",
             "Name": "={{ $json.displayName }}",
             "Telegram": "={{ $json.telegram_id }}",
             "About": "={{ $json.notes }}",
             "Goals": "={{ $json.goal }}",
-            "Status": "={{ $json.status }}"
+            "Status": "={{ $json.status }}",
+            "questionnaireCompleted": "={{ $json.questionnaireCompleted }}"
           },
           "matchingColumns": [
             "email"
@@ -153,6 +154,15 @@
               "display": true,
               "type": "string",
               "canBeUsedToMatch": true
+            },
+            {
+              "id": "questionnaireCompleted",
+              "displayName": "questionnaireCompleted",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
             }
           ],
           "attemptToConvertTypes": false,
@@ -163,10 +173,10 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.7,
       "position": [
-        1344,
-        48
+        1984,
+        160
       ],
-      "id": "6868f50c-0441-48b7-9031-cebb034417d7",
+      "id": "f8de8998-6489-43d1-884b-097c62770044",
       "name": "Append or update row in sheet",
       "retryOnFail": true,
       "maxTries": 5,
@@ -185,10 +195,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1568,
-        48
+        2208,
+        160
       ],
-      "id": "b0583c3c-98cf-49d0-8b13-69a92533d0d4",
+      "id": "39a2d019-c055-4871-b7bf-7550e18bc2b3",
       "name": "Remember synced row"
     },
     {
@@ -202,10 +212,10 @@
       "type": "n8n-nodes-base.googleFirebaseCloudFirestore",
       "typeVersion": 1.1,
       "position": [
-        224,
-        48
+        864,
+        160
       ],
-      "id": "05ca1175-51c5-4193-9be0-fa13feba086d",
+      "id": "f1c987ab-c323-4ec0-aebf-ba277d700ea8",
       "name": "Get goals",
       "credentials": {
         "googleFirebaseCloudFirestoreOAuth2Api": {
@@ -228,10 +238,10 @@
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.3,
       "position": [
-        0,
-        -144
+        640,
+        -32
       ],
-      "id": "4c2884ff-81f2-434e-adf7-7fe8f3233aef",
+      "id": "6facbc59-fdcc-4aff-a717-6578a6e1fc23",
       "name": "Schedule Trigger"
     },
     {
@@ -243,10 +253,10 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        1344,
-        -144
+        1984,
+        -32
       ],
-      "id": "41c5dab2-3f7e-4ab4-985e-c58a80f7bc0e",
+      "id": "0f77c741-b6b6-4d91-84b1-ff02c2a90319",
       "name": "Send a text message",
       "webhookId": "25223afe-b4fa-499c-acd4-77756f612c4c",
       "executeOnce": true,
@@ -268,10 +278,10 @@
       "type": "n8n-nodes-base.googleFirebaseCloudFirestore",
       "typeVersion": 1.1,
       "position": [
-        448,
-        48
+        1088,
+        160
       ],
-      "id": "18378e83-ea7d-483e-bf20-498b2725dc80",
+      "id": "28d2d42b-0dac-4b38-b877-80f4cfd5981a",
       "name": "Get students",
       "executeOnce": true,
       "credentials": {
@@ -283,16 +293,15 @@
     },
     {
       "parameters": {
-        "batchSize": 1,
         "options": {}
       },
       "type": "n8n-nodes-base.splitInBatches",
       "typeVersion": 3,
       "position": [
-        1120,
-        96
+        1760,
+        208
       ],
-      "id": "01253b83-2685-487a-8843-1b1ea29bf847",
+      "id": "164a8ad2-46b5-42a0-a70c-654ca5896b9b",
       "name": "Loop Over Items"
     },
     {
@@ -302,10 +311,10 @@
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
       "position": [
-        1568,
-        96
+        2432,
+        208
       ],
-      "id": "697daef7-229d-4d0e-a698-5f654567a24c",
+      "id": "214fcb08-8ef2-4eb9-82ac-ea31b9739dd0",
       "name": "Wait",
       "webhookId": "68a05fb0-4be7-4ee0-9a7a-d34aa75e1c3e"
     },
@@ -317,10 +326,10 @@
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
       "position": [
-        0,
-        336
+        640,
+        448
       ],
-      "id": "92e775b2-dd00-480e-82d4-1e034ee23a27",
+      "id": "62d2570c-9ead-44d0-b135-a3647ce7c7f2",
       "name": "Webhook",
       "webhookId": "ea0ac1ca-8aca-4267-8111-4ce2f86f3024"
     },
@@ -335,10 +344,10 @@
       "type": "n8n-nodes-base.googleFirebaseCloudFirestore",
       "typeVersion": 1.1,
       "position": [
-        224,
-        336
+        864,
+        448
       ],
-      "id": "645234cb-9838-44d8-912d-23d28552979b",
+      "id": "9c67119c-7e7d-4311-b5c7-11a9efd0399c",
       "name": "Get goals1",
       "credentials": {
         "googleFirebaseCloudFirestoreOAuth2Api": {
@@ -357,10 +366,10 @@
       "type": "n8n-nodes-base.googleFirebaseCloudFirestore",
       "typeVersion": 1.1,
       "position": [
-        448,
-        336
+        1088,
+        448
       ],
-      "id": "b60f20fa-4136-4289-8cfd-9bdc3ca7a2fc",
+      "id": "8e896c36-5b8b-4154-94b7-fd4f247b4031",
       "name": "Get students1",
       "executeOnce": true,
       "alwaysOutputData": true,
@@ -399,10 +408,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        672,
-        336
+        1312,
+        448
       ],
-      "id": "2ac1f78f-9336-4304-b52d-55ddbfd0cdd9",
+      "id": "3f54ffff-e111-4763-9763-6ad78ce0f3c4",
       "name": "If"
     },
     {
@@ -414,10 +423,10 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        896,
-        336
+        1536,
+        448
       ],
-      "id": "8d45b36d-7ea6-4024-843d-8db565050199",
+      "id": "1f20c285-5044-4e8b-a551-628b2f773d8f",
       "name": "Send an error message",
       "webhookId": "628914bb-d6a2-4fb9-97bc-e56b9a5b823d",
       "credentials": {
@@ -666,7 +675,7 @@
     "availableInMCP": false,
     "timeSavedPerExecution": 60
   },
-  "versionId": "99a161dc-90ba-478f-8ce6-abb9499e40e7",
+  "versionId": "631c9280-e980-4504-a2d7-a583d6cbf4b2",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "899d4ada7c2a91af1ad45b3d93cbd7a60489e825ced40cd449109d52bd341227"

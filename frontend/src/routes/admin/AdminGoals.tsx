@@ -1,5 +1,5 @@
 import { A } from "@solidjs/router";
-import { createEffect, createMemo, createSignal, For, Show } from "solid-js";
+import { createEffect, createMemo, createSignal, Index, Show } from "solid-js";
 import { Button } from "../../components/ui/button";
 import { Page } from "../../components/ui/page";
 import { SectionCard } from "../../components/ui/section-card";
@@ -319,73 +319,72 @@ export function AdminGoals() {
                   fallback={<div class="text-sm text-muted-foreground">No questions yet.</div>}
                 >
                   <div class="grid gap-3">
-                    <For each={form().intakeQuestions}>
+                    <Index each={form().intakeQuestions}>
                       {(question, index) => (
                         <div class="grid gap-3 rounded-xl border border-border/70 bg-card p-3">
-                          <div class="grid gap-3 md:grid-cols-2">
-                            <TextField>
-                              <TextFieldLabel for={`goal-question-id-${index()}`}>ID</TextFieldLabel>
-                              <TextFieldInput
-                                id={`goal-question-id-${index()}`}
-                                value={question.id}
-                                onInput={(e) => updateQuestion(index(), { id: e.currentTarget.value })}
-                              />
-                            </TextField>
-                            <TextField>
-                              <TextFieldLabel for={`goal-question-label-${index()}`}>Label</TextFieldLabel>
-                              <TextFieldInput
-                                id={`goal-question-label-${index()}`}
-                                value={question.label}
-                                onInput={(e) => updateQuestion(index(), { label: e.currentTarget.value })}
-                              />
-                            </TextField>
-                          </div>
-                          <div class="grid gap-3 md:grid-cols-2">
-                            <label class="grid gap-2 text-sm">
-                              <span class="font-medium">Type</span>
-                              <select
-                                class="rounded-md border border-border bg-background px-3 py-2"
-                                value={question.type}
-                                onChange={(e) => updateQuestion(index(), { type: e.currentTarget.value as GoalIntakeQuestion["type"] })}
-                              >
-                                <option value="text">text</option>
-                                <option value="multi_select">multi_select</option>
-                              </select>
-                            </label>
-                            <TextField>
-                              <TextFieldLabel for={`goal-question-options-${index()}`}>Options</TextFieldLabel>
-                              <TextFieldInput
-                                id={`goal-question-options-${index()}`}
-                                value={(question.options ?? []).join(", ")}
-                                onInput={(e) => updateQuestion(index(), { options: e.currentTarget.value.split(/[\n,]/).map((item) => item.trim()).filter(Boolean) })}
-                                placeholder="Only for multi_select"
-                              />
-                            </TextField>
-                          </div>
+                          <TextField>
+                            <TextFieldLabel for={`goal-question-label-${index}`}>
+                              <span class="flex items-center gap-1.5">
+                                Label
+                                <span
+                                  title={`Question ID: ${question().id}`}
+                                  class="cursor-help text-muted-foreground"
+                                >
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                                </span>
+                              </span>
+                            </TextFieldLabel>
+                            <TextFieldInput
+                              id={`goal-question-label-${index}`}
+                              value={question().label}
+                              onInput={(e) => updateQuestion(index, { label: e.currentTarget.value })}
+                              placeholder="Enter question label"
+                            />
+                          </TextField>
+                          <label class="grid gap-2 text-sm">
+                            <span class="font-medium">Type</span>
+                            <select
+                              class="rounded-md border border-border bg-background px-3 py-2"
+                              value={question().type}
+                              onChange={(e) => updateQuestion(index, { type: e.currentTarget.value as GoalIntakeQuestion["type"] })}
+                            >
+                              <option value="text">text</option>
+                              <option value="multi_select">multi_select</option>
+                            </select>
+                          </label>
+                          <TextField>
+                            <TextFieldLabel for={`goal-question-options-${index}`}>Options</TextFieldLabel>
+                            <TextFieldInput
+                              id={`goal-question-options-${index}`}
+                              value={(question().options ?? []).join(", ")}
+                              onInput={(e) => updateQuestion(index, { options: e.currentTarget.value.split(/[\n,]/).map((item) => item.trim()).filter(Boolean) })}
+                              placeholder="Only for multi_select, comma-separated"
+                            />
+                          </TextField>
                           <div class="flex flex-wrap items-center gap-4 text-sm">
                             <label class="flex items-center gap-2">
                               <input
                                 type="checkbox"
-                                checked={question.required}
-                                onChange={(e) => updateQuestion(index(), { required: e.currentTarget.checked })}
+                                checked={question().required}
+                                onChange={(e) => updateQuestion(index, { required: e.currentTarget.checked })}
                               />
                               <span>Required</span>
                             </label>
                             <label class="flex items-center gap-2">
                               <input
                                 type="checkbox"
-                                checked={question.isActive}
-                                onChange={(e) => updateQuestion(index(), { isActive: e.currentTarget.checked })}
+                                checked={question().isActive}
+                                onChange={(e) => updateQuestion(index, { isActive: e.currentTarget.checked })}
                               />
                               <span>Active</span>
                             </label>
-                            <Button variant="outline" size="sm" onClick={() => removeQuestion(index())}>
+                            <Button variant="outline" size="sm" onClick={() => removeQuestion(index)}>
                               Remove
                             </Button>
                           </div>
                         </div>
                       )}
-                    </For>
+                    </Index>
                   </div>
                 </Show>
               </div>

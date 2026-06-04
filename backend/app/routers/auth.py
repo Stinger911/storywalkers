@@ -521,7 +521,9 @@ def _course_id_from_step(data: dict[str, Any]) -> str | None:
     return _sanitize_optional_text(data.get("sourceCourseId"))
 
 
-def _student_course_payload(db: firestore.Client, course_id: str) -> dict[str, Any] | None:
+def _student_course_payload(
+    db: firestore.Client, course_id: str
+) -> dict[str, Any] | None:
     course = get_course_by_id(db, course_id)
     if not course:
         return None
@@ -858,7 +860,9 @@ async def get_my_dashboard(user: dict = Depends(require_active_student)):
         steps.append(data)
 
     selected_course_ids = _sanitize_selected_courses(
-        user.get("selectedCourses") if isinstance(user.get("selectedCourses"), list) else []
+        user.get("selectedCourses")
+        if isinstance(user.get("selectedCourses"), list)
+        else []
     )
     course_ids = selected_course_ids + [
         course_id

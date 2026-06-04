@@ -2,10 +2,10 @@ import re
 
 from app.services.telegram_events import (
     fmt_boosty_email_event,
-    fmt_email_activation_noop,
-    fmt_email_processing_result,
     fmt_email_activation_failed,
+    fmt_email_activation_noop,
     fmt_email_activation_succeeded,
+    fmt_email_processing_result,
     fmt_lesson_completed,
     fmt_questionnaire_completed,
     fmt_registration,

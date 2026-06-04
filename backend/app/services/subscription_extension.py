@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
-import re
 
 DURATION_PATTERN = re.compile(r"^(?P<value>[1-9]\d*)(?P<unit>[dw])$")
 

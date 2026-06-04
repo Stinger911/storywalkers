@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import argparse
+import sys
 from dataclasses import dataclass
 from pathlib import Path
-import sys
 
 from google.cloud import firestore
 from google.cloud.firestore_v1.base_query import FieldFilter
