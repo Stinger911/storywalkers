@@ -39,6 +39,9 @@ cc: ## clean code
 	make fix-unused-imports
 	make format
 	make isort
+	@echo "🔍 Type-checking frontend..."
+	@(cd frontend && npx tsc -b --noEmit)
+	@echo "✅ All checks passed!"
 
 tests-frontend: ## run frontend tests
 	@echo "🧪 Running frontend tests..."

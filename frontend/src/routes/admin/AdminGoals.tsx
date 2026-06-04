@@ -1,5 +1,12 @@
 import { A } from "@solidjs/router";
-import { createEffect, createMemo, createSignal, Index, Show } from "solid-js";
+import {
+  createEffect,
+  createMemo,
+  createSignal,
+  For,
+  Index,
+  Show,
+} from "solid-js";
 import { Button } from "../../components/ui/button";
 import { Page } from "../../components/ui/page";
 import { SectionCard } from "../../components/ui/section-card";
@@ -53,12 +60,16 @@ function normalizeQuestions(questions: GoalIntakeQuestion[]) {
     ...question,
     id: question.id.trim(),
     label: question.label.trim(),
-    options: (question.options ?? []).map((item) => item.trim()).filter(Boolean),
+    options: (question.options ?? [])
+      .map((item) => item.trim())
+      .filter(Boolean),
     order: index,
   }));
 }
 
 export function AdminGoals() {
+  let questionsEndRef: HTMLDivElement | undefined;
+
   const [items, setItems] = createSignal<Goal[]>([]);
   const [courses, setCourses] = createSignal<AdminCourse[]>([]);
   const [loading, setLoading] = createSignal(true);
@@ -101,7 +112,9 @@ export function AdminGoals() {
       id: item.id,
       title: item.title,
       description: item.description ?? "",
-      intakeQuestions: [...(item.intakeQuestions ?? [])].sort((a, b) => a.order - b.order),
+      intakeQuestions: [...(item.intakeQuestions ?? [])].sort(
+        (a, b) => a.order - b.order,
+      ),
     });
   };
 
@@ -111,7 +124,10 @@ export function AdminGoals() {
     return courses().filter((course) => course.goalIds.includes(goalId));
   });
 
-  const updateQuestion = (index: number, patch: Partial<GoalIntakeQuestion>) => {
+  const updateQuestion = (
+    index: number,
+    patch: Partial<GoalIntakeQuestion>,
+  ) => {
     setForm((current) => ({
       ...current,
       intakeQuestions: current.intakeQuestions.map((question, itemIndex) =>
@@ -123,14 +139,19 @@ export function AdminGoals() {
   const addQuestion = () => {
     setForm((current) => ({
       ...current,
-      intakeQuestions: [...current.intakeQuestions, newQuestion(current.intakeQuestions.length)],
+      intakeQuestions: [
+        ...current.intakeQuestions,
+        newQuestion(current.intakeQuestions.length),
+      ],
     }));
   };
 
   const removeQuestion = (index: number) => {
     setForm((current) => ({
       ...current,
-      intakeQuestions: current.intakeQuestions.filter((_, itemIndex) => itemIndex !== index),
+      intakeQuestions: current.intakeQuestions.filter(
+        (_, itemIndex) => itemIndex !== index,
+      ),
     }));
   };
 
@@ -143,25 +164,41 @@ export function AdminGoals() {
         throw new Error("Title is required.");
       }
       const intakeQuestions = normalizeQuestions(payload.intakeQuestions);
-      const invalidQuestion = intakeQuestions.find((question) => !question.id || !question.label);
+      const invalidQuestion = intakeQuestions.find(
+        (question) => !question.id || !question.label,
+      );
       if (invalidQuestion) {
         throw new Error("Every intake question needs an id and label.");
       }
       if (payload.id) {
-        await updateGoal(payload.id, {
+        const currentId = payload.id;
+        await updateGoal(currentId, {
           title: payload.title.trim(),
           description: payload.description.trim() || null,
           intakeQuestions,
         });
+        await load();
+        const updated = items().find((g) => g.id === currentId);
+        if (updated) {
+          selectItem(updated);
+          if (updated.intakeQuestions && updated.intakeQuestions.length > 0) {
+            queueMicrotask(() =>
+              questionsEndRef?.scrollIntoView({
+                behavior: "smooth",
+                block: "nearest",
+              }),
+            );
+          }
+        }
       } else {
         await createGoal({
           title: payload.title.trim(),
           description: payload.description.trim() || null,
           intakeQuestions,
         });
+        resetForm();
+        await load();
       }
-      resetForm();
-      await load();
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -221,15 +258,28 @@ export function AdminGoals() {
             when={!loading()}
             fallback={
               <div class="mt-4 space-y-2">
-                <Skeleton class="h-12 w-full rounded-[var(--radius-md)]" animate />
-                <Skeleton class="h-12 w-full rounded-[var(--radius-md)]" animate />
-                <Skeleton class="h-12 w-full rounded-[var(--radius-md)]" animate />
+                <Skeleton
+                  class="h-12 w-full rounded-[var(--radius-md)]"
+                  animate
+                />
+                <Skeleton
+                  class="h-12 w-full rounded-[var(--radius-md)]"
+                  animate
+                />
+                <Skeleton
+                  class="h-12 w-full rounded-[var(--radius-md)]"
+                  animate
+                />
               </div>
             }
           >
             <Show
               when={items().length > 0}
-              fallback={<div class="py-8 text-center text-sm text-muted-foreground">No goals have been created yet.</div>}
+              fallback={
+                <div class="py-8 text-center text-sm text-muted-foreground">
+                  No goals have been created yet.
+                </div>
+              }
             >
               <div class="mt-4 grid gap-3">
                 <For each={items()}>
@@ -240,12 +290,15 @@ export function AdminGoals() {
                     >
                       <div class="flex items-start justify-between gap-4">
                         <div>
-                          <div class="text-base font-semibold">{item.title}</div>
+                          <div class="text-base font-semibold">
+                            {item.title}
+                          </div>
                           <div class="text-sm text-muted-foreground">
                             {item.description || "No description yet"}
                           </div>
                           <div class="mt-1 text-xs text-muted-foreground">
-                            {(item.intakeQuestions ?? []).length} intake questions
+                            {(item.intakeQuestions ?? []).length} intake
+                            questions
                           </div>
                         </div>
                         <div class="flex gap-2">
@@ -287,17 +340,23 @@ export function AdminGoals() {
                 <TextFieldInput
                   id="goal-title"
                   value={form().title}
-                  onInput={(e) => setForm({ ...form(), title: e.currentTarget.value })}
+                  onInput={(e) =>
+                    setForm({ ...form(), title: e.currentTarget.value })
+                  }
                   placeholder="Become a video editor"
                 />
               </TextField>
               <TextField>
-                <TextFieldLabel for="goal-description">Description</TextFieldLabel>
+                <TextFieldLabel for="goal-description">
+                  Description
+                </TextFieldLabel>
                 <TextFieldTextArea
                   id="goal-description"
                   rows={4}
                   value={form().description}
-                  onInput={(e) => setForm({ ...form(), description: e.currentTarget.value })}
+                  onInput={(e) =>
+                    setForm({ ...form(), description: e.currentTarget.value })
+                  }
                   placeholder="Add a short description"
                 />
               </TextField>
@@ -305,7 +364,9 @@ export function AdminGoals() {
               <div class="grid gap-3 rounded-xl border border-border/70 p-4">
                 <div class="flex items-center justify-between gap-3">
                   <div>
-                    <div class="text-sm font-semibold">Goal intake questions</div>
+                    <div class="text-sm font-semibold">
+                      Goal intake questions
+                    </div>
                     <div class="text-xs text-muted-foreground">
                       These questions appear after a student selects this goal.
                     </div>
@@ -316,28 +377,52 @@ export function AdminGoals() {
                 </div>
                 <Show
                   when={form().intakeQuestions.length > 0}
-                  fallback={<div class="text-sm text-muted-foreground">No questions yet.</div>}
+                  fallback={
+                    <div class="text-sm text-muted-foreground">
+                      No questions yet.
+                    </div>
+                  }
                 >
                   <div class="grid gap-3">
                     <Index each={form().intakeQuestions}>
                       {(question, index) => (
                         <div class="grid gap-3 rounded-xl border border-border/70 bg-card p-3">
                           <TextField>
-                            <TextFieldLabel for={`goal-question-label-${index}`}>
+                            <TextFieldLabel
+                              for={`goal-question-label-${index}`}
+                            >
                               <span class="flex items-center gap-1.5">
                                 Label
                                 <span
                                   title={`Question ID: ${question().id}`}
                                   class="cursor-help text-muted-foreground"
                                 >
-                                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                                  <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    width="13"
+                                    height="13"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                  >
+                                    <circle cx="12" cy="12" r="10" />
+                                    <path d="M12 16v-4" />
+                                    <path d="M12 8h.01" />
+                                  </svg>
                                 </span>
                               </span>
                             </TextFieldLabel>
                             <TextFieldInput
                               id={`goal-question-label-${index}`}
                               value={question().label}
-                              onInput={(e) => updateQuestion(index, { label: e.currentTarget.value })}
+                              onInput={(e) =>
+                                updateQuestion(index, {
+                                  label: e.currentTarget.value,
+                                })
+                              }
                               placeholder="Enter question label"
                             />
                           </TextField>
@@ -346,18 +431,34 @@ export function AdminGoals() {
                             <select
                               class="rounded-md border border-border bg-background px-3 py-2"
                               value={question().type}
-                              onChange={(e) => updateQuestion(index, { type: e.currentTarget.value as GoalIntakeQuestion["type"] })}
+                              onChange={(e) =>
+                                updateQuestion(index, {
+                                  type: e.currentTarget
+                                    .value as GoalIntakeQuestion["type"],
+                                })
+                              }
                             >
                               <option value="text">text</option>
                               <option value="multi_select">multi_select</option>
                             </select>
                           </label>
                           <TextField>
-                            <TextFieldLabel for={`goal-question-options-${index}`}>Options</TextFieldLabel>
+                            <TextFieldLabel
+                              for={`goal-question-options-${index}`}
+                            >
+                              Options
+                            </TextFieldLabel>
                             <TextFieldInput
                               id={`goal-question-options-${index}`}
                               value={(question().options ?? []).join(", ")}
-                              onInput={(e) => updateQuestion(index, { options: e.currentTarget.value.split(/[\n,]/).map((item) => item.trim()).filter(Boolean) })}
+                              onInput={(e) =>
+                                updateQuestion(index, {
+                                  options: e.currentTarget.value
+                                    .split(/[\n,]/)
+                                    .map((item) => item.trim())
+                                    .filter(Boolean),
+                                })
+                              }
                               placeholder="Only for multi_select, comma-separated"
                             />
                           </TextField>
@@ -366,7 +467,11 @@ export function AdminGoals() {
                               <input
                                 type="checkbox"
                                 checked={question().required}
-                                onChange={(e) => updateQuestion(index, { required: e.currentTarget.checked })}
+                                onChange={(e) =>
+                                  updateQuestion(index, {
+                                    required: e.currentTarget.checked,
+                                  })
+                                }
                               />
                               <span>Required</span>
                             </label>
@@ -374,28 +479,48 @@ export function AdminGoals() {
                               <input
                                 type="checkbox"
                                 checked={question().isActive}
-                                onChange={(e) => updateQuestion(index, { isActive: e.currentTarget.checked })}
+                                onChange={(e) =>
+                                  updateQuestion(index, {
+                                    isActive: e.currentTarget.checked,
+                                  })
+                                }
                               />
                               <span>Active</span>
                             </label>
-                            <Button variant="outline" size="sm" onClick={() => removeQuestion(index)}>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => removeQuestion(index)}
+                            >
                               Remove
                             </Button>
                           </div>
                         </div>
                       )}
                     </Index>
+                    <div ref={questionsEndRef} />
                   </div>
                 </Show>
               </div>
 
-              <div class="flex flex-wrap gap-2">
-                <Button onClick={() => void submit()} disabled={saving()}>
-                  {form().id ? "Save changes" : "Create goal"}
-                </Button>
-                <Button variant="outline" onClick={resetForm}>
-                  Reset
-                </Button>
+              <div class="flex flex-wrap justify-between gap-2">
+                <div>
+                  <Button onClick={() => void submit()} disabled={saving()}>
+                    {form().id ? "Save changes" : "Create goal"}
+                  </Button>
+                  <Button variant="outline" onClick={resetForm}>
+                    Reset
+                  </Button>
+                </div>
+                <Show when={form().intakeQuestions.length > 0}>
+                  <Button
+                    variant="outline"
+                    onClick={addQuestion}
+                    disabled={saving()}
+                  >
+                    Add question
+                  </Button>
+                </Show>
               </div>
             </div>
           </SectionCard>
@@ -403,12 +528,27 @@ export function AdminGoals() {
           <SectionCard
             title="Linked Courses"
             description="Courses linked to this goal. Open the course editor to update them."
-            actions={<Button as={A} href="/admin/courses" variant="outline">Open courses</Button>}
+            actions={
+              <Button as={A} href="/admin/courses" variant="outline">
+                Open courses
+              </Button>
+            }
           >
-            <Show when={form().id} fallback={<div class="text-sm text-muted-foreground">Select a goal to view linked courses.</div>}>
+            <Show
+              when={form().id}
+              fallback={
+                <div class="text-sm text-muted-foreground">
+                  Select a goal to view linked courses.
+                </div>
+              }
+            >
               <Show
                 when={linkedCourses().length > 0}
-                fallback={<div class="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">No courses are linked to this goal yet.</div>}
+                fallback={
+                  <div class="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
+                    No courses are linked to this goal yet.
+                  </div>
+                }
               >
                 <div class="mt-4 grid gap-3">
                   <For each={linkedCourses()}>
@@ -416,16 +556,28 @@ export function AdminGoals() {
                       <div class="rounded-xl border border-border/70 bg-card p-4">
                         <div class="flex items-start justify-between gap-4">
                           <div>
-                            <div class="text-base font-semibold">{course.title}</div>
+                            <div class="text-base font-semibold">
+                              {course.title}
+                            </div>
                             <div class="text-sm text-muted-foreground">
                               {course.description || "No description yet"}
                             </div>
                           </div>
                           <div class="flex gap-2">
-                            <Button as={A} href={`/admin/courses?edit=${encodeURIComponent(course.id)}`} variant="outline" size="sm">
+                            <Button
+                              as={A}
+                              href={`/admin/courses?edit=${encodeURIComponent(course.id)}`}
+                              variant="outline"
+                              size="sm"
+                            >
                               Edit course
                             </Button>
-                            <Button as={A} href={`/admin/courses/${course.id}/lessons?title=${encodeURIComponent(course.title)}`} variant="outline" size="sm">
+                            <Button
+                              as={A}
+                              href={`/admin/courses/${course.id}/lessons?title=${encodeURIComponent(course.title)}`}
+                              variant="outline"
+                              size="sm"
+                            >
                               Lessons
                             </Button>
                           </div>
