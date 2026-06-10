@@ -66,6 +66,19 @@ type RawDictionary = {
     continueGoogle: string;
     switchToSignIn: string;
     switchToSignUp: string;
+    accessGateLabel: string;
+    platformTitle: string;
+    platformTitleRegister: string;
+    methodEmail: string;
+    methodRegister: string;
+    methodTelegram: string;
+    methodGoogle: string;
+    subTabPassword: string;
+    subTabLink: string;
+    sslLabel: string;
+    versionLabel: string;
+    telegramTitle: string;
+    telegramSoon: string;
     messages: {
       signedIn: string;
       accountCreated: string;
@@ -490,6 +503,19 @@ const dictionaries: Record<Locale, RawDictionary> = {
       continueGoogle: "Continue with Google",
       switchToSignIn: "Already have an account? Sign in",
       switchToSignUp: "Need an account? Register",
+      accessGateLabel: "STORYWALKERS ACCESS GATE",
+      platformTitle: "Sign in to platform",
+      platformTitleRegister: "Create account",
+      methodEmail: "By Email",
+      methodRegister: "Register",
+      methodTelegram: "Telegram",
+      methodGoogle: "Google",
+      subTabPassword: "Password",
+      subTabLink: "Magic Link",
+      sslLabel: "SSL Encryption",
+      versionLabel: "StoryWalkers ID v2.6",
+      telegramTitle: "Sign in via Telegram",
+      telegramSoon: "Coming soon",
       messages: {
         signedIn: "Signed in successfully.",
         accountCreated: "Account created and signed in.",
@@ -942,6 +968,19 @@ const dictionaries: Record<Locale, RawDictionary> = {
       continueGoogle: "Продолжить с Google",
       switchToSignIn: "Уже есть аккаунт? Войти",
       switchToSignUp: "Нужен аккаунт? Зарегистрироваться",
+      accessGateLabel: "STORYWALKERS ACCESS GATE",
+      platformTitle: "Вход на платформу",
+      platformTitleRegister: "Регистрация",
+      methodEmail: "По Почте",
+      methodRegister: "Регистрация",
+      methodTelegram: "Telegram",
+      methodGoogle: "Google",
+      subTabPassword: "Вход по паролю",
+      subTabLink: "Ссылка на почту",
+      sslLabel: "SSL Шифрование",
+      versionLabel: "StoryWalkers ID v2.6",
+      telegramTitle: "Войти через Telegram",
+      telegramSoon: "Скоро доступно",
       messages: {
         signedIn: "Вход выполнен.",
         accountCreated: "Аккаунт создан и выполнен вход.",
