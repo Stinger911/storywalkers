@@ -3,29 +3,44 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { I18nProvider } from "../../src/lib/i18n";
 import { OnboardingCourses } from "../../src/routes/onboarding/OnboardingCourses";
-import { listCourses } from "../../src/lib/coursesApi";
-import { getFxRates } from "../../src/lib/fxApi";
+import { listCourseLessons, listCourses } from "../../src/lib/coursesApi";
 
 const patchMeMock = vi.fn();
 const navigateMock = vi.fn();
-let meState = {
+type MeState = {
+  uid: string;
+  email: string;
+  displayName: string;
+  role: "student";
+  status: "active";
+  selectedGoalId: string | null;
+  profileForm: Record<string, unknown>;
+  selectedCourses: string[];
+  selectedLessons?: { courseId: string; lessonId: string }[];
+  subscriptionSelected: boolean | null;
+  isFirstHundred: boolean;
+};
+
+const baseMe = (): MeState => ({
   uid: "u1",
   email: "u1@example.com",
   displayName: "User One",
-  role: "student" as const,
-  status: "active" as const,
+  role: "student",
+  status: "active",
   selectedGoalId: "goal-1",
   profileForm: {
     aboutMe: "About me",
     telegram: "@alice",
     socialUrl: null,
-    experienceLevel: "beginner" as const,
+    experienceLevel: "beginner",
     notes: null,
   },
   selectedCourses: [],
   subscriptionSelected: null,
   isFirstHundred: false,
-};
+});
+
+let meState = baseMe();
 
 vi.mock("@solidjs/router", () => ({
   A: (props: { href: string; children: unknown; class?: string }) => (
@@ -50,72 +65,52 @@ vi.mock("../../src/lib/coursesApi", async () => {
   return {
     ...actual,
     listCourses: vi.fn(),
+    listCourseLessons: vi.fn(),
   };
 });
 
-vi.mock("../../src/lib/fxApi", () => ({
-  getFxRates: vi.fn(),
+vi.mock("../../src/lib/adminApi", () => ({
+  listGoals: vi.fn(async () => ({ items: [] })),
 }));
 
 vi.mock("../../src/routes/onboarding/OnboardingLayout", () => ({
   OnboardingLayout: (props: { children?: unknown }) => <>{props.children}</>,
 }));
 
+const courseOne = {
+  id: "course-1",
+  title: "Course One",
+  shortDescription: "Desc one",
+  priceUsdCents: 4000,
+  trialLessonUrl: null,
+  isActive: true,
+  goalIds: ["goal-1"],
+  lessonCount: 6,
+};
+
+const courseTwo = {
+  id: "course-2",
+  title: "Course Two",
+  shortDescription: "Desc two",
+  priceUsdCents: 6000,
+  trialLessonUrl: null,
+  isActive: true,
+  goalIds: ["goal-1"],
+  lessonCount: 3,
+};
+
 describe("OnboardingCourses", () => {
   beforeEach(() => {
     window.sessionStorage.clear();
-    meState = {
-      uid: "u1",
-      email: "u1@example.com",
-      displayName: "User One",
-      role: "student",
-      status: "active",
-      selectedGoalId: "goal-1",
-      profileForm: {
-        aboutMe: "About me",
-        telegram: "@alice",
-        socialUrl: null,
-        experienceLevel: "beginner",
-        notes: null,
-      },
-      selectedCourses: [],
-      subscriptionSelected: null,
-      isFirstHundred: false,
-    };
+    meState = baseMe();
     vi.mocked(listCourses).mockReset();
-    vi.mocked(getFxRates).mockReset();
+    vi.mocked(listCourseLessons).mockReset();
     patchMeMock.mockReset();
     navigateMock.mockReset();
-    vi.mocked(getFxRates).mockResolvedValue({
-      base: "USD",
-      rates: { USD: 1, EUR: 0.9, PLN: 4.0, RUB: 90 },
-      updatedAt: null,
-    });
   });
 
   it("renders course cards and persists selected courses on Next", async () => {
-    vi.mocked(listCourses).mockResolvedValue({
-      items: [
-        {
-          id: "course-1",
-          title: "Course One",
-          shortDescription: "Desc one",
-          priceUsdCents: 4000,
-          isActive: true,
-          goalIds: ["goal-1"],
-          lessonCount: 6,
-        },
-        {
-          id: "course-2",
-          title: "Course Two",
-          shortDescription: "Desc two",
-          priceUsdCents: 6000,
-          isActive: true,
-          goalIds: ["goal-1"],
-          lessonCount: 3,
-        },
-      ],
-    });
+    vi.mocked(listCourses).mockResolvedValue({ items: [courseOne, courseTwo] });
     patchMeMock.mockResolvedValue({});
 
     render(() => (
@@ -125,49 +120,25 @@ describe("OnboardingCourses", () => {
     ));
 
     expect(await screen.findByText("Course One")).toBeInTheDocument();
-    expect(screen.getByText("Mandatory")).toBeInTheDocument();
-    expect(screen.getByText("Included by default")).toBeInTheDocument();
     expect(screen.getByText("6 steps")).toBeInTheDocument();
     expect(listCourses).toHaveBeenCalledWith({ goalId: "goal-1" });
 
     fireEvent.click(screen.getByText("Course One"));
-    await waitFor(() => {
-      expect(screen.getByText("$62.22")).toBeInTheDocument();
-    });
-
     fireEvent.click(screen.getByRole("button", { name: "Next" }));
 
     await waitFor(() => {
       expect(patchMeMock).toHaveBeenCalledWith({
         selectedCourses: ["course-1"],
+        selectedLessons: [],
         subscriptionSelected: true,
       });
       expect(navigateMock).toHaveBeenCalledWith("/onboarding/checkout");
     });
   });
 
-  it("shows inactive courses separately and does not include them in payload", async () => {
+  it("does not render inactive courses and keeps them out of the payload", async () => {
     vi.mocked(listCourses).mockResolvedValue({
-      items: [
-        {
-          id: "course-1",
-          title: "Course One",
-          shortDescription: "Desc one",
-          priceUsdCents: 4000,
-          isActive: true,
-          goalIds: ["goal-1"],
-          lessonCount: 6,
-        },
-        {
-          id: "course-2",
-          title: "Course Two",
-          shortDescription: "Desc two",
-          priceUsdCents: 6000,
-          isActive: false,
-          goalIds: ["goal-1"],
-          lessonCount: 4,
-        },
-      ],
+      items: [courseOne, { ...courseTwo, isActive: false }],
     });
     patchMeMock.mockResolvedValue({});
 
@@ -177,10 +148,8 @@ describe("OnboardingCourses", () => {
       </I18nProvider>
     ));
 
-    expect(await screen.findByText("Unavailable paths")).toBeInTheDocument();
-    expect(listCourses).toHaveBeenCalledWith({ goalId: "goal-1" });
-    expect(screen.getByText("Course Two")).toBeInTheDocument();
-    expect(screen.getByText("4 steps")).toBeInTheDocument();
+    expect(await screen.findByText("Course One")).toBeInTheDocument();
+    expect(screen.queryByText("Course Two")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByText("Course One"));
     fireEvent.click(screen.getByRole("button", { name: "Next" }));
@@ -188,29 +157,16 @@ describe("OnboardingCourses", () => {
     await waitFor(() => {
       expect(patchMeMock).toHaveBeenCalledWith({
         selectedCourses: ["course-1"],
+        selectedLessons: [],
         subscriptionSelected: true,
       });
     });
   });
 
-  it("keeps community paid for first hundred students", async () => {
-    meState = {
-      ...meState,
-      isFirstHundred: true,
-    };
-    vi.mocked(listCourses).mockResolvedValue({
-      items: [
-        {
-          id: "course-1",
-          title: "Course One",
-          shortDescription: "Desc one",
-          priceUsdCents: 4000,
-          isActive: true,
-          goalIds: ["goal-1"],
-          lessonCount: 6,
-        },
-      ],
-    });
+  it("forces subscriptionSelected even when saved profile has it disabled", async () => {
+    meState = { ...baseMe(), subscriptionSelected: false };
+    vi.mocked(listCourses).mockResolvedValue({ items: [courseOne] });
+    patchMeMock.mockResolvedValue({});
 
     render(() => (
       <I18nProvider>
@@ -219,32 +175,38 @@ describe("OnboardingCourses", () => {
     ));
 
     expect(await screen.findByText("Course One")).toBeInTheDocument();
-    expect(screen.getByText("$40.00")).toHaveClass("line-through");
-    expect(screen.getAllByText("$0.00").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("$22.22")).toHaveLength(2);
-    expect(screen.getAllByText("$22.22")[0]).not.toHaveClass("line-through");
 
     fireEvent.click(screen.getByText("Course One"));
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+
     await waitFor(() => {
-      expect(screen.getAllByText("$22.22")).toHaveLength(2);
+      expect(patchMeMock).toHaveBeenCalledWith({
+        selectedCourses: ["course-1"],
+        selectedLessons: [],
+        subscriptionSelected: true,
+      });
     });
   });
 
-  it("forces community to stay selected even when saved profile has it disabled", async () => {
-    meState = {
-      ...meState,
-      subscriptionSelected: false,
-    };
-    vi.mocked(listCourses).mockResolvedValue({
+  it("supports picking individual lessons instead of the whole course", async () => {
+    vi.mocked(listCourses).mockResolvedValue({ items: [courseOne] });
+    vi.mocked(listCourseLessons).mockResolvedValue({
       items: [
         {
-          id: "course-1",
-          title: "Course One",
-          shortDescription: "Desc one",
-          priceUsdCents: 4000,
+          id: "lesson-1",
+          title: "Lesson One",
+          content: "Content",
+          materialUrl: null,
+          order: 0,
           isActive: true,
-          goalIds: ["goal-1"],
-          lessonCount: 6,
+        },
+        {
+          id: "lesson-2",
+          title: "Lesson Two",
+          content: "Content",
+          materialUrl: null,
+          order: 1,
+          isActive: true,
         },
       ],
     });
@@ -257,38 +219,31 @@ describe("OnboardingCourses", () => {
     ));
 
     expect(await screen.findByText("Course One")).toBeInTheDocument();
-    expect(screen.getByText("StoryWalkers Community")).toBeInTheDocument();
-    expect(screen.getAllByText("$22.22").length).toBeGreaterThan(0);
 
-    fireEvent.click(screen.getByText("Course One"));
+    fireEvent.click(screen.getByRole("button", { name: "Pick individual lessons" }));
+
+    expect(await screen.findByText("Lesson One")).toBeInTheDocument();
+    // round(4000 / 6) = 667 → $6.67 per lesson
+    expect(screen.getAllByText(/\$6\.67/).length).toBeGreaterThan(0);
+
+    const checkboxes = screen.getAllByRole("checkbox");
+    fireEvent.click(checkboxes[0]);
+
     fireEvent.click(screen.getByRole("button", { name: "Next" }));
 
     await waitFor(() => {
       expect(patchMeMock).toHaveBeenCalledWith({
-        selectedCourses: ["course-1"],
+        selectedCourses: [],
+        selectedLessons: [{ courseId: "course-1", lessonId: "lesson-1" }],
         subscriptionSelected: true,
       });
+      expect(navigateMock).toHaveBeenCalledWith("/onboarding/checkout");
     });
   });
 
   it("does not load courses when auth state has no selectedGoalId", async () => {
-    meState = {
-      ...meState,
-      selectedGoalId: null,
-    };
-    vi.mocked(listCourses).mockResolvedValue({
-      items: [
-        {
-          id: "course-1",
-          title: "Course One",
-          shortDescription: "Desc one",
-          priceUsdCents: 4000,
-          isActive: true,
-          goalIds: ["goal-1"],
-          lessonCount: 6,
-        },
-      ],
-    });
+    meState = { ...baseMe(), selectedGoalId: null };
+    vi.mocked(listCourses).mockResolvedValue({ items: [courseOne] });
 
     render(() => (
       <I18nProvider>
@@ -301,7 +256,7 @@ describe("OnboardingCourses", () => {
     expect(listCourses).not.toHaveBeenCalled();
   });
 
-  it("navigates back to goal step from courses", async () => {
+  it("navigates back to profile step from courses", async () => {
     vi.mocked(listCourses).mockResolvedValue({ items: [] });
 
     render(() => (
@@ -313,13 +268,12 @@ describe("OnboardingCourses", () => {
     fireEvent.click(screen.getByRole("button", { name: "Back" }));
 
     await waitFor(() => {
-      expect(navigateMock).toHaveBeenCalledWith("/onboarding/goal");
+      expect(navigateMock).toHaveBeenCalledWith("/onboarding/profile");
     });
   });
 
-  it("allows continuing to checkout with community access only", async () => {
-    vi.mocked(listCourses).mockResolvedValue({ items: [] });
-    patchMeMock.mockResolvedValue({});
+  it("keeps Next disabled until a course or lesson is selected", async () => {
+    vi.mocked(listCourses).mockResolvedValue({ items: [courseOne] });
 
     render(() => (
       <I18nProvider>
@@ -327,14 +281,10 @@ describe("OnboardingCourses", () => {
       </I18nProvider>
     ));
 
-    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+    expect(await screen.findByText("Course One")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Next" })).toBeDisabled();
 
-    await waitFor(() => {
-      expect(patchMeMock).toHaveBeenCalledWith({
-        selectedCourses: [],
-        subscriptionSelected: true,
-      });
-      expect(navigateMock).toHaveBeenCalledWith("/onboarding/checkout");
-    });
+    fireEvent.click(screen.getByText("Course One"));
+    expect(screen.getByRole("button", { name: "Next" })).not.toBeDisabled();
   });
 });

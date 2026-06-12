@@ -54,6 +54,28 @@ const useMeMock = vi.mocked(useMe);
 const useMyPlanMock = vi.mocked(useMyPlan);
 const showToastMock = vi.mocked(showToast);
 
+type PlanValue = ReturnType<typeof useMyPlan>;
+
+// Fills the context fields most tests don't care about (courses, stepsByCourseId).
+const mockPlanValue = (value: Partial<PlanValue>) => {
+  const steps = value.steps ?? (() => []);
+  useMyPlanMock.mockReturnValue({
+    courses: () => [],
+    stepsByCourseId: () => {
+      const grouped = new Map<string, ReturnType<typeof steps>>();
+      for (const step of steps()) {
+        const courseId =
+          (step as { courseId?: string }).courseId?.trim() || "__legacy__";
+        const current = grouped.get(courseId) ?? [];
+        current.push(step);
+        grouped.set(courseId, current);
+      }
+      return grouped;
+    },
+    ...value,
+  } as PlanValue);
+};
+
 afterEach(async () => {
   await new Promise((resolve) => setTimeout(resolve, 0));
   cleanup();
@@ -88,7 +110,7 @@ describe("StudentHome", () => {
         roleRaw: "student",
       }),
     });
-    useMyPlanMock.mockReturnValue({
+    mockPlanValue({
       plan: () => ({ studentUid: "u1", goalId: "g1" }),
       goal: () => ({ title: "Video Editing Basics", description: "Learn the workflow." }),
       steps: () => [makeStep()],
@@ -120,7 +142,7 @@ describe("StudentHome", () => {
   });
 
   it("embeds official youtube lesson links in the lesson popup", () => {
-    useMyPlanMock.mockReturnValue({
+    mockPlanValue({
       plan: () => ({ studentUid: "u1", goalId: "g1" }),
       goal: () => ({ title: "Video Editing Basics", description: "Learn the workflow." }),
       steps: () => [makeStep({ materialUrl: "https://youtu.be/dQw4w9WgXcQ" })],
@@ -149,7 +171,7 @@ describe("StudentHome", () => {
   });
 
   it("renders lesson descriptions as markdown", async () => {
-    useMyPlanMock.mockReturnValue({
+    mockPlanValue({
       plan: () => ({ studentUid: "u1", goalId: "g1" }),
       goal: () => ({ title: "Video Editing Basics", description: "Learn the workflow." }),
       steps: () => [makeStep({ description: "**Bold** with [link](https://example.com)" })],
@@ -181,7 +203,7 @@ describe("StudentHome", () => {
   });
 
   it("opens the selected lesson in a full-page popup and updates it on click", async () => {
-    useMyPlanMock.mockReturnValue({
+    mockPlanValue({
       plan: () => ({ studentUid: "u1", goalId: "g1" }),
       goal: () => ({ title: "Video Editing Basics", description: "Learn the workflow." }),
       steps: () => [
@@ -227,7 +249,7 @@ describe("StudentHome", () => {
   });
 
   it("does not embed non-youtube lesson links", async () => {
-    useMyPlanMock.mockReturnValue({
+    mockPlanValue({
       plan: () => ({ studentUid: "u1", goalId: "g1" }),
       goal: () => ({ title: "Video Editing Basics", description: "Learn the workflow." }),
       steps: () => [makeStep({ materialUrl: "https://example.com/lesson" })],
@@ -255,7 +277,7 @@ describe("StudentHome", () => {
   });
 
   it("shows empty goal state when no plan", () => {
-    useMyPlanMock.mockReturnValue({
+    mockPlanValue({
       plan: () => null,
       goal: () => null,
       steps: () => [],
@@ -278,7 +300,7 @@ describe("StudentHome", () => {
     useMeMock.mockReturnValue({
       me: () => ({ displayName: "", email: "fallback@example.com", roleRaw: "student" }),
     });
-    useMyPlanMock.mockReturnValue({
+    mockPlanValue({
       plan: () => null,
       goal: () => null,
       steps: () => [],
@@ -370,7 +392,7 @@ describe("StudentHome", () => {
   });
 
   it("renders locked lesson state and disables lesson actions in the popup", () => {
-    useMyPlanMock.mockReturnValue({
+    mockPlanValue({
       plan: () => ({ studentUid: "u1", goalId: "g1" }),
       goal: () => ({ title: "Video Editing Basics", description: "Learn the workflow." }),
       steps: () => [
@@ -403,7 +425,7 @@ describe("StudentHome", () => {
   });
 
   it("renders done comment and link only when values exist", () => {
-    useMyPlanMock.mockReturnValue({
+    mockPlanValue({
       plan: () => ({ studentUid: "u1", goalId: "g1" }),
       goal: () => ({ title: "Video Editing Basics", description: "Learn the workflow." }),
       steps: () => [
@@ -451,7 +473,7 @@ describe("StudentHome", () => {
   });
 
   it("selects a step from the path map and toggles a completed step back to incomplete", async () => {
-    useMyPlanMock.mockReturnValue({
+    mockPlanValue({
       plan: () => ({ studentUid: "u1", goalId: "g1" }),
       goal: () => ({ title: "Video Editing Basics", description: "Learn the workflow." }),
       steps: () => [

@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@solidjs/testing-library";
 import { vi } from "vitest";
 
 import { I18nProvider } from "../../src/lib/i18n";
+import { ThemeProvider } from "../../src/lib/theme";
 import { Login } from "../../src/routes/Login";
 
 const {
@@ -119,9 +120,13 @@ describe("Login linking", () => {
     sendSignInLinkToEmailMock.mockResolvedValue(undefined);
 
     render(() => (
-      <I18nProvider>
-        <Login />
-      </I18nProvider>
+      <ThemeProvider>
+
+        <I18nProvider>
+          <Login />
+        </I18nProvider>
+
+      </ThemeProvider>
     ));
 
     fireEvent.input(screen.getByLabelText("Email"), {
@@ -130,8 +135,10 @@ describe("Login linking", () => {
     fireEvent.input(screen.getByLabelText("Password"), {
       target: { value: "secret123" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Register" }));
-    fireEvent.click(screen.getByText("Create account (email/password)"));
+    fireEvent.click(screen.getByRole("button", { name: /Register/ }));
+    fireEvent.click(
+      screen.getByRole("button", { name: /Create account \(email\/password\)/ }),
+    );
 
     await waitFor(() => {
       expect(fetchSignInMethodsForEmailMock).toHaveBeenCalledWith(
@@ -162,9 +169,13 @@ describe("Login linking", () => {
     updatePasswordMock.mockResolvedValue(undefined);
 
     render(() => (
-      <I18nProvider>
-        <Login />
-      </I18nProvider>
+      <ThemeProvider>
+
+        <I18nProvider>
+          <Login />
+        </I18nProvider>
+
+      </ThemeProvider>
     ));
 
     await waitFor(() => {
@@ -188,9 +199,13 @@ describe("Login linking", () => {
     sendPasswordResetEmailMock.mockResolvedValue(undefined);
 
     render(() => (
-      <I18nProvider>
-        <Login />
-      </I18nProvider>
+      <ThemeProvider>
+
+        <I18nProvider>
+          <Login />
+        </I18nProvider>
+
+      </ThemeProvider>
     ));
 
     fireEvent.input(screen.getByLabelText("Email"), {
@@ -215,24 +230,33 @@ describe("Login linking", () => {
     isSignInWithEmailLinkMock.mockReturnValue(false);
 
     render(() => (
-      <I18nProvider>
-        <Login />
-      </I18nProvider>
+      <ThemeProvider>
+
+        <I18nProvider>
+          <Login />
+        </I18nProvider>
+
+      </ThemeProvider>
     ));
 
-    expect(screen.getByText("Welcome back")).toBeInTheDocument();
+    expect(screen.getByText("Sign in to platform")).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Send sign-in link (passwordless)" }),
+      screen.getByRole("button", { name: /Sign in with password/ }),
     ).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Register" }));
-
-    expect(await screen.findByText("Create your account")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Magic Link" }));
     expect(
-      screen.queryByRole("button", { name: "Send sign-in link (passwordless)" }),
+      screen.getByRole("button", { name: /Send sign-in link \(passwordless\)/ }),
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /Register/ }));
+
+    expect(await screen.findByText("Create account")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /Send sign-in link \(passwordless\)/ }),
     ).not.toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Already have an account? Sign in" }),
+      screen.getByRole("button", { name: /Create account \(email\/password\)/ }),
     ).toBeInTheDocument();
   });
 });

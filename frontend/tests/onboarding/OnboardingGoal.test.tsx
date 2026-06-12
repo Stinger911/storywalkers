@@ -13,6 +13,7 @@ vi.mock("@solidjs/router", () => ({
       {props.children}
     </a>
   ),
+  useNavigate: () => vi.fn(),
 }));
 
 vi.mock("../../src/lib/adminApi", () => ({
@@ -70,10 +71,15 @@ describe("OnboardingGoal", () => {
 
     fireEvent.click(screen.getByText("Goal One"));
 
-    await waitFor(() => {
-      expect(patchMeMock).toHaveBeenCalledWith({ selectedGoalId: "goal-1" });
-    });
     expect(screen.getByText("Selected")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+
+    await waitFor(() => {
+      expect(patchMeMock).toHaveBeenCalledWith(
+        expect.objectContaining({ selectedGoalId: "goal-1" }),
+      );
+    });
   });
 
   it("shows friendly load error text", async () => {

@@ -33,21 +33,21 @@ function baseMe(): MeProfile {
 describe("onboardingState", () => {
   it("computes next step in order", () => {
     const me1 = baseMe();
-    expect(getNextOnboardingStep(me1)).toBe("profile");
+    expect(getNextOnboardingStep(me1)).toBe("goal");
 
     const me2 = {
       ...baseMe(),
+      selectedGoalId: "goal-1",
+    };
+    expect(getNextOnboardingStep(me2)).toBe("profile");
+
+    const me3 = {
+      ...me2,
       profileForm: {
         ...baseMe().profileForm,
         submitted: true,
         telegram: "@alice",
       },
-    };
-    expect(getNextOnboardingStep(me2)).toBe("goal");
-
-    const me3 = {
-      ...me2,
-      selectedGoalId: "goal-1",
     };
     expect(getNextOnboardingStep(me3)).toBe("courses");
 

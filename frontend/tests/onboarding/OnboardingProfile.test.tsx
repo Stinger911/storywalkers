@@ -143,7 +143,7 @@ describe("OnboardingProfile", () => {
 
     await waitFor(() => {
       expect(patchMeMock).toHaveBeenCalled();
-      expect(navigateMock).toHaveBeenCalledWith("/onboarding/goal");
+      expect(navigateMock).toHaveBeenCalledWith("/onboarding/courses");
     });
   });
 
