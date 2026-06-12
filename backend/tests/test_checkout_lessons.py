@@ -270,7 +270,9 @@ def test_lesson_checkout_rejects_already_owned_lessons(monkeypatch):
     app.dependency_overrides.clear()
 
 
-def test_lesson_checkout_rejects_lessons_from_owned_course(monkeypatch):
+def test_lesson_checkout_allowed_when_course_in_selected_courses(monkeypatch):
+    # selectedCourses is the onboarding selection, not an ownership record.
+    # A student who selected c1 in onboarding must still be able to buy individual lessons.
     courses, lessons = _course_with_lessons()
     fake_db = FakeFirestore(courses=courses, lessons=lessons)
     monkeypatch.setattr(checkout, "get_firestore_client", lambda: fake_db)
@@ -284,10 +286,7 @@ def test_lesson_checkout_rejects_lessons_from_owned_course(monkeypatch):
         json={"selectedLessons": [{"courseId": "c1", "lessonId": "l1"}]},
     )
 
-    assert response.status_code == 400
-    payload = response.json()["error"]
-    assert payload["code"] == "validation_error"
-    assert payload["details"]["alreadyOwnedCourseIds"] == ["c1"]
+    assert response.status_code == 201
 
     app.dependency_overrides.clear()
 

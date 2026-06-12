@@ -312,35 +312,6 @@ async def create_checkout_intent(
             status_code=403,
         )
 
-    existing_courses = set(_normalize_selected_courses(user.get("selectedCourses")))
-    already_owned = [
-        course_id
-        for course_id in payload.selectedCourses
-        if course_id in existing_courses
-    ]
-    if already_owned:
-        raise AppError(
-            code="validation_error",
-            message="selectedCourses contains courses already owned by the student",
-            status_code=400,
-            details={"alreadyOwnedCourseIds": already_owned},
-        )
-
-    lessons_from_owned_courses = sorted(
-        {
-            item.courseId
-            for item in payload.selectedLessons
-            if item.courseId in existing_courses
-        }
-    )
-    if lessons_from_owned_courses:
-        raise AppError(
-            code="validation_error",
-            message="selectedLessons contains lessons from courses already owned",
-            status_code=400,
-            details={"alreadyOwnedCourseIds": lessons_from_owned_courses},
-        )
-
     owned_lesson_pairs = _normalize_owned_lessons(user.get("ownedLessons"))
 
     db = get_firestore_client()

@@ -276,7 +276,7 @@ export function OnboardingCheckout() {
                           {item.courseTitle} · {item.lessonTitle}
                         </span>
                         <span class="flex shrink-0 items-center gap-2">
-                          <Show when={item.priceCents !== null}>
+                          <Show when={item.priceCents !== null && !isFirstHundred()}>
                             <span class="font-medium">
                               {formatCents(item.priceCents ?? 0, preferredCurrency())}
                             </span>

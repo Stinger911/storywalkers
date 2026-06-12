@@ -257,7 +257,9 @@ def test_checkout_intent_allows_active_students_for_additional_courses(monkeypat
     app.dependency_overrides.clear()
 
 
-def test_checkout_intent_rejects_already_owned_courses(monkeypatch):
+def test_checkout_intent_allowed_when_course_in_selected_courses(monkeypatch):
+    # selectedCourses is the onboarding selection, not an ownership record.
+    # A student who selected c1 in onboarding must still be able to purchase it.
     fake_db = FakeFirestore(
         courses={
             "c1": {"priceUsdCents": 1200, "isActive": True},
@@ -272,10 +274,6 @@ def test_checkout_intent_rejects_already_owned_courses(monkeypatch):
 
     response = client.post("/api/checkout/intents", json={"selectedCourses": ["c1"]})
 
-    assert response.status_code == 400
-    payload = response.json()["error"]
-    assert payload["code"] == "validation_error"
-    assert payload["details"]["alreadyOwnedCourseIds"] == ["c1"]
-    assert fake_db._payments == {}
+    assert response.status_code == 201
 
     app.dependency_overrides.clear()
