@@ -1,5 +1,7 @@
 import { apiFetch } from "./api";
 
+export type SelectedLesson = { courseId: string; lessonId: string };
+
 export type CheckoutIntentResponse = {
   paymentId: string;
   redirectUrl: string;
@@ -18,7 +20,8 @@ async function handleJson<T>(response: Response): Promise<T> {
 }
 
 export async function createCheckoutIntent(payload: {
-  selectedCourses: string[];
+  selectedCourses?: string[];
+  selectedLessons?: SelectedLesson[];
 }) {
   const response = await apiFetch("/api/checkout/intents", {
     method: "POST",

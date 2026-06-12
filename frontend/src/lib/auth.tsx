@@ -50,10 +50,14 @@ export type MeProfile = {
     notes?: string | null
   }
   selectedCourses?: string[]
+  selectedLessons?: SelectedLessonRef[]
+  ownedLessons?: SelectedLessonRef[]
   preferredCurrency?: "USD" | "EUR" | "PLN" | "RUB"
   isFirstHundred?: boolean
   subscriptionSelected?: boolean | null
 }
+
+export type SelectedLessonRef = { courseId: string; lessonId: string }
 
 export type PatchMePayload = {
   displayName?: string
@@ -72,6 +76,7 @@ export type PatchMePayload = {
     notes?: string | null
   }
   selectedCourses?: string[]
+  selectedLessons?: SelectedLessonRef[]
   preferredCurrency?: "USD" | "EUR" | "PLN" | "RUB"
   isFirstHundred?: boolean
   subscriptionSelected?: boolean | null

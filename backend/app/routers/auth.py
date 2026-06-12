@@ -17,6 +17,7 @@ from app.core.errors import AppError
 from app.core.logging import get_logger
 from app.db.firestore import get_firestore_client
 from app.repositories.courses import get_course_by_id
+from app.schemas.payments import SelectedLesson
 from app.services.telegram import send_admin_message
 from app.services.telegram_events import (
     fmt_lesson_completed,
@@ -336,6 +337,8 @@ class MeResponse(BaseModel):
     goalIntakeAnswers: GoalIntakeAnswers | None = None
     profileForm: ProfileFormModel = Field(default_factory=ProfileFormModel)
     selectedCourses: list[str] = Field(default_factory=list)
+    selectedLessons: list[SelectedLesson] = Field(default_factory=list)
+    ownedLessons: list[SelectedLesson] = Field(default_factory=list)
     preferredCurrency: PreferredCurrency = "USD"
     isFirstHundred: bool = False
     subscriptionSelected: bool | None = None
@@ -352,6 +355,7 @@ class PatchMeRequest(BaseModel):
     goalIntakeAnswers: GoalIntakeAnswers | None = None
     profileForm: ProfileFormModel | None = None
     selectedCourses: list[str] | None = None
+    selectedLessons: list[SelectedLesson] | None = None
     preferredCurrency: PreferredCurrency | None = None
     subscriptionSelected: bool | None = None
 
@@ -424,6 +428,25 @@ class PatchMeRequest(BaseModel):
         if len(set(value)) != len(value):
             raise PydanticCustomError(
                 "selected_courses_unique", "selectedCourses must be unique"
+            )
+        return value
+
+    @field_validator("selectedLessons")
+    @classmethod
+    def _validate_selected_lessons(
+        cls, value: list[SelectedLesson] | None
+    ) -> list[SelectedLesson] | None:
+        if value is None:
+            return None
+        if len(value) > 100:
+            raise PydanticCustomError(
+                "selected_lessons_max_items",
+                "selectedLessons must contain at most 100 items",
+            )
+        pairs = {(item.courseId, item.lessonId) for item in value}
+        if len(pairs) != len(value):
+            raise PydanticCustomError(
+                "selected_lessons_unique", "selectedLessons must be unique"
             )
         return value
 
@@ -514,6 +537,26 @@ def _sanitize_selected_courses(value: list[str]) -> list[str]:
     return unique
 
 
+def _sanitize_lesson_pairs(value: object) -> list[dict[str, str]]:
+    if not isinstance(value, list):
+        return []
+    normalized: list[dict[str, str]] = []
+    seen: set[tuple[str, str]] = set()
+    for item in value:
+        if not isinstance(item, dict):
+            continue
+        course_id = _sanitize_optional_text(item.get("courseId"))
+        lesson_id = _sanitize_optional_text(item.get("lessonId"))
+        if not course_id or not lesson_id:
+            continue
+        pair = (course_id, lesson_id)
+        if pair in seen:
+            continue
+        seen.add(pair)
+        normalized.append({"courseId": course_id, "lessonId": lesson_id})
+    return normalized
+
+
 def _course_id_from_step(data: dict[str, Any]) -> str | None:
     course_id = _sanitize_optional_text(data.get("courseId"))
     if course_id:
@@ -573,10 +616,11 @@ def _onboarding_step(data: dict[str, Any]) -> str:
     if not _is_profile_complete(data):
         return "questionnaire"
     selected_courses = data.get("selectedCourses")
-    if (
-        not isinstance(selected_courses, list)
-        or len(_sanitize_selected_courses(selected_courses)) == 0
-    ):
+    has_courses = isinstance(selected_courses, list) and (
+        len(_sanitize_selected_courses(selected_courses)) > 0
+    )
+    has_lessons = len(_sanitize_lesson_pairs(data.get("selectedLessons"))) > 0
+    if not has_courses and not has_lessons:
         return "course_selection"
     return "checkout"
 
@@ -630,6 +674,11 @@ async def patch_me(
     if "selectedCourses" in payload_data:
         updates["selectedCourses"] = _sanitize_selected_courses(
             payload.selectedCourses or []
+        )
+
+    if "selectedLessons" in payload_data:
+        updates["selectedLessons"] = _sanitize_lesson_pairs(
+            [item.model_dump() for item in payload.selectedLessons or []]
         )
 
     if "preferredCurrency" in payload_data:
@@ -720,6 +769,8 @@ async def patch_me(
             if isinstance(response_data.get("selectedCourses"), list)
             else []
         ),
+        "selectedLessons": _sanitize_lesson_pairs(response_data.get("selectedLessons")),
+        "ownedLessons": _sanitize_lesson_pairs(response_data.get("ownedLessons")),
         "preferredCurrency": response_data.get("preferredCurrency")
         if response_data.get("preferredCurrency") in {"USD", "EUR", "PLN", "RUB"}
         else "USD",

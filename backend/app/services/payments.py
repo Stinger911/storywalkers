@@ -6,7 +6,10 @@ from google.cloud import firestore
 from app.core.config import get_settings
 from app.core.logging import get_logger
 from app.schemas.payments import PaymentStatus
-from app.services.course_plan_sync import append_courses_to_student_plan
+from app.services.course_plan_sync import (
+    append_courses_to_student_plan,
+    append_lessons_to_student_plan,
+)
 from app.services.telegram import send_admin_message
 from app.services.telegram_events import (
     fmt_email_activation_failed,
@@ -205,6 +208,10 @@ def activate_by_code(
     selected_courses = data.get("selectedCourses")
     if isinstance(selected_courses, list) and selected_courses:
         append_courses_to_student_plan(db, user_uid, selected_courses)
+
+    selected_lessons = data.get("selectedLessons")
+    if isinstance(selected_lessons, list) and selected_lessons:
+        append_lessons_to_student_plan(db, user_uid, selected_lessons)
 
     transaction = db.transaction()
     transaction.update(

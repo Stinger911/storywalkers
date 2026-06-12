@@ -182,6 +182,39 @@ def test_list_courses_returns_active_only_goal_filter_and_stable_order(monkeypat
     app.dependency_overrides.clear()
 
 
+def test_list_courses_includes_active_lesson_count(monkeypatch):
+    fake_db = FakeFirestore(
+        courses_data={
+            "c1": {
+                "title": "A Course",
+                "description": "Desc A",
+                "priceUsdCents": 12000,
+                "goalIds": ["g1"],
+                "isActive": True,
+            },
+        },
+        lesson_data={
+            "c1": {
+                "l1": {"title": "Lesson 1", "order": 0, "isActive": True},
+                "l2": {"title": "Lesson 2", "order": 1, "isActive": True},
+                "l3": {"title": "Lesson 3", "order": 2, "isActive": False},
+            }
+        },
+    )
+    monkeypatch.setattr(courses, "get_firestore_client", lambda: fake_db)
+    app.dependency_overrides[auth_deps.get_current_user] = _student
+    client = TestClient(app)
+
+    response = client.get("/api/courses")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["items"][0]["id"] == "c1"
+    assert payload["items"][0]["lessonCount"] == 2
+
+    app.dependency_overrides.clear()
+
+
 def test_list_courses_requires_auth():
     client = TestClient(app)
 

@@ -60,10 +60,15 @@ export function isProfileComplete(me: MeProfile): boolean {
   return Boolean(profile.submitted || (profile.aboutMe || profile.notes || "").trim());
 }
 
+export function hasSelectedContent(me: MeProfile): boolean {
+  if (me.selectedCourses && me.selectedCourses.length > 0) return true;
+  return Boolean(me.selectedLessons && me.selectedLessons.length > 0);
+}
+
 export function getNextOnboardingStep(me: MeProfile): OnboardingStep {
   if (!me.selectedGoalId) return "goal";
   if (!isProfileComplete(me)) return "profile";
-  if (!me.selectedCourses || me.selectedCourses.length === 0) {
+  if (!hasSelectedContent(me)) {
     return me.subscriptionSelected === true ? "checkout" : "courses";
   }
   return "checkout";
@@ -77,8 +82,7 @@ export function isOnboardingIncomplete(me: MeProfile): boolean {
   return (
     !isProfileComplete(me) ||
     !me.selectedGoalId ||
-    !me.selectedCourses ||
-    me.selectedCourses.length === 0
+    !hasSelectedContent(me)
   );
 }
 

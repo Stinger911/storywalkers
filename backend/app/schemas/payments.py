@@ -35,6 +35,32 @@ def _normalize_selected_courses(values: list[str]) -> list[str]:
     return result
 
 
+class SelectedLesson(BaseModel):
+    courseId: str
+    lessonId: str
+
+    model_config = {"extra": "forbid"}
+
+    @field_validator("courseId", "lessonId")
+    @classmethod
+    def _validate_required_strings(cls, value: str) -> str:
+        return _trim_required(value)
+
+
+def _normalize_selected_lessons(
+    values: list["SelectedLesson"],
+) -> list["SelectedLesson"]:
+    seen: set[tuple[str, str]] = set()
+    for item in values:
+        pair = (item.courseId, item.lessonId)
+        if pair in seen:
+            raise PydanticCustomError(
+                "selected_lessons_unique", "selectedLessons must be unique"
+            )
+        seen.add(pair)
+    return values
+
+
 class PaymentStatus(str, Enum):
     created = "created"
     email_detected = "email_detected"
@@ -64,6 +90,7 @@ class Payment(BaseModel):
     email: str
     provider: str
     selectedCourses: list[str] = Field(default_factory=list)
+    selectedLessons: list[SelectedLesson] = Field(default_factory=list)
     amount: StrictInt = Field(ge=0)
     currency: str
     activationCode: str | None = None
@@ -99,3 +126,10 @@ class Payment(BaseModel):
     @classmethod
     def _validate_selected_courses(cls, value: list[str]) -> list[str]:
         return _normalize_selected_courses(value)
+
+    @field_validator("selectedLessons")
+    @classmethod
+    def _validate_selected_lessons(
+        cls, value: list[SelectedLesson]
+    ) -> list[SelectedLesson]:
+        return _normalize_selected_lessons(value)

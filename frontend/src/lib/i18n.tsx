@@ -322,6 +322,13 @@ type RawDictionary = {
       refreshCourses: string;
       selectAtLeastOne: string;
       freeAccessHint: string;
+      buyLesson: string;
+      lessonPrice: string;
+      ownedLesson: string;
+      lessonMode: string;
+      courseMode: string;
+      upgradeHint: string;
+      lessonsNotAvailable: string;
     };
     onboarding: {
       eyebrow: string;
@@ -414,6 +421,10 @@ type RawDictionary = {
         goalSummaryTitle: string;
         tabCourses: string;
         tabPath: string;
+        perLesson: string;
+        buyIndividual: string;
+        wholeCourse: string;
+        selectedLessonsCount: string;
       };
       checkout: {
         title: string;
@@ -423,6 +434,7 @@ type RawDictionary = {
         goalEmpty: string;
         coursesLabel: string;
         coursesEmpty: string;
+        lessonsLabel: string;
         communityLabel: string;
         totalLabel: string;
         boostyCta: string;
@@ -781,6 +793,14 @@ const dictionaries: Record<Locale, RawDictionary> = {
         selectAtLeastOne: "Select at least one course.",
         freeAccessHint:
           "You are among the first 100 students. These courses are free for you.",
+        buyLesson: "Buy lesson",
+        lessonPrice: "per lesson",
+        ownedLesson: "Owned",
+        lessonMode: "Buy individual lessons",
+        courseMode: "Buy whole course",
+        upgradeHint:
+          "You own {{ count }} lessons from this course. Upgrade price: {{ price }}",
+        lessonsNotAvailable: "Individual lessons are not available for this course.",
       },
     onboarding: {
       eyebrow: "Registration",
@@ -880,6 +900,10 @@ const dictionaries: Record<Locale, RawDictionary> = {
           goalSummaryTitle: "Your selected goal",
           tabCourses: "Courses",
           tabPath: "Selected path",
+          perLesson: "/ lesson",
+          buyIndividual: "Pick individual lessons",
+          wholeCourse: "Whole course",
+          selectedLessonsCount: "{{ count }} lessons selected",
         },
         checkout: {
           title: "Payment",
@@ -889,6 +913,7 @@ const dictionaries: Record<Locale, RawDictionary> = {
           goalEmpty: "No goal selected",
           coursesLabel: "Selected paths:",
           coursesEmpty: "No paths selected",
+          lessonsLabel: "Selected lessons:",
           communityLabel: "StoryWalkers Community",
           totalLabel: "Total price:",
           boostyCta: "Go to Boosty",
@@ -1249,6 +1274,14 @@ const dictionaries: Record<Locale, RawDictionary> = {
         selectAtLeastOne: "Выберите хотя бы один курс.",
         freeAccessHint:
           "Вы входите в первую сотню учеников. Эти курсы доступны вам бесплатно.",
+        buyLesson: "Купить урок",
+        lessonPrice: "за урок",
+        ownedLesson: "Куплено",
+        lessonMode: "Купить отдельные уроки",
+        courseMode: "Купить весь курс",
+        upgradeHint:
+          "У вас уже есть {{ count }} ур. из этого курса. Цена апгрейда: {{ price }}",
+        lessonsNotAvailable: "Отдельные уроки недоступны для этого курса.",
       },
     onboarding: {
       eyebrow: "Регистрация",
@@ -1349,6 +1382,10 @@ const dictionaries: Record<Locale, RawDictionary> = {
           goalSummaryTitle: "Ваша выбранная цель",
           tabCourses: "Курсы",
           tabPath: "Выбранный путь",
+          perLesson: "/ урок",
+          buyIndividual: "Выбрать отдельные уроки",
+          wholeCourse: "Весь курс",
+          selectedLessonsCount: "Выбрано уроков: {{ count }}",
         },
         checkout: {
           title: "Оплата",
@@ -1358,6 +1395,7 @@ const dictionaries: Record<Locale, RawDictionary> = {
           goalEmpty: "Цель не выбрана",
           coursesLabel: "Выбранные пути:",
           coursesEmpty: "Пути не выбраны",
+          lessonsLabel: "Выбранные уроки:",
           communityLabel: "Сообщество Сториходцы",
           totalLabel: "Итого:",
           boostyCta: "Перейти в Boosty",

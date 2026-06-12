@@ -3,15 +3,18 @@ from typing import Any
 
 from fastapi import APIRouter, Depends
 from google.cloud import firestore
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 from pydantic_core import PydanticCustomError
 
 from app.auth.deps import get_current_user
 from app.core.errors import AppError, forbidden_error
 from app.core.logging import get_logger
 from app.db.firestore import get_firestore_client
-from app.schemas.payments import PaymentStatus
-from app.services.course_plan_sync import append_courses_to_student_plan
+from app.schemas.payments import PaymentStatus, SelectedLesson
+from app.services.course_plan_sync import (
+    append_courses_to_student_plan,
+    append_lessons_to_student_plan,
+)
 
 router = APIRouter(prefix="/api", tags=["Checkout"])
 logger = get_logger("app")
@@ -35,7 +38,8 @@ _AUTO_ACTIVATED_BY = "system:auto_zero_amount"
 
 
 class CheckoutIntentRequest(BaseModel):
-    selectedCourses: list[str] = Field(min_length=1, max_length=20)
+    selectedCourses: list[str] = Field(default_factory=list, max_length=20)
+    selectedLessons: list[SelectedLesson] = Field(default_factory=list, max_length=100)
 
     model_config = {"extra": "forbid"}
 
@@ -59,6 +63,40 @@ class CheckoutIntentRequest(BaseModel):
                 "selected_courses_unique", "selectedCourses must be unique"
             )
         return value
+
+    @field_validator("selectedLessons")
+    @classmethod
+    def _validate_selected_lessons_unique(
+        cls, value: list[SelectedLesson]
+    ) -> list[SelectedLesson]:
+        pairs = {(item.courseId, item.lessonId) for item in value}
+        if len(pairs) != len(value):
+            raise PydanticCustomError(
+                "selected_lessons_unique", "selectedLessons must be unique"
+            )
+        return value
+
+    @model_validator(mode="after")
+    def _validate_selection(self) -> "CheckoutIntentRequest":
+        if not self.selectedCourses and not self.selectedLessons:
+            raise PydanticCustomError(
+                "selection_empty",
+                "at least one of selectedCourses or selectedLessons is required",
+            )
+        course_set = set(self.selectedCourses)
+        overlapping = sorted(
+            {
+                item.courseId
+                for item in self.selectedLessons
+                if item.courseId in course_set
+            }
+        )
+        if overlapping:
+            raise PydanticCustomError(
+                "selection_overlap",
+                "selectedLessons must not reference courses present in selectedCourses",
+            )
+        return self
 
 
 class CheckoutIntentResponse(BaseModel):
@@ -128,11 +166,44 @@ def _generate_unique_activation_code(db: firestore.Client) -> str:
     )
 
 
+def _count_active_lessons(db: firestore.Client, course_id: str) -> int:
+    query = (
+        db.collection("courses")
+        .document(course_id)
+        .collection("lessons")
+        .where("isActive", "==", True)
+    )
+    return sum(1 for _ in query.stream())
+
+
+def _per_lesson_price_usd_cents(course_price: int, lesson_count: int) -> int:
+    if lesson_count <= 0:
+        return 0
+    return round(course_price / lesson_count)
+
+
+def _normalize_owned_lessons(value: object) -> set[tuple[str, str]]:
+    owned: set[tuple[str, str]] = set()
+    if not isinstance(value, list):
+        return owned
+    for item in value:
+        if not isinstance(item, dict):
+            continue
+        course_id = item.get("courseId")
+        lesson_id = item.get("lessonId")
+        if isinstance(course_id, str) and isinstance(lesson_id, str):
+            owned.add((course_id.strip(), lesson_id.strip()))
+    return owned
+
+
 def _resolve_active_course_prices(
-    db: firestore.Client, selected_course_ids: list[str]
+    db: firestore.Client,
+    selected_course_ids: list[str],
+    owned_lesson_pairs: set[tuple[str, str]] | None = None,
 ) -> tuple[int, list[str]]:
     total_usd_cents = 0
     invalid: list[str] = []
+    owned_lesson_pairs = owned_lesson_pairs or set()
     for course_id in selected_course_ids:
         snap = db.collection("courses").document(course_id).get()
         if not snap.exists:
@@ -146,8 +217,63 @@ def _resolve_active_course_prices(
         if not isinstance(price, int) or price < 0:
             invalid.append(course_id)
             continue
+        owned_count = sum(
+            1 for owned_course, _ in owned_lesson_pairs if owned_course == course_id
+        )
+        if owned_count > 0:
+            lesson_count = _count_active_lessons(db, course_id)
+            per_lesson = _per_lesson_price_usd_cents(price, lesson_count)
+            price = max(price - owned_count * per_lesson, 0)
         total_usd_cents += price
     return total_usd_cents, invalid
+
+
+def _resolve_lesson_prices(
+    db: firestore.Client,
+    lesson_items: list[SelectedLesson],
+    owned_lesson_pairs: set[tuple[str, str]],
+) -> tuple[int, list[str], list[str]]:
+    total_usd_cents = 0
+    invalid: list[str] = []
+    already_owned: list[str] = []
+    per_lesson_cache: dict[str, int | None] = {}
+    for item in lesson_items:
+        pair = (item.courseId, item.lessonId)
+        if pair in owned_lesson_pairs:
+            already_owned.append(item.lessonId)
+            continue
+        per_lesson = per_lesson_cache.get(item.courseId, -1)
+        if per_lesson == -1:
+            per_lesson = None
+            snap = db.collection("courses").document(item.courseId).get()
+            data = snap.to_dict() or {}
+            price = data.get("priceUsdCents")
+            if (
+                snap.exists
+                and data.get("isActive") is True
+                and isinstance(price, int)
+                and price >= 0
+            ):
+                lesson_count = _count_active_lessons(db, item.courseId)
+                if lesson_count > 0:
+                    per_lesson = _per_lesson_price_usd_cents(price, lesson_count)
+            per_lesson_cache[item.courseId] = per_lesson
+        if per_lesson is None:
+            invalid.append(item.courseId)
+            continue
+        lesson_snap = (
+            db.collection("courses")
+            .document(item.courseId)
+            .collection("lessons")
+            .document(item.lessonId)
+            .get()
+        )
+        lesson_data = lesson_snap.to_dict() or {}
+        if not lesson_snap.exists or lesson_data.get("isActive") is not True:
+            invalid.append(item.lessonId)
+            continue
+        total_usd_cents += per_lesson
+    return total_usd_cents, invalid, already_owned
 
 
 def _normalize_selected_courses(value: object) -> list[str]:
@@ -200,9 +326,26 @@ async def create_checkout_intent(
             details={"alreadyOwnedCourseIds": already_owned},
         )
 
+    lessons_from_owned_courses = sorted(
+        {
+            item.courseId
+            for item in payload.selectedLessons
+            if item.courseId in existing_courses
+        }
+    )
+    if lessons_from_owned_courses:
+        raise AppError(
+            code="validation_error",
+            message="selectedLessons contains lessons from courses already owned",
+            status_code=400,
+            details={"alreadyOwnedCourseIds": lessons_from_owned_courses},
+        )
+
+    owned_lesson_pairs = _normalize_owned_lessons(user.get("ownedLessons"))
+
     db = get_firestore_client()
     total_usd_cents, invalid_course_ids = _resolve_active_course_prices(
-        db, payload.selectedCourses
+        db, payload.selectedCourses, owned_lesson_pairs
     )
     if invalid_course_ids:
         raise AppError(
@@ -211,6 +354,26 @@ async def create_checkout_intent(
             status_code=400,
             details={"invalidCourseIds": invalid_course_ids},
         )
+
+    lessons_usd_cents, invalid_lesson_ids, already_owned_lessons = (
+        _resolve_lesson_prices(db, payload.selectedLessons, owned_lesson_pairs)
+    )
+    if invalid_lesson_ids:
+        raise AppError(
+            code="validation_error",
+            message="selectedLessons contains inactive or missing lessons",
+            status_code=400,
+            details={"invalidLessonIds": invalid_lesson_ids},
+        )
+    if already_owned_lessons:
+        raise AppError(
+            code="validation_error",
+            message="selectedLessons contains lessons already owned by the student",
+            status_code=400,
+            details={"alreadyOwnedLessonIds": already_owned_lessons},
+        )
+    total_usd_cents += lessons_usd_cents
+
     if total_usd_cents < 0:
         raise AppError(
             code="validation_error",
@@ -234,6 +397,7 @@ async def create_checkout_intent(
         "email": user.get("email") or "",
         "provider": _PAYMENT_PROVIDER,
         "selectedCourses": payload.selectedCourses,
+        "selectedLessons": [item.model_dump() for item in payload.selectedLessons],
         "amount": amount,
         "currency": currency,
         "activationCode": activation_code,
@@ -254,7 +418,14 @@ async def create_checkout_intent(
     doc_ref.set(payment_payload)
 
     if should_auto_activate:
-        append_courses_to_student_plan(db, user["uid"], payload.selectedCourses)
+        if payload.selectedCourses:
+            append_courses_to_student_plan(db, user["uid"], payload.selectedCourses)
+        if payload.selectedLessons:
+            append_lessons_to_student_plan(
+                db,
+                user["uid"],
+                [item.model_dump() for item in payload.selectedLessons],
+            )
         db.collection("users").document(user["uid"]).set(
             {
                 "status": "active",

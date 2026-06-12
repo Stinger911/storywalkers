@@ -49,6 +49,30 @@ def _normalize_selected_courses(value: object) -> list[str]:
     return normalized
 
 
+def _normalize_lesson_pairs(value: object) -> list[dict[str, str]]:
+    if not isinstance(value, list):
+        return []
+    normalized: list[dict[str, str]] = []
+    seen: set[tuple[str, str]] = set()
+    for item in value:
+        if not isinstance(item, dict):
+            continue
+        course_id = item.get("courseId")
+        lesson_id = item.get("lessonId")
+        if not isinstance(course_id, str) or not isinstance(lesson_id, str):
+            continue
+        course_id = course_id.strip()
+        lesson_id = lesson_id.strip()
+        if not course_id or not lesson_id:
+            continue
+        pair = (course_id, lesson_id)
+        if pair in seen:
+            continue
+        seen.add(pair)
+        normalized.append({"courseId": course_id, "lessonId": lesson_id})
+    return normalized
+
+
 def _normalize_preferred_currency(value: object) -> str | None:
     if not isinstance(value, str):
         return None
@@ -139,6 +163,8 @@ def _build_user_payload(uid: str, decoded: dict, profile: dict | None) -> dict:
             "notes": _sanitize_optional_text(profile_form.get("notes")),
         },
         "selectedCourses": _normalize_selected_courses(profile.get("selectedCourses")),
+        "selectedLessons": _normalize_lesson_pairs(profile.get("selectedLessons")),
+        "ownedLessons": _normalize_lesson_pairs(profile.get("ownedLessons")),
         "preferredCurrency": _normalize_preferred_currency(
             profile.get("preferredCurrency")
         )

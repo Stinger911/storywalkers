@@ -201,6 +201,13 @@ export function resetCoursesCacheForTests() {
   cachedLessonsByCourse.clear();
 }
 
+export function perLessonPriceUsdCents(course: Course): number | undefined {
+  if (typeof course.lessonCount !== "number" || course.lessonCount <= 0) {
+    return undefined;
+  }
+  return Math.round(course.priceUsdCents / course.lessonCount);
+}
+
 export function convertUsdCentsToCurrencyCents(
   usdCents: number,
   rate: number | null | undefined,

@@ -223,6 +223,58 @@ def test_activate_by_code_rejects_when_user_status_is_blocked(monkeypatch):
     assert "evidence: ev-3" in sent_messages[0]
 
 
+def test_activate_by_code_appends_selected_lessons(monkeypatch):
+    fake_db = _FakeFirestore(
+        payments={
+            "p5": {
+                "activationCode": "SW-EEEE5555",
+                "status": "created",
+                "userUid": "u5",
+                "selectedCourses": [],
+                "selectedLessons": [
+                    {"courseId": "course-1", "lessonId": "lesson-1"},
+                    {"courseId": "course-1", "lessonId": "lesson-2"},
+                ],
+            }
+        },
+        users={"u5": {"status": "disabled"}},
+    )
+    monkeypatch.setattr(payments_service, "get_settings", lambda: _Settings())
+    course_calls: list[tuple[str, list[str]]] = []
+    monkeypatch.setattr(
+        payments_service,
+        "append_courses_to_student_plan",
+        lambda db, uid, course_ids: course_calls.append((uid, course_ids)),
+    )
+    lesson_calls: list[tuple[str, list[dict]]] = []
+    monkeypatch.setattr(
+        payments_service,
+        "append_lessons_to_student_plan",
+        lambda db, uid, items: (
+            lesson_calls.append((uid, items))
+            or {"addedLessons": items, "createdSteps": len(items)}
+        ),
+    )
+    sent_messages: list[str] = []
+    monkeypatch.setattr(payments_service, "_notify_admin_async", sent_messages.append)
+
+    result = payments_service.activate_by_code(fake_db, "SW-EEEE5555", "ev-5")
+
+    assert result is True
+    assert course_calls == []
+    assert lesson_calls == [
+        (
+            "u5",
+            [
+                {"courseId": "course-1", "lessonId": "lesson-1"},
+                {"courseId": "course-1", "lessonId": "lesson-2"},
+            ],
+        )
+    ]
+    assert fake_db._users["u5"]["status"] == "active"
+    assert fake_db._payments["p5"]["status"] == "activated"
+
+
 def test_activate_by_code_transaction_activates_user_and_payment(monkeypatch):
     fake_db = _FakeFirestore(
         payments={

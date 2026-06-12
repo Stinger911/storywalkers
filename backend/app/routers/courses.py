@@ -116,6 +116,16 @@ def _ensure_active_status(user: dict) -> None:
         )
 
 
+def _count_active_lessons(db: firestore.Client, course_id: str) -> int:
+    query = (
+        db.collection("courses")
+        .document(course_id)
+        .collection("lessons")
+        .where("isActive", "==", True)
+    )
+    return sum(1 for _ in query.stream())
+
+
 def _is_restricted_student(user: dict) -> bool:
     return user.get("role") == "student" and user.get("status") in {
         "disabled",
@@ -144,6 +154,7 @@ async def list_courses(
             "priceUsdCents": course.priceUsdCents,
             "trialLessonUrl": course.trialLessonUrl,
             "currencyBase": "USD",
+            "lessonCount": _count_active_lessons(db, course.id),
         }
         for course in courses
     ]

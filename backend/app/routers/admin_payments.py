@@ -11,7 +11,10 @@ from app.core.errors import AppError
 from app.db.firestore import get_firestore_client
 from app.repositories.payments import get_payment, list_payments_page
 from app.schemas.payments import Payment, PaymentStatus
-from app.services.course_plan_sync import append_courses_to_student_plan
+from app.services.course_plan_sync import (
+    append_courses_to_student_plan,
+    append_lessons_to_student_plan,
+)
 
 router = APIRouter(prefix="/api/admin", tags=["Admin - Payments"])
 
@@ -64,6 +67,7 @@ def _payment_payload(payment_id: str, payment: Payment) -> dict:
         "email": payment.email,
         "provider": payment.provider,
         "selectedCourses": payment.selectedCourses,
+        "selectedLessons": [item.model_dump() for item in payment.selectedLessons],
         "amount": payment.amount,
         "currency": payment.currency,
         "activationCode": payment.activationCode,
@@ -207,6 +211,10 @@ async def activate_admin_payment(
     selected_courses = payment_data.get("selectedCourses")
     if isinstance(selected_courses, list) and selected_courses:
         append_courses_to_student_plan(db, user_uid, selected_courses)
+
+    selected_lessons = payment_data.get("selectedLessons")
+    if isinstance(selected_lessons, list) and selected_lessons:
+        append_lessons_to_student_plan(db, user_uid, selected_lessons)
 
     tx = db.transaction()
     tx.update(

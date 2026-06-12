@@ -6,10 +6,12 @@ import { Icon } from "../../components/ui/icon";
 import { SectionCard } from "../../components/ui/section-card";
 import { SmallStatBadge } from "../../components/ui/small-stat-badge";
 import { Skeleton } from "../../components/ui/skeleton";
-import { useAuth } from "../../lib/auth";
+import { useAuth, type SelectedLessonRef } from "../../lib/auth";
 import {
+  formatCents,
   listCourseLessons,
   listCourses,
+  perLessonPriceUsdCents,
   type CourseLesson,
   type Course,
 } from "../../lib/coursesApi";
@@ -45,6 +47,23 @@ export function OnboardingCourses() {
   const [selectedCourses, setSelectedCourses] = createSignal<string[]>(
     auth.me()?.selectedCourses || [],
   );
+  const initialSelectedLessons = () => {
+    const map: Record<string, string[]> = {};
+    for (const item of auth.me()?.selectedLessons ?? []) {
+      (map[item.courseId] ??= []).push(item.lessonId);
+    }
+    return map;
+  };
+  const [selectedLessonsByCourse, setSelectedLessonsByCourse] = createSignal<
+    Record<string, string[]>
+  >(initialSelectedLessons());
+  const [individualModeByCourse, setIndividualModeByCourse] = createSignal<
+    Record<string, boolean>
+  >(
+    Object.fromEntries(
+      Object.keys(initialSelectedLessons()).map((courseId) => [courseId, true]),
+    ),
+  );
 
   const selectedGoal = createMemo(() =>
     goals().find((goal) => goal.id === selectedGoalId()) || null,
@@ -59,6 +78,20 @@ export function OnboardingCourses() {
     const selected = new Set(selectedActiveCourseIds());
     return activeCourses().filter((course) => selected.has(course.id));
   });
+  const selectedActiveLessons = createMemo(() => {
+    const activeIds = new Set(activeCourses().map((course) => course.id));
+    const result: SelectedLessonRef[] = [];
+    for (const [courseId, lessonIds] of Object.entries(selectedLessonsByCourse())) {
+      if (!activeIds.has(courseId)) continue;
+      for (const lessonId of lessonIds) {
+        result.push({ courseId, lessonId });
+      }
+    }
+    return result;
+  });
+  const hasSelection = createMemo(
+    () => selectedActiveCourseIds().length > 0 || selectedActiveLessons().length > 0,
+  );
 
   const answerSummary = createMemo(() => {
     const stored = auth.me()?.goalIntakeAnswers;
@@ -82,6 +115,22 @@ export function OnboardingCourses() {
         ? prev.filter((id) => id !== courseId)
         : [...prev, courseId],
     );
+    setSelectedLessonsByCourse((current) => ({ ...current, [courseId]: [] }));
+    setIndividualModeByCourse((current) => ({ ...current, [courseId]: false }));
+  };
+
+  const toggleLesson = (courseId: string, lessonId: string) => {
+    if (saving()) return;
+    setSelectedLessonsByCourse((current) => {
+      const list = current[courseId] ?? [];
+      return {
+        ...current,
+        [courseId]: list.includes(lessonId)
+          ? list.filter((value) => value !== lessonId)
+          : [...list, lessonId],
+      };
+    });
+    setSelectedCourses((prev) => prev.filter((id) => id !== courseId));
   };
 
   const setLessonsLoading = (courseId: string, value: boolean) => {
@@ -121,6 +170,19 @@ export function OnboardingCourses() {
     void loadLessons(courseId);
   };
 
+  const toggleIndividualMode = (courseId: string) => {
+    if (saving()) return;
+    const next = !individualModeByCourse()[courseId];
+    setIndividualModeByCourse((current) => ({ ...current, [courseId]: next }));
+    if (next) {
+      setSelectedCourses((prev) => prev.filter((id) => id !== courseId));
+      setExpandedCourseId(courseId);
+      void loadLessons(courseId);
+    } else {
+      setSelectedLessonsByCourse((current) => ({ ...current, [courseId]: [] }));
+    }
+  };
+
   const load = async (options?: { force?: boolean }) => {
     setLoading(true);
     setLoadError(null);
@@ -158,7 +220,7 @@ export function OnboardingCourses() {
       setSaveError(t("student.onboarding.courses.goalMissing"));
       return false;
     }
-    if (selectedActiveCourseIds().length === 0) {
+    if (!hasSelection()) {
       setSaveError(t("student.onboarding.courses.selectAtLeastOne"));
       return false;
     }
@@ -167,6 +229,7 @@ export function OnboardingCourses() {
     try {
       await auth.patchMe({
         selectedCourses: selectedActiveCourseIds(),
+        selectedLessons: selectedActiveLessons(),
         subscriptionSelected: true,
       });
       return true;
@@ -189,6 +252,9 @@ export function OnboardingCourses() {
     const lessons = () => lessonsByCourse()[props.course.id] ?? [];
     const lessonsLoading = () => Boolean(lessonLoadingByCourse()[props.course.id]);
     const lessonsError = () => lessonErrorByCourse()[props.course.id];
+    const individual = () => individualModeByCourse()[props.course.id] === true;
+    const perLesson = () => perLessonPriceUsdCents(props.course);
+    const selectedLessonIds = () => selectedLessonsByCourse()[props.course.id] ?? [];
 
     return (
       <div
@@ -250,6 +316,21 @@ export function OnboardingCourses() {
                 {t("student.onboarding.courses.trialLesson")}
               </a>
             </Show>
+            <Show when={(props.course.lessonCount ?? 0) > 0 && perLesson() !== undefined}>
+              <button
+                type="button"
+                class={buttonVariants({
+                  variant: individual() ? "default" : "outline",
+                  size: "sm",
+                })}
+                onClick={() => toggleIndividualMode(props.course.id)}
+                disabled={saving() || props.disabled}
+              >
+                {individual()
+                  ? t("student.onboarding.courses.wholeCourse")
+                  : t("student.onboarding.courses.buyIndividual")}
+              </button>
+            </Show>
             <button
               type="button"
               class={buttonVariants({ variant: "outline", size: "sm" })}
@@ -262,10 +343,17 @@ export function OnboardingCourses() {
           </div>
         </div>
 
-        <Show when={expanded()}>
+        <Show when={expanded() || individual()}>
           <div class="border-t border-border/60 px-5 py-4">
-            <div class="mb-3 text-[11px] font-bold uppercase tracking-[0.14em] text-secondary">
-              {t("student.onboarding.courses.lessonsTitle")}
+            <div class="mb-3 flex flex-wrap items-center gap-2 text-[11px] font-bold uppercase tracking-[0.14em] text-secondary">
+              <span>{t("student.onboarding.courses.lessonsTitle")}</span>
+              <Show when={individual() && selectedLessonIds().length > 0}>
+                <SmallStatBadge class="bg-background normal-case tracking-normal">
+                  {t("student.onboarding.courses.selectedLessonsCount", {
+                    count: selectedLessonIds().length,
+                  })}
+                </SmallStatBadge>
+              </Show>
             </div>
             <Show when={!lessonsLoading()} fallback={<div class="space-y-2">
               <Skeleton class="h-10 rounded-[var(--radius-md)]" />
@@ -288,12 +376,26 @@ export function OnboardingCourses() {
                     <For each={lessons()}>
                       {(lesson, index) => (
                         <div class="flex items-center gap-3 rounded-[var(--radius-md)] bg-[rgba(237,244,255,0.6)] px-4 py-3 text-sm">
+                          <Show when={individual()}>
+                            <input
+                              type="checkbox"
+                              checked={selectedLessonIds().includes(lesson.id)}
+                              onChange={() => toggleLesson(props.course.id, lesson.id)}
+                              disabled={saving() || props.disabled}
+                            />
+                          </Show>
                           <span class="inline-flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-white text-[11px] font-bold text-primary shadow-sm">
                             {index() + 1}
                           </span>
                           <span class="min-w-0 flex-1 truncate text-foreground">
                             {lesson.title}
                           </span>
+                          <Show when={individual() && perLesson() !== undefined}>
+                            <span class="flex-shrink-0 text-xs text-muted-foreground">
+                              {formatCents(perLesson() ?? 0, "USD")}{" "}
+                              {t("student.onboarding.courses.perLesson")}
+                            </span>
+                          </Show>
                         </div>
                       )}
                     </For>
@@ -426,7 +528,7 @@ export function OnboardingCourses() {
             <Button
               variant="outline"
               onClick={() => void save()}
-              disabled={saving() || !selectedGoalId() || selectedActiveCourseIds().length === 0}
+              disabled={saving() || !selectedGoalId() || !hasSelection()}
             >
               {saving()
                 ? t("student.onboarding.common.saving")
@@ -434,7 +536,7 @@ export function OnboardingCourses() {
             </Button>
             <Button
               onClick={() => void next()}
-              disabled={saving() || !selectedGoalId() || selectedActiveCourseIds().length === 0}
+              disabled={saving() || !selectedGoalId() || !hasSelection()}
             >
               {saving()
                 ? t("student.onboarding.common.saving")
