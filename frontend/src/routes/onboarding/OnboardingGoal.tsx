@@ -1,5 +1,5 @@
 import { useNavigate } from "@solidjs/router";
-import { createMemo, createSignal, For, onCleanup, onMount, Show } from "solid-js";
+import { createMemo, createSignal, For, Match, onCleanup, onMount, Show, Switch } from "solid-js";
 
 import { Button } from "../../components/ui/button";
 import { SectionCard } from "../../components/ui/section-card";
@@ -247,9 +247,55 @@ export function OnboardingGoal() {
               <For each={questions()}>
                 {(question) => (
                   <div class="grid gap-2">
-                    <Show
-                      when={question.type === "multi_select"}
-                      fallback={
+                    <Switch>
+                      <Match when={question.type === "single_select"}>
+                        <div class="text-sm font-medium">
+                          {question.label}{question.required ? " *" : ""}
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                          <For each={question.options ?? []}>
+                            {(option) => {
+                              const selected = () => answers()[question.id] === option;
+                              return (
+                                <label class="inline-flex cursor-pointer items-center gap-2 rounded-full border border-border/70 px-3 py-2 text-sm">
+                                  <input
+                                    type="radio"
+                                    name={`goal-question-${question.id}`}
+                                    checked={selected()}
+                                    onChange={() => setTextAnswer(question.id, option)}
+                                    disabled={saving()}
+                                  />
+                                  <span>{option}</span>
+                                </label>
+                              );
+                            }}
+                          </For>
+                        </div>
+                      </Match>
+                      <Match when={question.type === "multi_select"}>
+                        <div class="text-sm font-medium">
+                          {question.label}{question.required ? " *" : ""}
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                          <For each={question.options ?? []}>
+                            {(option) => {
+                              const selected = () => Array.isArray(answers()[question.id]) && (answers()[question.id] as string[]).includes(option);
+                              return (
+                                <label class="inline-flex cursor-pointer items-center gap-2 rounded-full border border-border/70 px-3 py-2 text-sm">
+                                  <input
+                                    type="checkbox"
+                                    checked={selected()}
+                                    onChange={() => toggleOption(question.id, option)}
+                                    disabled={saving()}
+                                  />
+                                  <span>{option}</span>
+                                </label>
+                              );
+                            }}
+                          </For>
+                        </div>
+                      </Match>
+                      <Match when={true}>
                         <TextField>
                           <TextFieldLabel for={`goal-question-${question.id}`}>
                             {question.label}{question.required ? " *" : ""}
@@ -261,30 +307,8 @@ export function OnboardingGoal() {
                             disabled={saving()}
                           />
                         </TextField>
-                      }
-                    >
-                      <div class="text-sm font-medium">
-                        {question.label}{question.required ? " *" : ""}
-                      </div>
-                      <div class="flex flex-wrap gap-2">
-                        <For each={question.options ?? []}>
-                          {(option) => {
-                            const selected = () => Array.isArray(answers()[question.id]) && (answers()[question.id] as string[]).includes(option);
-                            return (
-                              <label class="inline-flex cursor-pointer items-center gap-2 rounded-full border border-border/70 px-3 py-2 text-sm">
-                                <input
-                                  type="checkbox"
-                                  checked={selected()}
-                                  onChange={() => toggleOption(question.id, option)}
-                                  disabled={saving()}
-                                />
-                                <span>{option}</span>
-                              </label>
-                            );
-                          }}
-                        </For>
-                      </div>
-                    </Show>
+                      </Match>
+                    </Switch>
                   </div>
                 )}
               </For>

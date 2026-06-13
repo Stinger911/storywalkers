@@ -48,9 +48,10 @@ class GoalIntakeQuestion(BaseModel):
     @field_validator("type")
     @classmethod
     def _validate_type(cls, value: str) -> str:
-        if value not in {"text", "multi_select"}:
+        if value not in {"text", "multi_select", "single_select"}:
             raise PydanticCustomError(
-                "invalid_question_type", "type must be text or multi_select"
+                "invalid_question_type",
+                "type must be text, multi_select, or single_select",
             )
         return value
 

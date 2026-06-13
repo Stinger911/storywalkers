@@ -439,6 +439,7 @@ export function AdminGoals() {
                               }
                             >
                               <option value="text">text</option>
+                              <option value="single_select">single_select</option>
                               <option value="multi_select">multi_select</option>
                             </select>
                           </label>
@@ -459,7 +460,7 @@ export function AdminGoals() {
                                     .filter(Boolean),
                                 })
                               }
-                              placeholder="Only for multi_select, comma-separated"
+                              placeholder="For single_select / multi_select, comma-separated"
                             />
                           </TextField>
                           <div class="flex flex-wrap items-center gap-4 text-sm">

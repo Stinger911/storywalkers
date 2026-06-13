@@ -30,7 +30,7 @@ logger = get_logger("app.db")
 
 ExperienceLevel = Literal["beginner", "intermediate", "advanced"]
 PreferredCurrency = Literal["USD", "EUR", "PLN", "RUB"]
-GoalIntakeAnswerType = Literal["text", "multi_select"]
+GoalIntakeAnswerType = Literal["text", "multi_select", "single_select"]
 TELEGRAM_HANDLE_RE = re.compile(r"^@[A-Za-z0-9_]{1,32}$")
 PHONE_LIKE_RE = re.compile(r"^[0-9+\-\s()]+$")
 QUESTIONNAIRE_COMPLETED_WEBHOOK_URL = (

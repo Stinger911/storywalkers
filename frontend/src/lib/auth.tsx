@@ -18,7 +18,7 @@ import { auth } from './firebase'
 
 export type GoalIntakeAnswer = {
   questionId: string
-  type: 'text' | 'multi_select'
+  type: 'text' | 'multi_select' | 'single_select'
   value: string | string[]
 }
 

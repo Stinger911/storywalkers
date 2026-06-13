@@ -12,7 +12,7 @@ type Category = {
 export type GoalIntakeQuestion = {
   id: string
   label: string
-  type: 'text' | 'multi_select'
+  type: 'text' | 'multi_select' | 'single_select'
   options?: string[]
   required?: boolean
   order: number
