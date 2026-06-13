@@ -5,6 +5,7 @@ export type StudentPathStep = {
   description: string;
   materialUrl: string;
   order: number;
+  lessonOrder?: number | null;
   isDone: boolean;
   isLocked: boolean;
   doneAt?: { toDate?: () => Date } | null;

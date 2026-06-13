@@ -23,6 +23,7 @@ export type PlanStep = {
   description: string
   materialUrl: string
   order: number
+  lessonOrder?: number | null
   isDone: boolean
   doneAt?: unknown
   doneComment?: string | null

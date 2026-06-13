@@ -71,6 +71,7 @@ export function StudentPlanProvider(props: { children: JSX.Element }) {
               description: step.description,
               materialUrl: step.materialUrl,
               order: step.order,
+              lessonOrder: step.lessonOrder ?? null,
               isDone: step.isDone,
               isLocked,
               doneAt: step.doneAt as { toDate?: () => Date } | null,
@@ -123,7 +124,9 @@ export function StudentPlanProvider(props: { children: JSX.Element }) {
     for (const [courseId, items] of grouped) {
       grouped.set(
         courseId,
-        items.slice().sort((a, b) => a.order - b.order),
+        items.slice().sort((a, b) =>
+          (a.lessonOrder ?? a.order) - (b.lessonOrder ?? b.order)
+        ),
       );
     }
     return grouped;
