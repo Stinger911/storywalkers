@@ -297,6 +297,9 @@ export function OnboardingProfile() {
             </For>
           </div>
           <div class="flex flex-wrap gap-2">
+            <Button variant="outline" onClick={() => void navigate("/onboarding/goal")} disabled={saving()}>
+              {t("student.onboarding.profile.back")}
+            </Button>
             <Button variant="outline" onClick={() => void save()} disabled={saving()}>
               {saving()
                 ? t("student.onboarding.common.saving")
