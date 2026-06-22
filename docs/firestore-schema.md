@@ -37,12 +37,21 @@ User profile + role.
 - `preferredCurrency`: `"USD" | "EUR" | "PLN"` (optional; default UI fallback is `USD`)
 - `selectedGoalId`: `string | null` (optional)
 - `selectedCourses`: `array<string>` (optional)
+- `referral`: `map | null` (optional; see [[#14) referral_sources{code}|referral_sources/{code}]] below)
+  - `code`: `string`
+  - `sourceId`: `string` (currently always equal to `code`)
+  - `capturedAt`: `timestamp`
+  - `landingPath`: `string | null`
+  - `utmSource`: `string | null`
+  - `utmMedium`: `string | null`
+  - `utmCampaign`: `string | null`
 - `createdAt`: `timestamp`
 - `updatedAt`: `timestamp` (optional but recommended)
 
 **Notes**
 
 - `email` here is a convenience cache; auth source of truth is Firebase Auth.
+- `referral` is set at most once, by the backend, within 24h of `createdAt`. It is never overwritten by a later referral link. Used for partner attribution reporting only.
 
 ---
 
@@ -316,6 +325,30 @@ Latest FX snapshot used by frontend price conversion.
 
 ---
 
+## Referrals
+
+### 14) `referral_sources/{code}`
+
+Partner/campaign referral codes used to build links like `https://storywalkers.club/login?ref=anna`. See [[research_referral_links]] / [[plan_referral_links]] for design background.
+
+**Document ID:** the referral code itself (lowercase, `^[a-z0-9_-]{3,64}$`)
+
+**Fields**
+
+- `name`: `string` (partner/source display name)
+- `kind`: `string` (free text, e.g. `"partner"`)
+- `status`: `"active" | "inactive"`
+- `notes`: `string | null` (optional)
+- `createdAt`: `timestamp`
+- `updatedAt`: `timestamp`
+
+**Notes**
+
+- Client-side reads/writes are denied by the default-deny rule in `firestore.rules`; all access goes through the backend (admin endpoints + the service account it uses).
+- Registrations are not denormalized onto this doc; staff reporting queries `users` by `referral.code` at request time (see indexes below). Add rollup counters under `referral_sources/{code}/daily_stats/{yyyy-mm-dd}` later if that query becomes too slow.
+
+---
+
 ## Recommended indexes (Firestore composite)
 
 Create these if Firestore asks, or proactively:
@@ -347,6 +380,10 @@ Create these if Firestore asks, or proactively:
 
 8. `courses`: composite index for active catalog listing/filtering, e.g. `isActive ASC, title ASC`.
 9. `courses/{courseId}/lessons`: index for ordered active lessons, e.g. `isActive ASC, order ASC`.
+
+### Referrals
+
+10. `users`: `referral.code ASC, createdAt DESC, __name__ DESC` — backs the admin registrations-by-code listing (cursor pagination via `start_after([createdAt, uid])`).
 
 ---
 
@@ -437,5 +474,32 @@ Create these if Firestore asks, or proactively:
   "keywords": ["remove", "background", "noise", "davinci", "resolve", "audio"],
   "createdAt": "timestamp",
   "updatedAt": "timestamp"
+}
+```
+
+### `referral_sources/{code}`
+
+```json
+{
+  "name": "Anna Ivanova",
+  "kind": "partner",
+  "status": "active",
+  "notes": "Instagram campaign",
+  "createdAt": "timestamp",
+  "updatedAt": "timestamp"
+}
+```
+
+### `users/{uid}.referral`
+
+```json
+{
+  "code": "anna",
+  "sourceId": "anna",
+  "capturedAt": "timestamp",
+  "landingPath": "/login",
+  "utmSource": "instagram",
+  "utmMedium": "bio",
+  "utmCampaign": "june_launch"
 }
 ```

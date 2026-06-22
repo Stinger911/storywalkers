@@ -17,7 +17,12 @@ from app.core.errors import AppError
 from app.core.logging import get_logger
 from app.db.firestore import get_firestore_client
 from app.repositories.courses import get_course_by_id
+from app.repositories.referrals import (
+    get_referral_source,
+    set_user_referral_attribution,
+)
 from app.schemas.payments import SelectedLesson
+from app.schemas.referrals import ReferralAttributionRequest
 from app.services.telegram import send_admin_message
 from app.services.telegram_events import (
     fmt_lesson_completed,
@@ -800,6 +805,30 @@ async def patch_me(
             )
         await _call_questionnaire_completed_webhook(user["uid"])
     return me_response
+
+
+class ReferralAttributionResponse(BaseModel):
+    applied: bool
+    code: str | None = None
+
+
+@router.post("/me/referral-attribution", response_model=ReferralAttributionResponse)
+async def set_referral_attribution(
+    payload: ReferralAttributionRequest,
+    user: dict = Depends(get_current_user),
+):
+    db = get_firestore_client()
+    source = get_referral_source(db, payload.code)
+    if not source or source.status != "active":
+        raise AppError(
+            code="invalid_referral_code",
+            message="Unknown or inactive referral code",
+            status_code=400,
+        )
+    attribution = set_user_referral_attribution(db, user["uid"], payload)
+    if attribution is None:
+        return {"applied": False, "code": None}
+    return {"applied": True, "code": attribution["code"]}
 
 
 def _doc_or_404(

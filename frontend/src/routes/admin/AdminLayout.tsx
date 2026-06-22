@@ -25,6 +25,7 @@ const adminNavItems = [
     icon: "fact_check",
   },
   { href: "/admin/payments", label: "Payments", icon: "payments" },
+  { href: "/admin/referrals", label: "Referrals", icon: "campaign" },
 ] as const;
 
 export function AdminLayout(props: AdminLayoutProps) {

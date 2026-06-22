@@ -1,10 +1,11 @@
 import { Route, Router } from "@solidjs/router";
-import { Suspense, lazy } from "solid-js";
+import { Suspense, lazy, onMount } from "solid-js";
 import "./App.css";
 import { AdminLayout } from "./routes/admin/AdminLayout.tsx";
 import { StudentLayout } from "./routes/student/StudentLayout.tsx";
 import { Toaster } from "./components/ui/toast.tsx";
 import { Loading } from "./components/Loading.tsx";
+import { captureReferralFromUrl } from "./lib/referral.ts";
 
 const Landing = lazy(async () => {
   const module = await import("./routes/Landing.tsx");
@@ -84,6 +85,16 @@ const AdminCourseLessons = lazy(async () => {
 const AdminPayments = lazy(async () => {
   const module = await import("./routes/admin/AdminPayments.tsx");
   return { default: module.AdminPayments };
+});
+
+const AdminReferrals = lazy(async () => {
+  const module = await import("./routes/admin/AdminReferrals.tsx");
+  return { default: module.AdminReferrals };
+});
+
+const AdminReferralRegistrations = lazy(async () => {
+  const module = await import("./routes/admin/AdminReferralRegistrations.tsx");
+  return { default: module.AdminReferralRegistrations };
 });
 
 const AdminPaymentDetail = lazy(async () => {
@@ -239,6 +250,18 @@ const AdminPaymentDetailRoute = () => (
   </AdminLayout>
 );
 
+const AdminReferralsRoute = () => (
+  <AdminLayout>
+    <AdminReferrals />
+  </AdminLayout>
+);
+
+const AdminReferralRegistrationsRoute = () => (
+  <AdminLayout>
+    <AdminReferralRegistrations />
+  </AdminLayout>
+);
+
 const StudentProfileRoute = () => (
   <StudentLayout>
     <StudentProfile />
@@ -300,6 +323,10 @@ const OnboardingCoursesRoute = () => <OnboardingCourses />;
 const OnboardingCheckoutRoute = () => <OnboardingCheckout />;
 
 export default function App() {
+  onMount(() => {
+    captureReferralFromUrl(new URL(window.location.href));
+  });
+
   return (
     <>
       <Suspense fallback={<div class="page"><Loading /></div>}>
@@ -332,6 +359,8 @@ export default function App() {
           <Route path="/admin/courses/:courseId/lessons" component={AdminCourseLessonsRoute} />
           <Route path="/admin/payments" component={AdminPaymentsRoute} />
           <Route path="/admin/payments/:id" component={AdminPaymentDetailRoute} />
+          <Route path="/admin/referrals" component={AdminReferralsRoute} />
+          <Route path="/admin/referrals/:code" component={AdminReferralRegistrationsRoute} />
           <Route path="/admin/library" component={AdminLibraryRoute} />
           <Route path="/admin/library/:id" component={AdminLibraryDetailRoute} />
           <Route path="/admin/categories" component={AdminCategoriesRoute} />

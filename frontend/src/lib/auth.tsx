@@ -15,6 +15,7 @@ import {
 
 import { apiFetch, setUnauthorizedHandler } from './api'
 import { auth } from './firebase'
+import { clearStoredReferral, getStoredReferral } from './referral'
 
 export type GoalIntakeAnswer = {
   questionId: string
@@ -126,6 +127,28 @@ export function AuthProvider(props: { children: JSX.Element }) {
     }
   }
 
+  const sendStoredReferralAttribution = async () => {
+    const stored = getStoredReferral()
+    if (!stored) return
+    try {
+      const response = await apiFetch('/api/me/referral-attribution', {
+        method: 'POST',
+        body: JSON.stringify({
+          code: stored.code,
+          utmSource: stored.utmSource,
+          utmMedium: stored.utmMedium,
+          utmCampaign: stored.utmCampaign,
+          landingPath: stored.landingPath,
+        }),
+      })
+      if (response.ok || response.status === 400) {
+        clearStoredReferral()
+      }
+    } catch {
+      // network error: leave it stored, retry on next auth state change
+    }
+  }
+
   const patchMe = async (payload: PatchMePayload) => {
     const response = await apiFetch('/api/me', {
       method: 'PATCH',
@@ -177,6 +200,7 @@ export function AuthProvider(props: { children: JSX.Element }) {
     } finally {
       setLoading(false)
     }
+    void sendStoredReferralAttribution()
   })
 
   onCleanup(() => {

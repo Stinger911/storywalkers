@@ -24,6 +24,7 @@ from app.routers import (
     jobs,
     library,
     questions,
+    referrals_admin,
     telegram_webhook,
 )
 
@@ -178,6 +179,7 @@ app.include_router(admin_students.router)
 app.include_router(admin_step_completions.router)
 app.include_router(admin_goals.router)
 app.include_router(admin_settings.router)
+app.include_router(referrals_admin.router)
 app.include_router(jobs.router)
 app.include_router(gmail_webhook.router)
 app.include_router(questions.router)

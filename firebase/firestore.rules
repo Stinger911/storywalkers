@@ -269,5 +269,15 @@ service cloud.firestore {
       allow get, list: if isStaff();
       allow create, update, delete: if false;
     }
+
+    /* =========================
+     * referral_sources/{code}
+     * ========================= */
+    match /referral_sources/{code} {
+      // Backend-managed via service account (bypasses these rules); no client
+      // access at all. Staff use /api/admin/referrals, not direct Firestore reads.
+      allow get, list: if false;
+      allow create, update, delete: if false;
+    }
   }
 }

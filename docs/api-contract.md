@@ -124,6 +124,50 @@ Update current user profile (MVP: display name only).
 
 ---
 
+### POST `/me/referral-attribution`
+
+Attributes the current user's registration to a referral code (`?ref=anna` link). Called once by the frontend right after login if a referral code was captured from the URL.
+
+**Access:** any authenticated user
+
+**Request**
+
+```json
+{
+  "code": "anna",
+  "utmSource": "instagram",
+  "utmMedium": "bio",
+  "utmCampaign": "june_launch",
+  "landingPath": "/login"
+}
+```
+
+**Response 200**
+
+```json
+{ "applied": true, "code": "anna" }
+```
+
+**Response 200 (no-op)**
+
+```json
+{ "applied": false, "code": null }
+```
+
+**Response 400**
+
+```json
+{ "error": { "code": "invalid_referral_code", "message": "Unknown or inactive referral code", "details": {} } }
+```
+
+**Notes**
+
+- `code` must match `^[a-z0-9_-]{3,64}$` (case-insensitive on input, normalized to lowercase); malformed codes return `400` validation error before reaching the handler.
+- No-op (`applied: false`) if the user already has a `referral` attribution, or if more than 24h have passed since the user's `createdAt`. Attribution is immutable once set.
+- `utmSource`/`utmMedium`/`utmCampaign`/`landingPath` are optional and stored as-is for reporting.
+
+---
+
 ## 2) Admin: Students
 
 > Staff-only routes.
@@ -816,10 +860,102 @@ To minimize backend scope, the following are allowed directly from Firestore wit
 
 ---
 
-## 7) Acceptance mapping (API coverage)
+## 7) Admin: Referrals
+
+> Staff-only routes. See [[research_referral_links]] and [[plan_referral_links]] for design background.
+
+### GET `/admin/referrals`
+
+**Response 200**
+
+```json
+{
+  "items": [
+    {
+      "code": "anna",
+      "name": "Anna Ivanova",
+      "kind": "partner",
+      "status": "active",
+      "notes": "Instagram campaign",
+      "registrations": 12
+    }
+  ]
+}
+```
+
+### POST `/admin/referrals`
+
+**Request**
+
+```json
+{ "code": "anna", "name": "Anna Ivanova", "kind": "partner", "notes": "Instagram campaign" }
+```
+
+**Response 201**
+
+```json
+{
+  "code": "anna",
+  "name": "Anna Ivanova",
+  "kind": "partner",
+  "status": "active",
+  "notes": "Instagram campaign",
+  "registrations": 0
+}
+```
+
+**Response 409** if `code` already exists (`referral_code_exists`).
+
+### PATCH `/admin/referrals/{code}`
+
+**Request**
+
+```json
+{ "status": "inactive" }
+```
+
+**Response 200:** same shape as `POST`. **Response 404** if the code doesn't exist.
+
+**Notes**
+
+- `code` itself is immutable after creation (set via the document ID); only `name`, `status`, `notes` can be patched.
+
+### GET `/admin/referrals/{code}/registrations`
+
+Paginated list of students who registered through this code, newest first.
+
+**Query params (optional)**
+
+- `limit`: `1..100` (default `50`)
+- `cursor`: opaque string from a previous response's `nextCursor`
+
+**Response 200**
+
+```json
+{
+  "items": [
+    {
+      "uid": "UID123",
+      "email": "alex@example.com",
+      "displayName": "Alex",
+      "status": "active",
+      "createdAt": "2026-02-03T10:15:30Z",
+      "selectedCourses": ["c1"]
+    }
+  ],
+  "nextCursor": null
+}
+```
+
+**Response 404** if the code doesn't exist.
+
+---
+
+## 8) Acceptance mapping (API coverage)
 
 - Admin creates goals/templates/categories: ✅ `/admin/*`
 - Admin assigns goal and builds plan: ✅ `/admin/students/{uid}/plan` + `/plan/steps`
 - Student asks a question: ✅ `POST /questions`
 - Admin answers and publishes to library: ✅ `POST /admin/questions/{id}/answer`
 - Student reads library and searches: ✅ `GET /library` + `GET /library/{id}`
+- Partner referral link drives registrations, staff sees counts: ✅ `POST /me/referral-attribution` + `/admin/referrals/*`

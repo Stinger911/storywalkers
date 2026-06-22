@@ -17,6 +17,7 @@ tags:
   - name: Admin - Courses
   - name: Admin - Payments
   - name: Admin - Settings
+  - name: Admin - Referrals
   - name: Questions
   - name: Library
   - name: Courses
@@ -1361,6 +1362,134 @@ components:
               enum: [draft, published]
               example: published
 
+    ReferralSource:
+      type: object
+      required: [code, name, kind, status, registrations]
+      properties:
+        code:
+          type: string
+          example: anna
+        name:
+          type: string
+          example: Anna Ivanova
+        kind:
+          type: string
+          example: partner
+        status:
+          type: string
+          enum: [active, inactive]
+        notes:
+          type: string
+          nullable: true
+          example: Instagram campaign
+        registrations:
+          type: integer
+          example: 12
+
+    ReferralSourcesListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReferralSource"
+
+    CreateReferralSourceRequest:
+      type: object
+      required: [code, name]
+      properties:
+        code:
+          type: string
+          pattern: "^[a-z0-9_-]{3,64}$"
+          example: anna
+        name:
+          type: string
+          example: Anna Ivanova
+        kind:
+          type: string
+          default: partner
+        notes:
+          type: string
+          nullable: true
+
+    UpdateReferralSourceRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        status:
+          type: string
+          enum: [active, inactive]
+        notes:
+          type: string
+          nullable: true
+
+    ReferralRegistration:
+      type: object
+      required: [uid, email, displayName, selectedCourses]
+      properties:
+        uid:
+          type: string
+        email:
+          type: string
+        displayName:
+          type: string
+        status:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+          nullable: true
+        selectedCourses:
+          type: array
+          items:
+            type: string
+
+    ReferralRegistrationsListResponse:
+      allOf:
+        - $ref: "#/components/schemas/Paginated"
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/ReferralRegistration"
+
+    ReferralAttributionRequest:
+      type: object
+      required: [code]
+      properties:
+        code:
+          type: string
+          pattern: "^[a-z0-9_-]{3,64}$"
+          example: anna
+        utmSource:
+          type: string
+          nullable: true
+        utmMedium:
+          type: string
+          nullable: true
+        utmCampaign:
+          type: string
+          nullable: true
+        landingPath:
+          type: string
+          nullable: true
+
+    ReferralAttributionResponse:
+      type: object
+      required: [applied]
+      properties:
+        applied:
+          type: boolean
+        code:
+          type: string
+          nullable: true
+          example: anna
+
   responses:
     Unauthorized:
       description: Unauthenticated (missing/invalid token)
@@ -1382,6 +1511,12 @@ components:
             $ref: "#/components/schemas/ErrorResponse"
     ValidationError:
       description: Validation error
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Conflict:
+      description: Conflict (e.g. duplicate code)
       content:
         application/json:
           schema:
@@ -1425,6 +1560,33 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "404":
           $ref: "#/components/responses/NotFound"
+
+  /me/referral-attribution:
+    post:
+      tags: [Auth]
+      summary: Attribute the current user's registration to a referral code
+      description: >
+        Called once by the frontend right after login if a referral code was
+        captured from the URL (?ref=anna). No-op if the user already has an
+        attribution, or if more than 24h have passed since the user's createdAt.
+      operationId: setReferralAttribution
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReferralAttributionRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReferralAttributionResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
 
   /admin/students:
     get:
@@ -2482,6 +2644,113 @@ paths:
       responses:
         "204":
           description: No Content
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /admin/referrals:
+    get:
+      tags: [Admin - Referrals]
+      summary: List referral codes with registration counts
+      operationId: adminListReferrals
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReferralSourcesListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [Admin - Referrals]
+      summary: Create a referral code
+      operationId: adminCreateReferral
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateReferralSourceRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReferralSource"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /admin/referrals/{code}:
+    patch:
+      tags: [Admin - Referrals]
+      summary: Update a referral code's name, status, or notes
+      description: "The code itself (document ID) is immutable after creation."
+      operationId: adminUpdateReferral
+      parameters:
+        - in: path
+          name: code
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateReferralSourceRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReferralSource"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /admin/referrals/{code}/registrations:
+    get:
+      tags: [Admin - Referrals]
+      summary: List students who registered through this referral code
+      operationId: adminListReferralRegistrations
+      parameters:
+        - in: path
+          name: code
+          required: true
+          schema: { type: string }
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 50
+            minimum: 1
+            maximum: 100
+        - in: query
+          name: cursor
+          schema:
+            type: string
+          description: Opaque cursor from a previous response's nextCursor.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReferralRegistrationsListResponse"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":

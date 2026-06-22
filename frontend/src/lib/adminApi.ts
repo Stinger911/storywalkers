@@ -80,6 +80,24 @@ export type AdminPayment = {
   activatedAt?: unknown
 }
 
+export type ReferralSource = {
+  code: string
+  name: string
+  kind: string
+  status: "active" | "inactive"
+  notes?: string | null
+  registrations: number
+}
+
+export type ReferralRegistration = {
+  uid: string
+  email: string
+  displayName: string
+  status?: string
+  createdAt?: unknown
+  selectedCourses: string[]
+}
+
 export type AdminPaymentActionResult = "activated" | "rejected" | "noop"
 
 export type AdminPaymentActionResponse = {
@@ -619,6 +637,49 @@ export async function rejectAdminPayment(id: string, payload: { reason?: string 
     body: JSON.stringify(payload),
   })
   return handleJson<AdminPaymentActionResponse>(response)
+}
+
+export async function listReferrals() {
+  const response = await apiFetch('/api/admin/referrals')
+  return handleJson<ApiList<ReferralSource>>(response)
+}
+
+export async function createReferral(payload: {
+  code: string
+  name: string
+  kind?: string
+  notes?: string | null
+}) {
+  const response = await apiFetch('/api/admin/referrals', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+  return handleJson<ReferralSource>(response)
+}
+
+export async function updateReferral(
+  code: string,
+  payload: { name?: string; status?: "active" | "inactive"; notes?: string | null },
+) {
+  const response = await apiFetch(`/api/admin/referrals/${code}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  })
+  return handleJson<ReferralSource>(response)
+}
+
+export async function listReferralRegistrations(
+  code: string,
+  params?: { limit?: number; cursor?: string },
+) {
+  const query = new URLSearchParams()
+  if (params?.limit) query.set('limit', String(params.limit))
+  if (params?.cursor) query.set('cursor', params.cursor)
+  const suffix = query.toString()
+  const response = await apiFetch(
+    `/api/admin/referrals/${code}/registrations${suffix ? `?${suffix}` : ''}`,
+  )
+  return handleJson<ApiList<ReferralRegistration>>(response)
 }
 
 export type {
