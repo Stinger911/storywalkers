@@ -29,6 +29,7 @@ type StudentPathVisualizationProps = {
   onOpenMaterial: (url?: string | null) => void;
   onToggleStep: (step: StudentPathStep) => void;
   toggleDisabled?: boolean;
+  triggerOpen?: () => number;
 };
 
 type PathPoint = {
@@ -67,6 +68,15 @@ export function StudentPathVisualization(props: StudentPathVisualizationProps) {
 
     if (nextSelected !== selectedStepId()) {
       setSelectedStepId(nextSelected);
+    }
+  });
+
+  createEffect(() => {
+    if (!props.triggerOpen) return;
+    if (props.triggerOpen() > 0) {
+      const nextStep = props.steps.find((s) => !s.isDone) ?? props.steps[0];
+      if (nextStep) setSelectedStepId(nextStep.id);
+      setDetailsOpen(true);
     }
   });
 

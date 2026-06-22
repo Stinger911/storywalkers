@@ -37,6 +37,7 @@ export function StudentHome(props: { readOnly?: boolean }) {
   } = useMyPlan()
   const { t } = useI18n()
   const [activeCourseId, setActiveCourseId] = createSignal<string | null>(null)
+  const [openCurrentStepTrigger, setOpenCurrentStepTrigger] = createSignal(0)
   const [completeDialogOpen, setCompleteDialogOpen] = createSignal(false)
   const [pendingStepId, setPendingStepId] = createSignal<string | null>(null)
   const [doneComment, setDoneComment] = createSignal('')
@@ -139,14 +140,8 @@ export function StudentHome(props: { readOnly?: boolean }) {
 
     setStudentRail(
       <div class="space-y-3">
-        {progressCards().map((item) => (
-          <div
-            class={
-              item.emphasis
-                ? "overflow-hidden rounded-[calc(var(--radius-lg)+2px)] bg-primary px-4 py-4 text-white shadow-none"
-                : "rounded-[calc(var(--radius-lg)+2px)] border border-border/70 bg-card px-4 py-4 shadow-none"
-            }
-          >
+        {progressCards().map((item) => {
+          const inner = (
             <div class="flex items-start justify-between gap-3">
               <div class="min-w-0">
                 <p
@@ -178,8 +173,32 @@ export function StudentHome(props: { readOnly?: boolean }) {
                 class={`text-3xl ${item.iconClass} ${item.emphasis ? '!text-white/80' : ''}`}
               />
             </div>
-          </div>
-        ))}
+          )
+          if (item.emphasis) {
+            return (
+              <button
+                type="button"
+                class="w-full overflow-hidden rounded-[calc(var(--radius-lg)+2px)] bg-primary px-4 py-4 text-left text-white shadow-none transition-opacity hover:opacity-90 active:opacity-80"
+                onClick={() => {
+                  const step = currentStep()
+                  if (!step) return
+                  const courseId = step.courseId?.trim() || LEGACY_COURSE_ID
+                  setActiveCourseId(courseId)
+                  setOpenCurrentStepTrigger((n) => n + 1)
+                }}
+              >
+                {inner}
+              </button>
+            )
+          }
+          return (
+            <div
+              class="rounded-[calc(var(--radius-lg)+2px)] border border-border/70 bg-card px-4 py-4 shadow-none"
+            >
+              {inner}
+            </div>
+          )
+        })}
       </div>,
     )
 
@@ -385,6 +404,7 @@ export function StudentHome(props: { readOnly?: boolean }) {
                           materialLabel={t('student.home.currentStepMaterial')}
                           onOpenMaterial={openMaterial}
                           toggleDisabled={props.readOnly}
+                          triggerOpen={openCurrentStepTrigger}
                           onToggleStep={(step) => {
                             if (props.readOnly) return
                             if (step.isLocked) return
