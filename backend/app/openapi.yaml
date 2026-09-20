@@ -87,6 +87,8 @@ components:
           example: goal_video_editor
         goalIntakeAnswers:
           $ref: "#/components/schemas/GoalIntakeAnswers"
+        youtubeOnboarding:
+          $ref: "#/components/schemas/YoutubeOnboarding"
         profileForm:
           $ref: "#/components/schemas/ProfileForm"
         selectedCourses:
@@ -236,6 +238,8 @@ components:
           example: goal_video_editor
         goalIntakeAnswers:
           $ref: "#/components/schemas/GoalIntakeAnswers"
+        youtubeOnboarding:
+          $ref: "#/components/schemas/YoutubeOnboarding"
         profileForm:
           $ref: "#/components/schemas/ProfileForm"
         selectedCourses:
@@ -254,6 +258,144 @@ components:
           type: boolean
           nullable: true
           example: false
+
+    YoutubeChannel:
+      type: object
+      required: [subscriberCount]
+      additionalProperties: false
+      properties:
+        url:
+          type: string
+          nullable: true
+          maxLength: 300
+          format: uri
+          example: https://youtube.com/@storywalkers
+        channelId:
+          type: string
+          nullable: true
+          maxLength: 64
+          example: UC_x5XG1OV2P6uZZ5FSM9Ttw
+        title:
+          type: string
+          nullable: true
+          maxLength: 200
+          example: StoryWalkers
+        subscriberCount:
+          type: integer
+          minimum: 0
+          example: 1500
+        hiddenSubscriberCount:
+          type: boolean
+          default: false
+        videoCount:
+          type: integer
+          nullable: true
+          minimum: 0
+          example: 42
+        viewCount:
+          type: integer
+          nullable: true
+          minimum: 0
+          example: 120000
+        subscriberCountSource:
+          type: string
+          enum: [api, manual]
+          default: api
+          description: manual when the channel hides its subscriber count
+        fetchedAt:
+          type: string
+          nullable: true
+          example: "2026-09-20T10:15:00+00:00"
+
+    YoutubeOnboarding:
+      type: object
+      nullable: true
+      required: [hasChannel, topic, format, targetMilestone]
+      additionalProperties: false
+      description: >
+        Answers from the YouTube onboarding flow. Cross-field rules: a channel is
+        required when hasChannel is true and forbidden otherwise; purpose is asked
+        only without a channel; monetizationEnabled is asked only from 1000
+        subscribers up; the lifestyle topic forces the live format; track and
+        excludedTags are derived server-side.
+      properties:
+        version:
+          type: integer
+          enum: [1]
+          default: 1
+        hasChannel:
+          type: boolean
+          example: true
+        channel:
+          $ref: "#/components/schemas/YoutubeChannel"
+        topic:
+          type: string
+          enum:
+            [
+              movies_anime,
+              games,
+              education,
+              business,
+              tech_ai,
+              lifestyle,
+              beauty,
+              health,
+              food,
+              travel,
+              family,
+              psychology,
+              news,
+              music,
+              sport,
+              humor,
+              true_crime,
+            ]
+          example: tech_ai
+        format:
+          type: string
+          enum: [live, talking_head, voiceover]
+          example: voiceover
+        purpose:
+          type: string
+          nullable: true
+          enum: [earn, business, community, creative]
+          example: earn
+        monetizationEnabled:
+          type: boolean
+          nullable: true
+          example: false
+        targetMilestone:
+          type: string
+          enum:
+            [
+              first_video,
+              views_10k,
+              subs_1k_hours_4k,
+              hours_4k,
+              subs_2k,
+              subs_5k,
+              subs_10k,
+              subs_25k,
+              subs_50k,
+              subs_100k,
+            ]
+          example: hours_4k
+        track:
+          type: string
+          nullable: true
+          enum: [self_serve, expert]
+          description: derived from hasChannel; expert when a channel exists
+          example: expert
+        excludedTags:
+          type: array
+          description: derived from format; ["filming"] for voiceover
+          items:
+            type: string
+          example: [filming]
+        completedAt:
+          type: string
+          nullable: true
+          example: "2026-09-20T10:15:00+00:00"
 
     CourseSummary:
       type: object
@@ -283,6 +425,13 @@ components:
           items:
             type: string
           example: [goal_video_editor, goal_youtube]
+        tags:
+          type: array
+          maxItems: 20
+          items:
+            type: string
+          description: lowercase labels; "filming" is excluded for voiceover students
+          example: [filming]
         currencyBase:
           type: string
           enum: [USD]
@@ -307,6 +456,12 @@ components:
           items:
             type: string
           example: [goal_video_editor, goal_youtube]
+        tags:
+          type: array
+          maxItems: 20
+          items:
+            type: string
+          example: [filming]
         priceUsdCents:
           type: integer
           minimum: 0
@@ -850,6 +1005,13 @@ components:
           type: string
           nullable: true
           example: "..."
+        slug:
+          type: string
+          nullable: true
+          maxLength: 64
+          pattern: "^[a-z0-9][a-z0-9_-]{0,63}$"
+          description: stable identifier for landing links, unique across goals
+          example: youtube
         intakeQuestions:
           type: array
           items:
@@ -881,6 +1043,12 @@ components:
         description:
           type: string
           nullable: true
+        slug:
+          type: string
+          nullable: true
+          maxLength: 64
+          pattern: "^[a-z0-9][a-z0-9_-]{0,63}$"
+          example: youtube
         intakeQuestions:
           type: array
           items:
@@ -895,6 +1063,12 @@ components:
         description:
           type: string
           nullable: true
+        slug:
+          type: string
+          nullable: true
+          maxLength: 64
+          pattern: "^[a-z0-9][a-z0-9_-]{0,63}$"
+          example: youtube
         intakeQuestions:
           type: array
           items:
@@ -1903,6 +2077,10 @@ paths:
                 goalIds:
                   type: array
                   items: { type: string }
+                tags:
+                  type: array
+                  maxItems: 20
+                  items: { type: string }
                 priceUsdCents:
                   type: integer
                   minimum: 0
@@ -2094,6 +2272,10 @@ paths:
                   nullable: true
                 goalIds:
                   type: array
+                  items: { type: string }
+                tags:
+                  type: array
+                  maxItems: 20
                   items: { type: string }
                 priceUsdCents:
                   type: integer

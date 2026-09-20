@@ -23,6 +23,11 @@ from app.repositories.referrals import (
 )
 from app.schemas.payments import SelectedLesson
 from app.schemas.referrals import ReferralAttributionRequest
+from app.schemas.youtube_onboarding import (
+    YoutubeOnboarding,
+    finalize_youtube_onboarding,
+    sanitize_youtube_onboarding,
+)
 from app.services.telegram import send_admin_message
 from app.services.telegram_events import (
     fmt_lesson_completed,
@@ -340,6 +345,7 @@ class MeResponse(BaseModel):
     selectedGoalId: str | None = None
     selectedGoalTitle: str | None = None
     goalIntakeAnswers: GoalIntakeAnswers | None = None
+    youtubeOnboarding: YoutubeOnboarding | None = None
     profileForm: ProfileFormModel = Field(default_factory=ProfileFormModel)
     selectedCourses: list[str] = Field(default_factory=list)
     selectedLessons: list[SelectedLesson] = Field(default_factory=list)
@@ -358,6 +364,7 @@ class PatchMeRequest(BaseModel):
     displayName: str | None = None
     selectedGoalId: str | None = None
     goalIntakeAnswers: GoalIntakeAnswers | None = None
+    youtubeOnboarding: YoutubeOnboarding | None = None
     profileForm: ProfileFormModel | None = None
     selectedCourses: list[str] | None = None
     selectedLessons: list[SelectedLesson] | None = None
@@ -676,6 +683,13 @@ async def patch_me(
             else None
         )
 
+    if "youtubeOnboarding" in payload_data:
+        updates["youtubeOnboarding"] = (
+            finalize_youtube_onboarding(payload.youtubeOnboarding)
+            if payload.youtubeOnboarding
+            else None
+        )
+
     if "selectedCourses" in payload_data:
         updates["selectedCourses"] = _sanitize_selected_courses(
             payload.selectedCourses or []
@@ -762,6 +776,9 @@ async def patch_me(
         ),
         "goalIntakeAnswers": _sanitize_goal_intake_answers(
             response_data.get("goalIntakeAnswers")
+        ),
+        "youtubeOnboarding": sanitize_youtube_onboarding(
+            response_data.get("youtubeOnboarding")
         ),
         "profileForm": _sanitize_profile_form(
             response_data.get("profileForm")

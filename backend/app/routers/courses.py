@@ -151,6 +151,7 @@ async def list_courses(
             "title": course.title,
             "description": course.description,
             "goalIds": course.goalIds,
+            "tags": course.tags,
             "priceUsdCents": course.priceUsdCents,
             "trialLessonUrl": course.trialLessonUrl,
             "currencyBase": "USD",

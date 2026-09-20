@@ -1,3 +1,4 @@
+import re
 from typing import Any
 
 from fastapi import APIRouter, Depends, Query, status
@@ -10,6 +11,24 @@ from app.core.errors import AppError
 from app.db.firestore import get_firestore_client
 
 router = APIRouter(prefix="/api/admin", tags=["Admin - Settings"])
+
+# Stable identifier a landing page can use instead of the generated goal id
+# (e.g. /start/channel?goal=youtube).
+GOAL_SLUG_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{0,63}$")
+
+
+def _normalize_goal_slug(value: str | None) -> str | None:
+    if value is None:
+        return None
+    trimmed = value.strip().lower()
+    if not trimmed:
+        return None
+    if not GOAL_SLUG_RE.match(trimmed):
+        raise PydanticCustomError(
+            "goal_slug_invalid",
+            "slug must contain only a-z, 0-9, hyphen and underscore",
+        )
+    return trimmed
 
 
 class CreateCategoryRequest(BaseModel):
@@ -89,15 +108,27 @@ class GoalIntakeQuestion(BaseModel):
 class CreateGoalRequest(BaseModel):
     title: str
     description: str | None = None
+    slug: str | None = None
     intakeQuestions: list[GoalIntakeQuestion] = Field(default_factory=list)
     isActive: bool = True
+
+    @field_validator("slug", mode="before")
+    @classmethod
+    def _validate_slug(cls, value: str | None) -> str | None:
+        return _normalize_goal_slug(value)
 
 
 class PatchGoalRequest(BaseModel):
     title: str | None = None
     description: str | None = None
+    slug: str | None = None
     intakeQuestions: list[GoalIntakeQuestion] | None = None
     isActive: bool | None = None
+
+    @field_validator("slug", mode="before")
+    @classmethod
+    def _validate_slug(cls, value: str | None) -> str | None:
+        return _normalize_goal_slug(value)
 
 
 class CreateStepTemplateRequest(BaseModel):
@@ -146,7 +177,22 @@ def _goal_payload(data: dict[str, Any], *, staff: bool) -> dict[str, Any]:
         payload.get("intakeQuestions"),
         staff=staff,
     )
+    payload["slug"] = payload.get("slug") or None
     return payload
+
+
+def _ensure_goal_slug_unique(
+    db: firestore.Client, slug: str, *, exclude_id: str | None = None
+) -> None:
+    for snap in db.collection("goals").stream():
+        if exclude_id and snap.id == exclude_id:
+            continue
+        if (snap.to_dict() or {}).get("slug") == slug:
+            raise AppError(
+                code="conflict",
+                message="Goal slug already exists",
+                status_code=409,
+            )
 
 
 def _doc_or_404(doc_ref: firestore.DocumentReference) -> dict[str, Any]:
@@ -258,10 +304,13 @@ async def create_goal(
     user: dict = Depends(require_staff),
 ):
     db = get_firestore_client()
+    if payload.slug:
+        _ensure_goal_slug_unique(db, payload.slug)
     now = firestore.SERVER_TIMESTAMP
     data = {
         "title": payload.title,
         "description": payload.description,
+        "slug": payload.slug,
         "intakeQuestions": [item.model_dump() for item in payload.intakeQuestions],
         "isActive": payload.isActive,
         "createdAt": now,
@@ -282,6 +331,8 @@ async def update_goal(
     doc_ref = db.collection("goals").document(id)
     _doc_or_404(doc_ref)
     updates = payload.model_dump(exclude_unset=True)
+    if updates.get("slug"):
+        _ensure_goal_slug_unique(db, updates["slug"], exclude_id=id)
     updates["updatedAt"] = firestore.SERVER_TIMESTAMP
     doc_ref.update(updates)
     return _goal_payload(_doc_or_404(doc_ref), staff=True)

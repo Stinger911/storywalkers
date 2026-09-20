@@ -37,6 +37,28 @@ def _validate_optional_url(value: str | None) -> str | None:
     return trimmed
 
 
+def _normalize_tags(values: list[str]) -> list[str]:
+    # Tags are lowercased labels, so "Filming" and "filming" are the same tag:
+    # drop the repeat instead of failing the request the way goalIds do.
+    normalized: list[str] = []
+    seen: set[str] = set()
+    for value in values:
+        trimmed = value.strip().lower()
+        if not trimmed or trimmed in seen:
+            continue
+        if len(trimmed) > 40:
+            raise PydanticCustomError(
+                "tag_max_length", "each tag must be 40 characters or fewer"
+            )
+        seen.add(trimmed)
+        normalized.append(trimmed)
+    if len(normalized) > 20:
+        raise PydanticCustomError(
+            "tags_max_items", "tags must contain at most 20 items"
+        )
+    return normalized
+
+
 def _unique_preserve_order(values: list[str]) -> list[str]:
     seen: set[str] = set()
     result: list[str] = []
@@ -61,6 +83,7 @@ class CourseBase(BaseModel):
     title: str
     description: str | None = None
     goalIds: list[str] = Field(default_factory=list)
+    tags: list[str] = Field(default_factory=list)
     priceUsdCents: StrictInt = Field(ge=0)
     trialLessonUrl: str | None = None
     isActive: bool = True
@@ -80,6 +103,11 @@ class CourseBase(BaseModel):
     def _validate_goal_ids(cls, value: list[str]) -> list[str]:
         return _unique_preserve_order(value)
 
+    @field_validator("tags")
+    @classmethod
+    def _validate_tags(cls, value: list[str]) -> list[str]:
+        return _normalize_tags(value)
+
     @field_validator("trialLessonUrl")
     @classmethod
     def _validate_trial_lesson_url(cls, value: str | None) -> str | None:
@@ -94,6 +122,7 @@ class CourseUpdate(BaseModel):
     title: str | None = None
     description: str | None = None
     goalIds: list[str] | None = None
+    tags: list[str] | None = None
     priceUsdCents: StrictInt | None = Field(default=None, ge=0)
     trialLessonUrl: str | None = None
     isActive: bool | None = None
@@ -118,6 +147,13 @@ class CourseUpdate(BaseModel):
         if value is None:
             return None
         return _unique_preserve_order(value)
+
+    @field_validator("tags")
+    @classmethod
+    def _validate_tags(cls, value: list[str] | None) -> list[str] | None:
+        if value is None:
+            return None
+        return _normalize_tags(value)
 
     @field_validator("trialLessonUrl")
     @classmethod

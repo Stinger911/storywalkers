@@ -288,3 +288,79 @@ def test_goal_intake_questions_are_saved_and_student_list_filters_inactive(monke
     assert [item["id"] for item in goal["intakeQuestions"]] == ["background"]
 
     app.dependency_overrides.clear()
+
+
+def test_create_goal_normalizes_slug_and_defaults_to_none(monkeypatch):
+    goals_store = {}
+    fake_db = FakeFirestore(goals_store)
+    monkeypatch.setattr(admin_settings, "get_firestore_client", lambda: fake_db)
+    app.dependency_overrides[auth_deps.get_current_user] = _staff
+    client = TestClient(app)
+
+    with_slug = client.post(
+        "/api/admin/goals",
+        json={"title": "YouTube channel", "slug": "  YouTube  "},
+    )
+    assert with_slug.status_code == 201
+    assert with_slug.json()["slug"] == "youtube"
+
+    without_slug = client.post("/api/admin/goals", json={"title": "Other goal"})
+    assert without_slug.status_code == 201
+    assert without_slug.json()["slug"] is None
+
+    app.dependency_overrides.clear()
+
+
+def test_create_goal_rejects_invalid_slug(monkeypatch):
+    goals_store = {}
+    fake_db = FakeFirestore(goals_store)
+    monkeypatch.setattr(admin_settings, "get_firestore_client", lambda: fake_db)
+    app.dependency_overrides[auth_deps.get_current_user] = _staff
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/admin/goals",
+        json={"title": "Bad slug", "slug": "you tube!"},
+    )
+
+    assert response.status_code == 400
+    assert goals_store == {}
+
+    app.dependency_overrides.clear()
+
+
+def test_goal_slug_must_be_unique(monkeypatch):
+    goals_store = {
+        "g1": {
+            "title": "Existing",
+            "slug": "youtube",
+            "isActive": True,
+            "createdAt": "t0",
+            "updatedAt": "t0",
+        },
+        "g2": {
+            "title": "Other",
+            "isActive": True,
+            "createdAt": "t1",
+            "updatedAt": "t1",
+        },
+    }
+    fake_db = FakeFirestore(goals_store)
+    monkeypatch.setattr(admin_settings, "get_firestore_client", lambda: fake_db)
+    app.dependency_overrides[auth_deps.get_current_user] = _staff
+    client = TestClient(app)
+
+    created = client.post(
+        "/api/admin/goals",
+        json={"title": "Duplicate", "slug": "youtube"},
+    )
+    assert created.status_code == 409
+
+    patched = client.patch("/api/admin/goals/g2", json={"slug": "youtube"})
+    assert patched.status_code == 409
+
+    kept_own_slug = client.patch("/api/admin/goals/g1", json={"slug": "youtube"})
+    assert kept_own_slug.status_code == 200
+    assert kept_own_slug.json()["slug"] == "youtube"
+
+    app.dependency_overrides.clear()
