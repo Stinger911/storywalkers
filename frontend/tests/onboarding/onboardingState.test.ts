@@ -4,6 +4,7 @@ import type { MeProfile } from "../../src/lib/auth";
 import {
   canAccessOnboardingStep,
   getNextOnboardingStep,
+  isExpertTrack,
   isOnboardingIncomplete,
   isProfileComplete,
 } from "../../src/routes/onboarding/onboardingState";
@@ -132,5 +133,67 @@ describe("onboardingState", () => {
         },
       }),
     ).toBe(false);
+  });
+
+  it("routes the expert track past course selection and checkout", () => {
+    const withChannel: MeProfile = {
+      ...baseMe(),
+      selectedGoalId: "goal-1",
+      youtubeOnboarding: { hasChannel: true, track: "expert" },
+    };
+
+    expect(isExpertTrack(withChannel)).toBe(true);
+    expect(getNextOnboardingStep(withChannel)).toBe("profile");
+    expect(isOnboardingIncomplete(withChannel)).toBe(true);
+
+    const withProfile: MeProfile = {
+      ...withChannel,
+      profileForm: {
+        ...baseMe().profileForm,
+        submitted: true,
+        telegram: "@alice",
+      },
+    };
+
+    expect(getNextOnboardingStep(withProfile)).toBe("expert");
+    // No courses to pick, so onboarding is done once the profile is filled.
+    expect(isOnboardingIncomplete(withProfile)).toBe(false);
+    expect(canAccessOnboardingStep(withProfile, "expert")).toBe(true);
+    expect(canAccessOnboardingStep(withProfile, "checkout")).toBe(false);
+    expect(canAccessOnboardingStep(withProfile, "courses")).toBe(false);
+  });
+
+  it("keeps the self-serve track away from the expert screen", () => {
+    const selfServe: MeProfile = {
+      ...baseMe(),
+      selectedGoalId: "goal-1",
+      selectedCourses: ["course-1"],
+      profileForm: {
+        ...baseMe().profileForm,
+        submitted: true,
+        telegram: "@alice",
+      },
+      youtubeOnboarding: { hasChannel: false, track: "self_serve" },
+    };
+
+    expect(isExpertTrack(selfServe)).toBe(false);
+    expect(getNextOnboardingStep(selfServe)).toBe("checkout");
+    expect(canAccessOnboardingStep(selfServe, "expert")).toBe(false);
+  });
+
+  it("leaves students from the old flow untouched", () => {
+    const legacy: MeProfile = {
+      ...baseMe(),
+      selectedGoalId: "goal-1",
+      profileForm: {
+        ...baseMe().profileForm,
+        submitted: true,
+        telegram: "@alice",
+      },
+    };
+
+    expect(isExpertTrack(legacy)).toBe(false);
+    expect(getNextOnboardingStep(legacy)).toBe("courses");
+    expect(isOnboardingIncomplete(legacy)).toBe(true);
   });
 });

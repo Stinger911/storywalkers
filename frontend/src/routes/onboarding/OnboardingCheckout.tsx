@@ -49,6 +49,11 @@ export function OnboardingCheckout() {
     return typeof rate === "number" && rate > 0 ? rate : 1;
   });
 
+  // Students from the pre-registration funnel go back to their path preview;
+  // legacy students still have the course selection step.
+  const backToPathHref = createMemo(() =>
+    me()?.youtubeOnboarding ? "/start/plan" : "/onboarding/courses",
+  );
   const selectedCourseIds = createMemo(() => me()?.selectedCourses || []);
   const selectedLessons = createMemo<SelectedLesson[]>(() => me()?.selectedLessons || []);
   const communitySelected = createMemo(() => true);
@@ -242,7 +247,7 @@ export function OnboardingCheckout() {
                 <div class="mt-2 rounded-md border border-warning/40 bg-warning/10 p-3 text-warning-foreground">
                   <div>{t("student.onboarding.checkout.coursesEmpty")}</div>
                   <div class="mt-3">
-                    <Button as={A} href="/onboarding/courses" variant="outline">
+                    <Button as={A} href={backToPathHref()} variant="outline">
                       {t("student.onboarding.checkout.backToCourses")}
                     </Button>
                   </div>
@@ -294,14 +299,16 @@ export function OnboardingCheckout() {
                     )}
                   </For>
                 </Show>
-                <Show when={communitySelected()}>
-                  <div class="flex items-center justify-between rounded-md border border-border/70 bg-card px-3 py-2">
-                    <span>{t("student.onboarding.checkout.communityLabel")}</span>
-                    <span class="font-medium">
-                      {formatCents(communityPriceCents(), preferredCurrency())}
-                    </span>
-                  </div>
-                </Show>
+              </div>
+            </Show>
+            {/* The community line stays visible even with no courses left:
+                it is mandatory and always part of the total. */}
+            <Show when={communitySelected()}>
+              <div class="mt-2 flex items-center justify-between rounded-md border border-border/70 bg-card px-3 py-2">
+                <span>{t("student.onboarding.checkout.communityLabel")}</span>
+                <span class="font-medium">
+                  {formatCents(communityPriceCents(), preferredCurrency())}
+                </span>
               </div>
             </Show>
           </div>
@@ -337,7 +344,7 @@ export function OnboardingCheckout() {
             )}
           </Show>
           <div class="flex flex-wrap gap-2">
-            <Button as={A} href="/onboarding/courses" variant="outline">
+            <Button as={A} href={backToPathHref()} variant="outline">
               {t("student.onboarding.profile.back")}
             </Button>
             <Show when={hasSelection() && !checkout()}>

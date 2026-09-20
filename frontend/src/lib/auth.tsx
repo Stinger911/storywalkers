@@ -28,6 +28,31 @@ export type GoalIntakeAnswers = {
   answers: GoalIntakeAnswer[]
 }
 
+export type YoutubeOnboardingChannel = {
+  url?: string | null
+  channelId?: string | null
+  title?: string | null
+  subscriberCount?: number | null
+  hiddenSubscriberCount?: boolean
+  videoCount?: number | null
+  viewCount?: number | null
+  subscriberCountSource?: 'api' | 'manual'
+}
+
+export type YoutubeOnboarding = {
+  version?: 1
+  hasChannel: boolean
+  channel?: YoutubeOnboardingChannel | null
+  topic?: string
+  format?: string
+  purpose?: string | null
+  monetizationEnabled?: boolean | null
+  targetMilestone?: string
+  track?: 'self_serve' | 'expert' | null
+  excludedTags?: string[]
+  completedAt?: string | null
+}
+
 export type MeProfile = {
   uid: string
   email: string
@@ -39,6 +64,7 @@ export type MeProfile = {
   selectedGoalId?: string | null
   selectedGoalTitle?: string | null
   goalIntakeAnswers?: GoalIntakeAnswers | null
+  youtubeOnboarding?: YoutubeOnboarding | null
   profileForm?: {
     firstName?: string | null
     lastName?: string | null
@@ -65,6 +91,7 @@ export type PatchMePayload = {
   selectedGoalId?: string | null
   selectedGoalTitle?: string | null
   goalIntakeAnswers?: GoalIntakeAnswers | null
+  youtubeOnboarding?: YoutubeOnboarding | null
   profileForm?: {
     firstName?: string | null
     lastName?: string | null

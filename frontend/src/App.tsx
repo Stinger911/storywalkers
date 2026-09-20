@@ -187,6 +187,11 @@ const OnboardingCourses = lazy(async () => {
   return { default: module.OnboardingCourses };
 });
 
+const OnboardingExpert = lazy(async () => {
+  const module = await import("./routes/onboarding/OnboardingExpert.tsx");
+  return { default: module.OnboardingExpert };
+});
+
 const OnboardingCheckout = lazy(async () => {
   const module = await import("./routes/onboarding/OnboardingCheckout.tsx");
   return { default: module.OnboardingCheckout };
@@ -372,6 +377,7 @@ export default function App() {
           <Route path="/onboarding/profile" component={OnboardingProfileRoute} />
           <Route path="/onboarding/courses" component={OnboardingCoursesRoute} />
           <Route path="/onboarding/checkout" component={OnboardingCheckoutRoute} />
+          <Route path="/onboarding/expert" component={OnboardingExpert} />
           <Route path="/admin" component={AdminHomeRoute} />
           <Route path="/admin/home" component={AdminHomeRoute} />
           <Route path="/admin/students" component={AdminStudentsRoute} />

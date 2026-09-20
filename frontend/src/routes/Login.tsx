@@ -45,6 +45,7 @@ import {
   isOnboardingIncomplete,
   onboardingPath,
 } from "./onboarding/onboardingState";
+import { syncDraftToMe } from "./start/startSync";
 
 function friendlyAuthError(
   err: unknown,
@@ -220,6 +221,9 @@ export function Login() {
   }
 
   async function redirectIfLoggedIn(silent = false) {
+    // Answers collected before registration are saved first, so /api/me below
+    // already reflects the goal and the path chosen in the funnel.
+    await syncDraftToMe();
     const response = await apiFetch("/api/me");
     if (response.ok) {
       const data = (await response.json()) as MeProfile;

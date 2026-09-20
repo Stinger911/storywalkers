@@ -1,7 +1,13 @@
 import type { MeProfile } from "../../lib/auth";
 
-export type OnboardingStep = "profile" | "goal" | "courses" | "checkout";
+export type OnboardingStep =
+  | "profile"
+  | "goal"
+  | "courses"
+  | "checkout"
+  | "expert";
 
+// The stepper shows the self-serve path only; "expert" is a separate screen.
 export const ONBOARDING_STEPS: OnboardingStep[] = [
   "goal",
   "profile",
@@ -65,9 +71,16 @@ export function hasSelectedContent(me: MeProfile): boolean {
   return Boolean(me.selectedLessons && me.selectedLessons.length > 0);
 }
 
+/** Students who already had a channel get their plan from a human expert. */
+export function isExpertTrack(me: MeProfile): boolean {
+  return me.youtubeOnboarding?.track === "expert";
+}
+
 export function getNextOnboardingStep(me: MeProfile): OnboardingStep {
   if (!me.selectedGoalId) return "goal";
   if (!isProfileComplete(me)) return "profile";
+  // The expert builds the path, so course selection and checkout are skipped.
+  if (isExpertTrack(me)) return "expert";
   if (!hasSelectedContent(me)) {
     return me.subscriptionSelected === true ? "checkout" : "courses";
   }
@@ -75,10 +88,17 @@ export function getNextOnboardingStep(me: MeProfile): OnboardingStep {
 }
 
 export function canAccessOnboardingStep(me: MeProfile, step: OnboardingStep): boolean {
-  return stepIndex(step) <= stepIndex(getNextOnboardingStep(me));
+  if (step === "expert") return isExpertTrack(me);
+  const next = getNextOnboardingStep(me);
+  if (next === "expert") return step === "goal" || step === "profile";
+  return stepIndex(step) <= stepIndex(next);
 }
 
 export function isOnboardingIncomplete(me: MeProfile): boolean {
+  if (isExpertTrack(me)) {
+    // Nothing left to pick: the account is ready once the profile is filled.
+    return !isProfileComplete(me) || !me.selectedGoalId;
+  }
   return (
     !isProfileComplete(me) ||
     !me.selectedGoalId ||

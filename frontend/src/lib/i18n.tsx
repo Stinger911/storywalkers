@@ -12,6 +12,17 @@ type StartSection = {
   stepperTitle: string;
   steps: { channel: string; topic: string; goal: string; plan: string };
   stepPlanExpert: string;
+  expert: {
+    title: string;
+    body: string;
+    subscriptionTitle: string;
+    subscriptionBody: string;
+    subscriptionCta: string;
+    nextTitle: string;
+    nextBody: string;
+    supportLabel: string;
+    toDashboard: string;
+  };
   panel: {
     title: string;
     channelName: string;
@@ -588,6 +599,19 @@ const dictionaries: Record<Locale, RawDictionary> = {
         plan: "Plan",
       },
       stepPlanExpert: "Expert",
+      expert: {
+        title: "An expert is building your path",
+        body: "Your channel already has history, so your learning path is built together with a live expert. We have your answers - our expert will contact you in Telegram to agree on the next steps.",
+        subscriptionTitle: "Join the community",
+        subscriptionBody:
+          "The community subscription is paid right away and opens access to the club. Lessons chosen with the expert are invoiced separately after the consultation.",
+        subscriptionCta: "Pay on Boosty",
+        nextTitle: "What happens next",
+        nextBody:
+          "After the consultation the expert puts your path together and sends an invoice for the lessons you agreed on. You will see it in your account.",
+        supportLabel: "Questions:",
+        toDashboard: "Go to my account",
+      },
       panel: {
         title: "Your channel",
         channelName: "Channel name",
@@ -1208,6 +1232,19 @@ const dictionaries: Record<Locale, RawDictionary> = {
         plan: "План",
       },
       stepPlanExpert: "Эксперт",
+      expert: {
+        title: "Эксперт составляет ваш путь",
+        body: "У вашего канала уже есть история, поэтому план обучения составляется с живым представителем. Ваши ответы у нас — эксперт свяжется с вами в Telegram, чтобы обсудить следующие шаги.",
+        subscriptionTitle: "Подписка на сообщество",
+        subscriptionBody:
+          "Подписка на сообщество оплачивается сразу и открывает доступ в клуб. Уроки, выбранные вместе с экспертом, оплачиваются отдельно после консультации.",
+        subscriptionCta: "Перейти в Boosty",
+        nextTitle: "Что дальше",
+        nextBody:
+          "После консультации эксперт соберёт ваш путь и выставит счёт на согласованные уроки. Вы увидите его в личном кабинете.",
+        supportLabel: "Вопросы:",
+        toDashboard: "Перейти в кабинет",
+      },
       panel: {
         title: "Ваш канал",
         channelName: "Имя канала",

@@ -156,9 +156,11 @@ export function OnboardingProfile() {
 
   const next = async () => {
     const ok = await save();
-    if (ok) {
-      void navigate("/onboarding/courses");
-    }
+    if (!ok) return;
+    // Students who already had a channel get their path from a live expert,
+    // so they skip course selection and checkout.
+    const isExpert = auth.me()?.youtubeOnboarding?.track === "expert";
+    void navigate(isExpert ? "/onboarding/expert" : "/onboarding/courses");
   };
 
   return (
