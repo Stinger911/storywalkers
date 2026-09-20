@@ -7,7 +7,129 @@ import {
 } from "solid-js";
 import * as i18n from "@solid-primitives/i18n";
 
+type StartSection = {
+  eyebrow: string;
+  stepperTitle: string;
+  steps: { channel: string; topic: string; goal: string; plan: string };
+  stepPlanExpert: string;
+  panel: {
+    title: string;
+    channelName: string;
+    topic: string;
+    subscribers: string;
+    videos: string;
+    views: string;
+    monetization: string;
+    currentGoal: string;
+    empty: string;
+    monetizationOn: string;
+    monetizationOff: string;
+  };
+  channel: {
+    title: string;
+    subtitle: string;
+    question: string;
+    answerNo: string;
+    answerYes: string;
+    linkHint: string;
+    linkLabel: string;
+    linkPlaceholder: string;
+    check: string;
+    checking: string;
+    found: string;
+    manualTitle: string;
+    manualHint: string;
+    manualLabel: string;
+    manualApply: string;
+    next: string;
+    errorUnsupported: string;
+    errorNotFound: string;
+    errorRateLimited: string;
+    errorFailed: string;
+    errorManualRequired: string;
+  };
+  topic: {
+    title: string;
+    subtitle: string;
+    question: string;
+    hint: string;
+    formatQuestion: string;
+    lifestyleLocked: string;
+    voiceoverTitle: string;
+    voiceoverBody: string;
+    voiceoverOk: string;
+    next: string;
+    back: string;
+    errorTopicRequired: string;
+  };
+  goal: {
+    title: string;
+    subtitle: string;
+    purposeQuestion: string;
+    monetizationQuestion: string;
+    monetizationYes: string;
+    monetizationNo: string;
+    milestoneQuestion: string;
+    milestoneBelowThousand: string;
+    recommended: string;
+    next: string;
+    back: string;
+    errorPurposeRequired: string;
+    errorMonetizationRequired: string;
+    errorMilestoneRequired: string;
+  };
+  plan: {
+    title: string;
+    subtitle: string;
+    expertTitle: string;
+    expertBody: string;
+    lessonsSuffix: string;
+    register: string;
+    back: string;
+    loadError: string;
+    retry: string;
+    empty: string;
+    excludedNote: string;
+  };
+  topics: Record<
+    | "movies_anime"
+    | "games"
+    | "education"
+    | "business"
+    | "tech_ai"
+    | "lifestyle"
+    | "beauty"
+    | "health"
+    | "food"
+    | "travel"
+    | "family"
+    | "psychology"
+    | "news"
+    | "music"
+    | "sport"
+    | "humor"
+    | "true_crime",
+    string
+  >;
+  formats: Record<"live" | "talking_head" | "voiceover", string>;
+  purposes: Record<"earn" | "business" | "community" | "creative", string>;
+  milestones: Record<
+    | "first_video"
+    | "views_10k"
+    | "subs_1k_hours_4k"
+    | "hours_4k"
+    | "subs_2k"
+    | "subs_5k"
+    | "subs_10k"
+    | "subs_25k"
+    | "subs_50k"
+    | "subs_100k",
+    string
+  >;
+};
+
 type RawDictionary = {
+  start: StartSection;
   common: {
     loading: string;
     refresh: string;
@@ -456,6 +578,148 @@ type Locale = "en" | "ru";
 
 const dictionaries: Record<Locale, RawDictionary> = {
   en: {
+    start: {
+      eyebrow: "Getting started",
+      stepperTitle: "Your first steps",
+      steps: {
+        channel: "Channel",
+        topic: "Topic",
+        goal: "Goal",
+        plan: "Plan",
+      },
+      stepPlanExpert: "Expert",
+      panel: {
+        title: "Your channel",
+        channelName: "Channel name",
+        topic: "Topic",
+        subscribers: "Subscribers",
+        videos: "Videos published",
+        views: "Views",
+        monetization: "Monetization",
+        currentGoal: "Current goal",
+        empty: "—",
+        monetizationOn: "Enabled",
+        monetizationOff: "Not yet",
+      },
+      channel: {
+        title: "Do you already have a YouTube channel?",
+        subtitle: "We use the answer to build your personal path.",
+        question: "Do you already have a YouTube channel, or do you want to start one?",
+        answerNo: "No",
+        answerYes: "Yes, I have one",
+        linkHint:
+          "Paste a link to your channel and we will read its current numbers and take them into account while building your personal path.",
+        linkLabel: "Channel link",
+        linkPlaceholder: "youtube.com/@yourchannel",
+        check: "Check channel",
+        checking: "Checking…",
+        found: "Channel found",
+        manualTitle: "Enter the numbers yourself",
+        manualHint:
+          "This channel hides its subscriber count, so please type it in - we need it to pick your next goal.",
+        manualLabel: "Subscribers",
+        manualApply: "Save number",
+        next: "Continue",
+        errorUnsupported:
+          "Send a link like youtube.com/@handle or youtube.com/channel/UC…",
+        errorNotFound: "We could not find this channel. Check the link, please.",
+        errorRateLimited: "Too many checks. Try again in a minute.",
+        errorFailed:
+          "YouTube did not answer. Enter your subscriber count manually to continue.",
+        errorManualRequired: "Enter your subscriber count to continue.",
+      },
+      topic: {
+        title: "Pick your topic and format",
+        subtitle:
+          "We cannot detect them from the link yet, so please answer these two questions.",
+        question:
+          "Which topic would you like to work in? Nothing is locked in - you can change it later.",
+        hint: "Pick the closest one.",
+        formatQuestion: "Choose the format of your videos",
+        lifestyleLocked:
+          "Lifestyle and vlog means live dynamic shooting, so the format is fixed.",
+        voiceoverTitle: "Filming is out of your path",
+        voiceoverBody:
+          "Since you picked the voiceover format, you do not need to learn filming at this stage. We will drop that block from your path, and you can add it later.",
+        voiceoverOk: "Got it",
+        next: "Continue",
+        back: "Back",
+        errorTopicRequired: "Pick a topic and a format to continue.",
+      },
+      goal: {
+        title: "Set your goal",
+        subtitle: "It becomes the finish line of your first path.",
+        purposeQuestion: "What is the main goal of starting a YouTube channel?",
+        monetizationQuestion: "Is monetization enabled on the channel?",
+        monetizationYes: "Yes, the channel is monetized",
+        monetizationNo: "Not yet",
+        milestoneQuestion: "Pick the goal you want to reach next.",
+        milestoneBelowThousand:
+          "Your next goal is the monetization threshold: 1000 subscribers and 4000 watch hours.",
+        recommended: "Recommended",
+        next: "Continue",
+        back: "Back",
+        errorPurposeRequired: "Pick a goal to continue.",
+        errorMonetizationRequired: "Answer the monetization question to continue.",
+        errorMilestoneRequired: "Pick a goal to continue.",
+      },
+      plan: {
+        title: "Your learning path",
+        subtitle: "These are the lessons waiting for you.",
+        expertTitle: "An expert will build your path",
+        expertBody:
+          "Your channel already has history, so your learning path should be built together with a live expert. Sign up and our expert will contact you to help.",
+        lessonsSuffix: "lessons",
+        register: "Sign up",
+        back: "Back",
+        loadError: "Could not load the path.",
+        retry: "Try again",
+        empty: "No courses for this goal yet.",
+        excludedNote: "Filming lessons are excluded for the voiceover format.",
+      },
+      topics: {
+        movies_anime: "Movies, series, anime",
+        games: "Games",
+        education: "Education",
+        business: "Business, money",
+        tech_ai: "Technology, AI",
+        lifestyle: "Lifestyle, vlog",
+        beauty: "Beauty, fashion",
+        health: "Health, fitness",
+        food: "Food, cooking",
+        travel: "Travel",
+        family: "Family, kids",
+        psychology: "Psychology, relationships",
+        news: "News, politics",
+        music: "Music",
+        sport: "Sport",
+        humor: "Humor, entertainment",
+        true_crime: "True crime, mystery",
+      },
+      formats: {
+        live: "Live dynamic shooting",
+        talking_head: "Talking head",
+        voiceover: "Voiceover",
+      },
+      purposes: {
+        earn: "I want to earn as a YouTuber",
+        business: "I want to promote my business on YouTube",
+        community: "I want to find like-minded people",
+        creative: "I just want a creative outlet",
+      },
+      milestones: {
+        first_video: "Publish the first video",
+        views_10k: "First 10,000 views",
+        subs_1k_hours_4k: "1000 subscribers and 4000 watch hours",
+        hours_4k: "4000 watch hours",
+        subs_2k: "2000 subscribers",
+        subs_5k: "5000 subscribers",
+        subs_10k: "10,000 subscribers",
+        subs_25k: "25,000 subscribers",
+        subs_50k: "50,000 subscribers",
+        subs_100k: "100,000 subscribers",
+      },
+    },
     common: {
       loading: "Loading…",
       refresh: "Refresh",
@@ -934,6 +1198,151 @@ const dictionaries: Record<Locale, RawDictionary> = {
     },
   },
   ru: {
+    start: {
+      eyebrow: "Начало",
+      stepperTitle: "Ваши первые шаги",
+      steps: {
+        channel: "Канал",
+        topic: "Тематика",
+        goal: "Цель",
+        plan: "План",
+      },
+      stepPlanExpert: "Эксперт",
+      panel: {
+        title: "Ваш канал",
+        channelName: "Имя канала",
+        topic: "Тематика канала",
+        subscribers: "Количество подписчиков",
+        videos: "Сколько видео опубликовано",
+        views: "Сколько просмотров",
+        monetization: "Монетизация",
+        currentGoal: "Текущая цель",
+        empty: "—",
+        monetizationOn: "Включена",
+        monetizationOff: "Не включена",
+      },
+      channel: {
+        title: "У вас уже есть YouTube-канал?",
+        subtitle: "От ответа зависит, каким будет ваш персональный путь.",
+        question:
+          "У вас уже есть YouTube-канал или вы хотите создать новый с нуля?",
+        answerNo: "Нет",
+        answerYes: "Да, есть",
+        linkHint:
+          "Вставьте ссылку на канал, а мы проанализируем его текущие показатели и учтём их при создании вашего персонального пути.",
+        linkLabel: "Ссылка на канал",
+        linkPlaceholder: "youtube.com/@вашканал",
+        check: "Проверить канал",
+        checking: "Проверяем…",
+        found: "Канал найден",
+        manualTitle: "Введите данные вручную",
+        manualHint:
+          "Этот канал скрывает количество подписчиков — укажите его сами, оно нужно для выбора следующей цели.",
+        manualLabel: "Подписчики",
+        manualApply: "Сохранить",
+        next: "Продолжить",
+        errorUnsupported:
+          "Пришлите ссылку вида youtube.com/@имя или youtube.com/channel/UC…",
+        errorNotFound: "Не нашли такой канал. Проверьте ссылку, пожалуйста.",
+        errorRateLimited: "Слишком много проверок. Попробуйте через минуту.",
+        errorFailed:
+          "YouTube не ответил. Чтобы продолжить, укажите количество подписчиков вручную.",
+        errorManualRequired: "Укажите количество подписчиков, чтобы продолжить.",
+      },
+      topic: {
+        title: "Выберите тематику и формат",
+        subtitle:
+          "К сожалению, по ссылке мы их пока не определяем — ответьте, пожалуйста, на два вопроса.",
+        question:
+          "Выберите, какой тематикой вам хотелось бы заниматься в ютубе. Выбор ни к чему не обязывает, вы можете потом его поменять.",
+        hint: "Выберите самую близкую.",
+        formatQuestion: "Выберите формат ваших видео",
+        lifestyleLocked:
+          "Лайфстайл и влог — это живая динамичная съёмка, поэтому формат зафиксирован.",
+        voiceoverTitle: "Съёмка не войдёт в ваш путь",
+        voiceoverBody:
+          "Так как вы выбрали формат «голос за кадром», на этом этапе вам не нужно изучать съёмку видео. Мы исключим этот блок из вашего пути, но вы сможете добавить его позже.",
+        voiceoverOk: "Понятно",
+        next: "Продолжить",
+        back: "Назад",
+        errorTopicRequired: "Выберите тематику и формат, чтобы продолжить.",
+      },
+      goal: {
+        title: "Поставьте цель",
+        subtitle: "Она станет финишем вашего первого пути.",
+        purposeQuestion: "Какая основная цель создания Ютуб-канала?",
+        monetizationQuestion: "Включена ли монетизация на канале?",
+        monetizationYes: "Да, канал монетизируется",
+        monetizationNo: "Нет ещё",
+        milestoneQuestion:
+          "Выберите, какую цель вы бы хотели поставить для себя следующей.",
+        milestoneBelowThousand:
+          "Ваша следующая цель — порог монетизации: 1000 подписчиков и 4000 часов просмотра.",
+        recommended: "Рекомендуем",
+        next: "Продолжить",
+        back: "Назад",
+        errorPurposeRequired: "Выберите цель, чтобы продолжить.",
+        errorMonetizationRequired:
+          "Ответьте на вопрос о монетизации, чтобы продолжить.",
+        errorMilestoneRequired: "Выберите цель, чтобы продолжить.",
+      },
+      plan: {
+        title: "Ваш план обучения",
+        subtitle: "Вот уроки, которые вас ждут.",
+        expertTitle: "План составит эксперт",
+        expertBody:
+          "У вашего канала уже есть история, поэтому план обучения должен составляться с живым представителем. Зарегистрируйтесь у нас на сайте, и наш эксперт свяжется с вами, чтобы помочь.",
+        lessonsSuffix: "уроков",
+        register: "Зарегистрироваться",
+        back: "Назад",
+        loadError: "Не удалось загрузить план.",
+        retry: "Попробовать снова",
+        empty: "Для этой цели пока нет курсов.",
+        excludedNote: "Для формата «голос за кадром» уроки по съёмке исключены.",
+      },
+      topics: {
+        movies_anime: "Кино, сериалы, аниме",
+        games: "Игры",
+        education: "Образование",
+        business: "Бизнес, деньги",
+        tech_ai: "Технологии, AI",
+        lifestyle: "Лайфстайл, влог",
+        beauty: "Красота, мода",
+        health: "Здоровье, фитнес",
+        food: "Еда, кулинария",
+        travel: "Путешествия",
+        family: "Семья, дети",
+        psychology: "Психология, отношения",
+        news: "Новости, политика",
+        music: "Музыка",
+        sport: "Спорт",
+        humor: "Юмор, развлечения",
+        true_crime: "Тру-крайм, мистика",
+      },
+      formats: {
+        live: "Живая динамичная съёмка",
+        talking_head: "Говорящая голова",
+        voiceover: "Голос за кадром",
+      },
+      purposes: {
+        earn: "Хочу зарабатывать как ютубер",
+        business: "Хочу продвигать свой бизнес через Ютуб",
+        community: "Хочу найти единомышленников",
+        creative: "Хочу просто заняться творчеством для души",
+      },
+      milestones: {
+        first_video: "Публикация первого видео",
+        views_10k: "Первые 10 000 просмотров",
+        subs_1k_hours_4k: "1000 подписчиков и 4000 часов просмотра",
+        hours_4k: "4000 часов просмотра",
+        subs_2k: "2000 подписчиков",
+        subs_5k: "5000 подписчиков",
+        subs_10k: "10 000 подписчиков",
+        subs_25k: "25 000 подписчиков",
+        subs_50k: "50 000 подписчиков",
+        subs_100k: "100 000 подписчиков",
+      },
+    },
     common: {
       loading: "Загрузка…",
       refresh: "Обновить",

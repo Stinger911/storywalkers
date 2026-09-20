@@ -152,6 +152,26 @@ const StudentCourses = lazy(async () => {
   return { default: module.StudentCourses };
 });
 
+const StartChannel = lazy(async () => {
+  const module = await import("./routes/start/StartChannel.tsx");
+  return { default: module.StartChannel };
+});
+
+const StartTopic = lazy(async () => {
+  const module = await import("./routes/start/StartTopic.tsx");
+  return { default: module.StartTopic };
+});
+
+const StartGoal = lazy(async () => {
+  const module = await import("./routes/start/StartGoal.tsx");
+  return { default: module.StartGoal };
+});
+
+const StartPlan = lazy(async () => {
+  const module = await import("./routes/start/StartPlan.tsx");
+  return { default: module.StartPlan };
+});
+
 const OnboardingGoal = lazy(async () => {
   const module = await import("./routes/onboarding/OnboardingGoal.tsx");
   return { default: module.OnboardingGoal };
@@ -343,6 +363,11 @@ export default function App() {
           <Route path="/student/library" component={StudentLibraryRoute} />
           <Route path="/student/library/:id" component={StudentLibraryDetailRoute} />
           <Route path="/student/courses" component={StudentCoursesRoute} />
+          <Route path="/start" component={StartChannel} />
+          <Route path="/start/channel" component={StartChannel} />
+          <Route path="/start/topic" component={StartTopic} />
+          <Route path="/start/goal" component={StartGoal} />
+          <Route path="/start/plan" component={StartPlan} />
           <Route path="/onboarding/goal" component={OnboardingGoalRoute} />
           <Route path="/onboarding/profile" component={OnboardingProfileRoute} />
           <Route path="/onboarding/courses" component={OnboardingCoursesRoute} />
