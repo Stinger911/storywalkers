@@ -23,6 +23,7 @@ from app.routers import (
     gmail_webhook,
     jobs,
     library,
+    public_onboarding,
     questions,
     referrals_admin,
     telegram_webhook,
@@ -173,6 +174,7 @@ async def version():
 app.include_router(auth.router)
 app.include_router(checkout.router)
 app.include_router(courses.router)
+app.include_router(public_onboarding.router)
 app.include_router(admin_courses.router)
 app.include_router(admin_payments.router)
 app.include_router(admin_students.router)

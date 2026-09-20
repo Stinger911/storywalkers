@@ -32,6 +32,10 @@ class Settings(BaseSettings):
     PAYMENT_AUTO_ACTIVATE_NOTIFY: bool = True
     FX_RATES_URL: str = "https://open.er-api.com/v6/latest/USD"
     FX_RATES_TIMEOUT_SECONDS: float = 10.0
+    YOUTUBE_API_KEY: str | None = None
+    YOUTUBE_LOOKUP_TIMEOUT_SECONDS: float = 10.0
+    YOUTUBE_CHANNEL_CACHE_HOURS: int = 24
+    YOUTUBE_LOOKUP_RATE_LIMIT_PER_MINUTE: int = 20
 
 
 @lru_cache(maxsize=1)

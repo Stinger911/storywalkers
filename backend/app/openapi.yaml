@@ -21,6 +21,7 @@ tags:
   - name: Questions
   - name: Library
   - name: Courses
+  - name: Public
 
 components:
   securitySchemes:
@@ -396,6 +397,113 @@ components:
           type: string
           nullable: true
           example: "2026-09-20T10:15:00+00:00"
+
+    YoutubeChannelLookupResponse:
+      type: object
+      required: [channel, cached]
+      properties:
+        cached:
+          type: boolean
+          description: true when served from the 24h Firestore cache
+          example: false
+        channel:
+          type: object
+          required: [channelId, hiddenSubscriberCount]
+          properties:
+            channelId:
+              type: string
+              nullable: true
+              example: UC_x5XG1OV2P6uZZ5FSM9Ttw
+            title:
+              type: string
+              nullable: true
+              example: StoryWalkers
+            url:
+              type: string
+              nullable: true
+              format: uri
+              example: https://youtube.com/@storywalkers
+            subscriberCount:
+              type: integer
+              nullable: true
+              minimum: 0
+              description: null when the channel hides it; ask the student instead
+              example: 1500
+            hiddenSubscriberCount:
+              type: boolean
+              example: false
+            videoCount:
+              type: integer
+              nullable: true
+              minimum: 0
+              example: 42
+            viewCount:
+              type: integer
+              nullable: true
+              minimum: 0
+              example: 120000
+
+    OnboardingPlanResponse:
+      type: object
+      required: [goal, courses, excludedTags]
+      properties:
+        goal:
+          type: object
+          required: [id, title]
+          properties:
+            id:
+              type: string
+              example: goal_youtube
+            title:
+              type: string
+              example: YouTube channel
+            slug:
+              type: string
+              nullable: true
+              example: youtube
+        excludedTags:
+          type: array
+          items:
+            type: string
+          example: [filming]
+        courses:
+          type: array
+          items:
+            type: object
+            required: [id, title, lessonCount, lessons]
+            properties:
+              id:
+                type: string
+                example: course_video_basics
+              title:
+                type: string
+                example: Video Basics
+              description:
+                type: string
+                nullable: true
+              tags:
+                type: array
+                items:
+                  type: string
+                example: [filming]
+              lessonCount:
+                type: integer
+                minimum: 0
+                example: 12
+              lessons:
+                type: array
+                description: titles only, no lesson content or material links
+                items:
+                  type: object
+                  required: [id, title, order]
+                  properties:
+                    id:
+                      type: string
+                    title:
+                      type: string
+                    order:
+                      type: integer
+                      minimum: 0
 
     CourseSummary:
       type: object
@@ -3243,6 +3351,81 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /public/youtube/channel:
+    get:
+      tags: [Public]
+      summary: Look up public YouTube channel stats by link (no auth)
+      operationId: lookupYoutubeChannel
+      description: >
+        Used by onboarding step 1 before registration. Accepts
+        `youtube.com/@handle`, `youtube.com/channel/UC...`, `youtube.com/user/name`,
+        a bare handle or a channel id. Custom `/c/<name>` links are rejected because
+        resolving them costs 100 quota units. Results are cached for 24 hours and
+        lookups are rate limited per IP.
+      security: []
+      parameters:
+        - in: query
+          name: url
+          required: true
+          schema: { type: string, minLength: 1, maxLength: 300 }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/YoutubeChannelLookupResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          description: Too many lookups from this IP
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "502":
+          description: YouTube API unavailable or not configured
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /public/onboarding/plan:
+    get:
+      tags: [Public]
+      summary: Learning path preview for a goal (no auth)
+      operationId: getPublicOnboardingPlan
+      description: >
+        Used by onboarding step 4 before registration. Returns active courses of
+        the goal with lesson titles only - no prices, no lesson content. Courses
+        tagged `filming` are dropped when `format=voiceover`.
+      security: []
+      parameters:
+        - in: query
+          name: goal
+          required: true
+          schema: { type: string, minLength: 1, maxLength: 64 }
+          description: goal slug (e.g. `youtube`) or goal id
+        - in: query
+          name: format
+          required: false
+          schema:
+            type: string
+            enum: [live, talking_head, voiceover]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OnboardingPlanResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
         "404":
           $ref: "#/components/responses/NotFound"
 
