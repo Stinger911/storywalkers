@@ -29,3 +29,31 @@ export async function createCheckoutIntent(payload: {
   });
   return handleJson<CheckoutIntentResponse>(response);
 }
+
+export type MyPayment = {
+  id: string;
+  amount: number;
+  currency: string;
+  activationCode: string | null;
+  status: string;
+  note: string | null;
+  selectedLessons: SelectedLesson[];
+  selectedCourses: string[];
+  createdAt?: unknown;
+};
+
+export type MyPaymentsResponse = {
+  items: MyPayment[];
+  redirectUrl: string;
+};
+
+/** Invoices of the current student, including those issued by staff. */
+export async function listMyPayments(limit = 10) {
+  const response = await apiFetch(`/api/me/payments?limit=${limit}`);
+  return handleJson<MyPaymentsResponse>(response);
+}
+
+/** Invoices the student still has to pay. */
+export function isPayableInvoice(payment: MyPayment) {
+  return ["created", "email_detected", "pending"].includes(payment.status);
+}

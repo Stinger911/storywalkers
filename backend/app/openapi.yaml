@@ -1843,6 +1843,66 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /me/payments:
+    get:
+      tags: [Auth]
+      summary: Invoices of the current student, newest first
+      operationId: listMyPayments
+      description: >
+        Lets a student see invoices issued by staff after an expert
+        consultation: the amount, the activation code and what to pay for.
+      parameters:
+        - in: query
+          name: limit
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 50, default: 10 }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  redirectUrl:
+                    type: string
+                    format: uri
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, amount, currency, status]
+                      properties:
+                        id: { type: string }
+                        amount:
+                          type: integer
+                          minimum: 0
+                        currency: { type: string }
+                        activationCode:
+                          type: string
+                          nullable: true
+                        status: { type: string }
+                        note:
+                          type: string
+                          nullable: true
+                        selectedLessons:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              courseId: { type: string }
+                              lessonId: { type: string }
+                        selectedCourses:
+                          type: array
+                          items: { type: string }
+                        createdAt:
+                          type: string
+                          format: date-time
+                          nullable: true
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
   /me/referral-attribution:
     post:
       tags: [Auth]
@@ -2214,6 +2274,83 @@ paths:
           $ref: "#/components/responses/ValidationError"
 
   /admin/payments:
+    post:
+      tags: [Admin - Payments]
+      summary: Issue an invoice for lessons agreed with the expert (staff)
+      operationId: adminCreateManualPayment
+      description: >
+        Used after an expert consultation for students who already had a YouTube
+        channel. Lessons are priced exactly as in the student-initiated checkout
+        (course price divided by its active lessons). The student sees the
+        invoice in `GET /me/payments`; activation stays manual via
+        `/admin/payments/{id}/activate` or the Boosty email webhook.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [userUid, selectedLessons]
+              additionalProperties: false
+              properties:
+                userUid:
+                  type: string
+                selectedLessons:
+                  type: array
+                  minItems: 1
+                  maxItems: 100
+                  uniqueItems: true
+                  items:
+                    type: object
+                    required: [courseId, lessonId]
+                    properties:
+                      courseId: { type: string }
+                      lessonId: { type: string }
+                note:
+                  type: string
+                  nullable: true
+                  maxLength: 500
+      responses:
+        "201":
+          description: Invoice created
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  [id, userUid, amount, currency, activationCode, status]
+                properties:
+                  id: { type: string }
+                  userUid: { type: string }
+                  amount:
+                    type: integer
+                    minimum: 0
+                  currency:
+                    type: string
+                    enum: [USD, EUR, PLN, RUB]
+                  activationCode: { type: string }
+                  status: { type: string, enum: [created] }
+                  selectedLessons:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        courseId: { type: string }
+                        lessonId: { type: string }
+                  note:
+                    type: string
+                    nullable: true
+                  redirectUrl:
+                    type: string
+                    format: uri
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
     get:
       tags: [Admin - Payments]
       summary: List payments (staff)

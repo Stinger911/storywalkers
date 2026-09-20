@@ -5,18 +5,81 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, Query
 from google.cloud import firestore
 from pydantic import BaseModel, field_validator
+from pydantic_core import PydanticCustomError
 
 from app.auth.deps import require_staff
 from app.core.errors import AppError
+from app.core.logging import get_logger
 from app.db.firestore import get_firestore_client
 from app.repositories.payments import get_payment, list_payments_page
-from app.schemas.payments import Payment, PaymentStatus
+from app.schemas.payments import Payment, PaymentStatus, SelectedLesson
 from app.services.course_plan_sync import (
     append_courses_to_student_plan,
     append_lessons_to_student_plan,
 )
+from app.services.payment_pricing import (
+    PAYMENT_PROVIDER,
+    REDIRECT_URL,
+    generate_unique_activation_code,
+    get_fx_rate,
+    normalize_owned_lessons,
+    resolve_currency,
+    resolve_lesson_prices,
+)
+from app.services.telegram import send_admin_message
+from app.services.telegram_events import fmt_manual_invoice_issued
+
+logger = get_logger("app.payments")
 
 router = APIRouter(prefix="/api/admin", tags=["Admin - Payments"])
+
+
+class CreateManualPaymentRequest(BaseModel):
+    """Invoice for lessons agreed with the expert after the consultation."""
+
+    userUid: str
+    selectedLessons: list[SelectedLesson]
+    note: str | None = None
+
+    model_config = {"extra": "forbid"}
+
+    @field_validator("userUid")
+    @classmethod
+    def _trim_uid(cls, value: str) -> str:
+        trimmed = value.strip()
+        if not trimmed:
+            raise PydanticCustomError("uid_required", "userUid is required")
+        return trimmed
+
+    @field_validator("selectedLessons")
+    @classmethod
+    def _validate_lessons(cls, value: list[SelectedLesson]) -> list[SelectedLesson]:
+        if not value:
+            raise PydanticCustomError(
+                "lessons_required", "selectedLessons must not be empty"
+            )
+        if len(value) > 100:
+            raise PydanticCustomError(
+                "lessons_max_items", "selectedLessons must contain at most 100 items"
+            )
+        pairs = {(item.courseId, item.lessonId) for item in value}
+        if len(pairs) != len(value):
+            raise PydanticCustomError(
+                "selected_lessons_unique", "selectedLessons must be unique"
+            )
+        return value
+
+    @field_validator("note")
+    @classmethod
+    def _trim_note(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        trimmed = value.strip()
+        if len(trimmed) > 500:
+            raise PydanticCustomError(
+                "note_max_length", "note must be 500 characters or fewer"
+            )
+        return trimmed or None
 
 
 class RejectPaymentRequest(BaseModel):
@@ -100,6 +163,116 @@ def _matches_q(payment_id: str, payment: Payment, q: str | None) -> bool:
         ]
     ).lower()
     return needle in haystack
+
+
+@router.post("/payments", status_code=201)
+async def create_manual_payment(
+    payload: CreateManualPaymentRequest,
+    user: dict = Depends(require_staff),
+):
+    """Staff issues an invoice; the student pays it the usual way."""
+    db = get_firestore_client()
+    student_ref = db.collection("users").document(payload.userUid)
+    student_snap = student_ref.get()
+    if not student_snap.exists:
+        raise AppError(code="not_found", message="Student not found", status_code=404)
+    student = student_snap.to_dict() or {}
+
+    owned = normalize_owned_lessons(student.get("ownedLessons"))
+    total_usd_cents, invalid, already_owned = resolve_lesson_prices(
+        db, payload.selectedLessons, owned
+    )
+    if invalid:
+        raise AppError(
+            code="validation_error",
+            message="selectedLessons contains inactive or missing lessons",
+            status_code=400,
+            details={"invalidIds": invalid},
+        )
+    if already_owned:
+        raise AppError(
+            code="validation_error",
+            message="selectedLessons contains lessons already owned by the student",
+            status_code=400,
+            details={"alreadyOwnedLessonIds": already_owned},
+        )
+
+    currency = resolve_currency(student)
+    amount = int(round(total_usd_cents * get_fx_rate(db, currency)))
+    activation_code = generate_unique_activation_code(db)
+    now = firestore.SERVER_TIMESTAMP
+    doc_ref = db.collection("payments").document()
+    payment_data = {
+        "userUid": payload.userUid,
+        "email": student.get("email") or "",
+        "provider": PAYMENT_PROVIDER,
+        "selectedCourses": [],
+        "selectedLessons": [item.model_dump() for item in payload.selectedLessons],
+        "amount": amount,
+        "currency": currency,
+        "activationCode": activation_code,
+        "status": PaymentStatus.created.value,
+        "emailEvidence": None,
+        "issuedBy": user.get("uid"),
+        "note": payload.note,
+        "createdAt": now,
+        "updatedAt": now,
+        "activatedAt": None,
+        "activatedBy": None,
+        "rejectedAt": None,
+        "rejectedBy": None,
+        "rejectionReason": None,
+    }
+    doc_ref.set(payment_data)
+
+    logger.info(
+        "manual_invoice_created",
+        extra={
+            "event": "manual_invoice_created",
+            "paymentId": doc_ref.id,
+            "uid": payload.userUid,
+            "amount": amount,
+            "currency": currency,
+        },
+    )
+
+    # The student has no Telegram chat mapped to their account, so the
+    # confirmation goes to the admin chat; the invoice itself is shown in the
+    # student's account.
+    try:
+        await send_admin_message(
+            fmt_manual_invoice_issued(
+                {**student, "uid": payload.userUid},
+                payment_id=doc_ref.id,
+                amount=amount,
+                currency=currency,
+                activation_code=activation_code,
+                lesson_count=len(payload.selectedLessons),
+                issued_by=str(user.get("uid") or ""),
+            )
+        )
+    except Exception:
+        logger.warning(
+            "manual_invoice_telegram_notify_failed",
+            extra={
+                "event": "manual_invoice_telegram_notify_failed",
+                "paymentId": doc_ref.id,
+                "uid": payload.userUid,
+            },
+            exc_info=True,
+        )
+
+    return {
+        "id": doc_ref.id,
+        "userUid": payload.userUid,
+        "amount": amount,
+        "currency": currency,
+        "activationCode": activation_code,
+        "status": PaymentStatus.created.value,
+        "selectedLessons": [item.model_dump() for item in payload.selectedLessons],
+        "note": payload.note,
+        "redirectUrl": REDIRECT_URL,
+    }
 
 
 @router.get("/payments")

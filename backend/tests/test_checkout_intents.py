@@ -4,6 +4,7 @@ from google.cloud import firestore
 from app.auth import deps as auth_deps
 from app.main import app
 from app.routers import checkout
+from app.services import payment_pricing
 
 
 class FakeSnap:
@@ -173,7 +174,9 @@ def test_checkout_intent_auto_activates_zero_amount_for_first_hundred_students(
         **_student("active"),
         "isFirstHundred": True,
     }
-    monkeypatch.setattr(checkout, "_generate_activation_code", lambda: "SW-FREE100")
+    monkeypatch.setattr(
+        payment_pricing, "_generate_activation_code", lambda: "SW-FREE100"
+    )
     client = TestClient(app)
 
     response = client.post("/api/checkout/intents", json={"selectedCourses": ["c1"]})
@@ -211,7 +214,9 @@ def test_checkout_intent_retries_activation_code_until_unique(monkeypatch):
     monkeypatch.setattr(checkout, "get_firestore_client", lambda: fake_db)
     app.dependency_overrides[auth_deps.get_current_user] = lambda: _student("disabled")
     sequence = iter(["SW-DUPL1CAT", "SW-UN1QU3AB"])
-    monkeypatch.setattr(checkout, "_generate_activation_code", lambda: next(sequence))
+    monkeypatch.setattr(
+        payment_pricing, "_generate_activation_code", lambda: next(sequence)
+    )
     client = TestClient(app)
 
     response = client.post(
@@ -245,7 +250,9 @@ def test_checkout_intent_allows_active_students_for_additional_courses(monkeypat
         **_student("active"),
         "selectedCourses": ["c1"],
     }
-    monkeypatch.setattr(checkout, "_generate_activation_code", lambda: "SW-ADD1TION")
+    monkeypatch.setattr(
+        payment_pricing, "_generate_activation_code", lambda: "SW-ADD1TION"
+    )
     client = TestClient(app)
 
     response = client.post("/api/checkout/intents", json={"selectedCourses": ["c2"]})

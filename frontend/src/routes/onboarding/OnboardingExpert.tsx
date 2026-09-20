@@ -1,10 +1,16 @@
 import { A, Navigate } from "@solidjs/router";
-import { Show } from "solid-js";
+import { createResource, For, Show } from "solid-js";
 
 import { Loading } from "../../components/Loading";
 import { Button, buttonVariants } from "../../components/ui/button";
 import { SectionCard } from "../../components/ui/section-card";
 import { useAuth } from "../../lib/auth";
+import {
+  isPayableInvoice,
+  listMyPayments,
+  type MyPayment,
+} from "../../lib/checkoutApi";
+import { formatCents } from "../../lib/coursesApi";
 import { useI18n } from "../../lib/i18n";
 import { StudentLayout } from "../student/StudentLayout";
 
@@ -23,6 +29,15 @@ const SUPPORT_TELEGRAM_URL =
 export function OnboardingExpert() {
   const auth = useAuth();
   const { t } = useI18n();
+
+  const [payments] = createResource(async () => {
+    try {
+      return await listMyPayments();
+    } catch {
+      return { items: [] as MyPayment[], redirectUrl: BOOSTY_SUBSCRIPTION_URL };
+    }
+  });
+  const invoices = () => (payments()?.items ?? []).filter(isPayableInvoice);
 
   return (
     <Show when={!auth.loading()} fallback={<div class="page"><Loading /></div>}>
@@ -54,6 +69,57 @@ export function OnboardingExpert() {
                   {t("start.expert.subscriptionCta")}
                 </a>
               </div>
+            </SectionCard>
+
+            <SectionCard title={t("start.expert.invoiceTitle")}>
+              <Show
+                when={invoices().length > 0}
+                fallback={
+                  <p class="text-sm text-muted-foreground">
+                    {t("start.expert.invoiceEmpty")}
+                  </p>
+                }
+              >
+                <div class="space-y-3">
+                  <For each={invoices()}>
+                    {(invoice) => (
+                      <div class="space-y-2 rounded-xl border border-border/70 bg-card p-4 text-sm">
+                        <div class="text-lg font-semibold">
+                          {formatCents(invoice.amount, invoice.currency)}
+                        </div>
+                        <div>
+                          <span class="text-muted-foreground">
+                            {t("start.expert.invoiceLessonsLabel")}:{" "}
+                          </span>
+                          <span>{invoice.selectedLessons.length}</span>
+                        </div>
+                        <div>
+                          <span class="text-muted-foreground">
+                            {t("start.expert.invoiceCodeLabel")}:{" "}
+                          </span>
+                          <span class="font-mono">{invoice.activationCode}</span>
+                        </div>
+                        <Show when={invoice.note}>
+                          <div>
+                            <span class="text-muted-foreground">
+                              {t("start.expert.invoiceNoteLabel")}:{" "}
+                            </span>
+                            <span>{invoice.note}</span>
+                          </div>
+                        </Show>
+                        <a
+                          class={buttonVariants({ size: "sm" })}
+                          href={payments()?.redirectUrl || BOOSTY_SUBSCRIPTION_URL}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          {t("start.expert.invoicePayCta")}
+                        </a>
+                      </div>
+                    )}
+                  </For>
+                </div>
+              </Show>
             </SectionCard>
 
             <SectionCard title={t("start.expert.nextTitle")}>

@@ -5,7 +5,10 @@ import { SectionCard } from "../../components/ui/section-card";
 import { useAuth } from "../../lib/auth";
 import {
   createCheckoutIntent,
+  isPayableInvoice,
+  listMyPayments,
   type CheckoutIntentResponse,
+  type MyPayment,
   type SelectedLesson,
 } from "../../lib/checkoutApi";
 import {
@@ -34,6 +37,21 @@ export function StudentCourses() {
   const [selectedLessonsByCourse, setSelectedLessonsByCourse] = createSignal<Record<string, string[]>>({});
   const [fxRates, setFxRates] = createSignal<Record<string, number>>({ USD: 1 });
   const [checkout, setCheckout] = createSignal<CheckoutIntentResponse | null>(null);
+  // Invoices issued by staff after an expert consultation.
+  const [invoices, setInvoices] = createSignal<MyPayment[]>([]);
+  const [invoicesRedirectUrl, setInvoicesRedirectUrl] = createSignal("");
+
+  onMount(() => {
+    void (async () => {
+      try {
+        const data = await listMyPayments();
+        setInvoices(data.items.filter(isPayableInvoice));
+        setInvoicesRedirectUrl(data.redirectUrl);
+      } catch {
+        setInvoices([]);
+      }
+    })();
+  });
   const isFirstHundred = createMemo(() => auth.me()?.isFirstHundred === true);
 
   const ownedCourseIds = createMemo(
@@ -356,6 +374,52 @@ export function StudentCourses() {
           </Show>
         </Show>
       </SectionCard>
+
+      <Show when={invoices().length > 0}>
+        <SectionCard title={t("start.expert.invoiceTitle")}>
+          <div class="space-y-3 text-sm">
+            <For each={invoices()}>
+              {(invoice) => (
+                <div class="space-y-2 rounded-xl border border-border/70 bg-card p-4">
+                  <div class="text-lg font-semibold">
+                    {formatCents(invoice.amount, invoice.currency)}
+                  </div>
+                  <div>
+                    <span class="text-muted-foreground">
+                      {t("start.expert.invoiceLessonsLabel")}:{" "}
+                    </span>
+                    <span>{invoice.selectedLessons.length}</span>
+                  </div>
+                  <div>
+                    <span class="text-muted-foreground">
+                      {t("start.expert.invoiceCodeLabel")}:{" "}
+                    </span>
+                    <span class="font-mono">{invoice.activationCode}</span>
+                  </div>
+                  <Show when={invoice.note}>
+                    <div>
+                      <span class="text-muted-foreground">
+                        {t("start.expert.invoiceNoteLabel")}:{" "}
+                      </span>
+                      <span>{invoice.note}</span>
+                    </div>
+                  </Show>
+                  <Show when={invoicesRedirectUrl()}>
+                    <a
+                      class="inline-flex text-sm font-medium text-primary underline-offset-4 hover:underline"
+                      href={invoicesRedirectUrl()}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {t("start.expert.invoicePayCta")}
+                    </a>
+                  </Show>
+                </div>
+              )}
+            </For>
+          </div>
+        </SectionCard>
+      </Show>
 
       <Show when={ownedCourses().length > 0}>
         <SectionCard title={t("student.courses.ownedTitle")}>

@@ -74,6 +74,30 @@ def fmt_expert_request(user: Mapping[str, Any]) -> str:
     )
 
 
+def fmt_manual_invoice_issued(
+    user: Mapping[str, Any],
+    *,
+    payment_id: str,
+    amount: int,
+    currency: str,
+    activation_code: str,
+    lesson_count: int,
+    issued_by: str,
+) -> str:
+    """Staff issued an invoice for lessons agreed with the expert."""
+    timestamp = _iso_now()
+    return (
+        "🧾 Invoice issued\n"
+        f"time: {timestamp}\n"
+        f"payment_id: {payment_id}\n"
+        f"amount: {amount / 100:.2f} {currency}\n"
+        f"lessons: {lesson_count}\n"
+        f"activation_code: {activation_code}\n"
+        f"issued_by: {(issued_by or '-').strip() or '-'}\n"
+        f"{_user_summary(user)}"
+    )
+
+
 def fmt_status_changed(
     user: Mapping[str, Any],
     old: str,

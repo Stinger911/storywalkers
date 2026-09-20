@@ -3,7 +3,7 @@ from typing import Any, Literal
 from urllib.parse import urlparse
 
 import httpx
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
 from google.cloud import firestore
 from pydantic import BaseModel, Field, field_validator
 from pydantic_core import PydanticCustomError
@@ -28,6 +28,7 @@ from app.schemas.youtube_onboarding import (
     finalize_youtube_onboarding,
     sanitize_youtube_onboarding,
 )
+from app.services.payment_pricing import REDIRECT_URL as PAYMENT_REDIRECT_URL
 from app.services.telegram import send_admin_message
 from app.services.telegram_events import (
     fmt_expert_request,
@@ -359,6 +360,42 @@ class MeResponse(BaseModel):
 @router.get("/me", response_model=MeResponse)
 async def get_me(user: dict = Depends(get_current_user)) -> MeResponse:
     return user
+
+
+@router.get("/me/payments")
+async def list_my_payments(
+    user: dict = Depends(get_current_user),
+    limit: int = Query(10, ge=1, le=50),
+):
+    """Invoices of the current student, newest first.
+
+    Covers invoices issued by staff after an expert consultation: without this
+    the student would never see the amount and the activation code.
+    """
+    db = get_firestore_client()
+    query = (
+        db.collection("payments")
+        .where("userUid", "==", user["uid"])
+        .order_by("createdAt", direction=firestore.Query.DESCENDING)
+        .limit(limit)
+    )
+    items = []
+    for snap in query.stream():
+        data = snap.to_dict() or {}
+        items.append(
+            {
+                "id": snap.id,
+                "amount": data.get("amount"),
+                "currency": data.get("currency"),
+                "activationCode": data.get("activationCode"),
+                "status": data.get("status"),
+                "selectedLessons": data.get("selectedLessons") or [],
+                "selectedCourses": data.get("selectedCourses") or [],
+                "note": data.get("note"),
+                "createdAt": data.get("createdAt"),
+            }
+        )
+    return {"items": items, "redirectUrl": PAYMENT_REDIRECT_URL}
 
 
 class PatchMeRequest(BaseModel):

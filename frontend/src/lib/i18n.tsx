@@ -22,6 +22,12 @@ type StartSection = {
     nextBody: string;
     supportLabel: string;
     toDashboard: string;
+    invoiceTitle: string;
+    invoiceEmpty: string;
+    invoiceCodeLabel: string;
+    invoiceNoteLabel: string;
+    invoicePayCta: string;
+    invoiceLessonsLabel: string;
   };
   panel: {
     title: string;
@@ -611,6 +617,13 @@ const dictionaries: Record<Locale, RawDictionary> = {
           "After the consultation the expert puts your path together and sends an invoice for the lessons you agreed on. You will see it in your account.",
         supportLabel: "Questions:",
         toDashboard: "Go to my account",
+        invoiceTitle: "Your invoice",
+        invoiceEmpty:
+          "No invoice yet. It appears here after the expert agrees the lessons with you.",
+        invoiceCodeLabel: "Activation code",
+        invoiceNoteLabel: "Comment",
+        invoicePayCta: "Pay on Boosty",
+        invoiceLessonsLabel: "Lessons",
       },
       panel: {
         title: "Your channel",
@@ -1244,6 +1257,13 @@ const dictionaries: Record<Locale, RawDictionary> = {
           "После консультации эксперт соберёт ваш путь и выставит счёт на согласованные уроки. Вы увидите его в личном кабинете.",
         supportLabel: "Вопросы:",
         toDashboard: "Перейти в кабинет",
+        invoiceTitle: "Ваш счёт",
+        invoiceEmpty:
+          "Счёта пока нет. Он появится здесь после того, как эксперт согласует с вами уроки.",
+        invoiceCodeLabel: "Код активации",
+        invoiceNoteLabel: "Комментарий",
+        invoicePayCta: "Оплатить на Boosty",
+        invoiceLessonsLabel: "Уроков",
       },
       panel: {
         title: "Ваш канал",

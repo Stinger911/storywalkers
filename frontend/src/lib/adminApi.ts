@@ -643,6 +643,31 @@ export async function listAdminPayments(params?: {
   return handleJson<ApiList<AdminPayment>>(response)
 }
 
+export type ManualInvoice = {
+  id: string
+  userUid: string
+  amount: number
+  currency: string
+  activationCode: string
+  status: string
+  selectedLessons: { courseId: string; lessonId: string }[]
+  note?: string | null
+  redirectUrl: string
+}
+
+/** Invoice for lessons agreed with the expert after the consultation. */
+export async function createAdminPayment(payload: {
+  userUid: string
+  selectedLessons: { courseId: string; lessonId: string }[]
+  note?: string | null
+}) {
+  const response = await apiFetch('/api/admin/payments', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+  return handleJson<ManualInvoice>(response)
+}
+
 export async function getAdminPayment(id: string) {
   const response = await apiFetch(`/api/admin/payments/${id}`)
   return handleJson<AdminPayment>(response)

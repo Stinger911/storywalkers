@@ -45,18 +45,22 @@ import { clampWords } from "../../lib/utils";
 import {
   appendCoursesToStudentPlan,
   assignPlan,
+  createAdminPayment,
   deleteStudentPlanStep,
   deleteStudent,
   getStudent,
   getStudentPlan,
   getStudentPlanSteps,
+  listAdminCourseLessons,
   listAdminCourses,
   listGoals,
   previewResetFromGoal,
   reorderSteps,
   updateStudent,
   type AdminCourse,
+  type AdminLesson,
   type Goal,
+  type ManualInvoice,
 } from "../../lib/adminApi";
 
 type StudentProfile = {
@@ -130,6 +134,73 @@ export function AdminStudentProfile() {
   const params = useParams();
   const navigate = useNavigate();
   const uid = () => params.uid ?? "";
+
+  // Invoice for lessons agreed with the expert after the consultation.
+  const [invoiceCourses, setInvoiceCourses] = createSignal<AdminCourse[]>([]);
+  const [invoiceCourseId, setInvoiceCourseId] = createSignal("");
+  const [invoiceLessons, setInvoiceLessons] = createSignal<AdminLesson[]>([]);
+  const [invoiceLessonIds, setInvoiceLessonIds] = createSignal<string[]>([]);
+  const [invoiceNote, setInvoiceNote] = createSignal("");
+  const [issuingInvoice, setIssuingInvoice] = createSignal(false);
+  const [invoiceError, setInvoiceError] = createSignal<string | null>(null);
+  const [lastInvoice, setLastInvoice] = createSignal<ManualInvoice | null>(null);
+  let invoiceCoursesRequested = false;
+
+  // Only students handed over to an expert get manual invoices, so the course
+  // list is not fetched on every profile.
+  const canIssueInvoice = () => student()?.youtubeOnboarding?.track === "expert";
+
+  createEffect(() => {
+    if (!canIssueInvoice() || invoiceCoursesRequested) return;
+    invoiceCoursesRequested = true;
+    void listAdminCourses({ isActive: true, limit: 200 })
+      .then((data) => setInvoiceCourses(data.items))
+      .catch(() => setInvoiceCourses([]));
+  });
+
+  const selectInvoiceCourse = async (courseId: string) => {
+    setInvoiceCourseId(courseId);
+    setInvoiceLessonIds([]);
+    setInvoiceLessons([]);
+    setInvoiceError(null);
+    if (!courseId) return;
+    try {
+      const data = await listAdminCourseLessons(courseId);
+      setInvoiceLessons(data.items.filter((lesson) => lesson.isActive));
+    } catch (err) {
+      setInvoiceError((err as Error).message);
+    }
+  };
+
+  const toggleInvoiceLesson = (lessonId: string) => {
+    setInvoiceLessonIds((prev) =>
+      prev.includes(lessonId)
+        ? prev.filter((id) => id !== lessonId)
+        : [...prev, lessonId],
+    );
+  };
+
+  const issueInvoice = async () => {
+    const courseId = invoiceCourseId();
+    const lessonIds = invoiceLessonIds();
+    if (!courseId || lessonIds.length === 0) return;
+    setIssuingInvoice(true);
+    setInvoiceError(null);
+    try {
+      const invoice = await createAdminPayment({
+        userUid: uid(),
+        selectedLessons: lessonIds.map((lessonId) => ({ courseId, lessonId })),
+        note: invoiceNote().trim() || null,
+      });
+      setLastInvoice(invoice);
+      setInvoiceLessonIds([]);
+      setInvoiceNote("");
+    } catch (err) {
+      setInvoiceError((err as Error).message);
+    } finally {
+      setIssuingInvoice(false);
+    }
+  };
 
   const [student, setStudent] = createSignal<StudentProfile | null>(null);
   const [, setPlan] = createSignal<StudentPlan | null>(null);
@@ -970,6 +1041,94 @@ export function AdminStudentProfile() {
                 </div>
               </SectionCard>
             )}
+          </Show>
+
+          <Show when={canIssueInvoice()}>
+          <SectionCard title="Issue an invoice">
+            <div class="grid gap-3 text-sm">
+              <p class="text-muted-foreground">
+                Price comes from the course price divided by its active lessons -
+                the same rule the student checkout uses. The student sees the
+                invoice and the activation code in their account.
+              </p>
+              <div class="grid gap-2">
+                <label class="text-sm font-medium" for="invoice-course">
+                  Course
+                </label>
+                <select
+                  id="invoice-course"
+                  class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  value={invoiceCourseId()}
+                  onChange={(event) =>
+                    void selectInvoiceCourse(event.currentTarget.value)
+                  }
+                >
+                  <option value="">Select a course…</option>
+                  <For each={invoiceCourses()}>
+                    {(course) => <option value={course.id}>{course.title}</option>}
+                  </For>
+                </select>
+              </div>
+
+              <Show when={invoiceCourseId()}>
+                <div class="grid gap-2 rounded-md border border-border/70 p-3">
+                  <Show
+                    when={invoiceLessons().length > 0}
+                    fallback={
+                      <div class="text-sm text-muted-foreground">
+                        This course has no active lessons.
+                      </div>
+                    }
+                  >
+                    <For each={invoiceLessons()}>
+                      {(lesson) => (
+                        <label class="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={invoiceLessonIds().includes(lesson.id)}
+                            onChange={() => toggleInvoiceLesson(lesson.id)}
+                          />
+                          <span>{lesson.title}</span>
+                        </label>
+                      )}
+                    </For>
+                  </Show>
+                </div>
+              </Show>
+
+              <TextField class="grid gap-2">
+                <TextFieldLabel for="invoice-note">Comment (optional)</TextFieldLabel>
+                <TextFieldInput
+                  id="invoice-note"
+                  value={invoiceNote()}
+                  onInput={(event) => setInvoiceNote(event.currentTarget.value)}
+                  placeholder="Agreed on the call"
+                />
+              </TextField>
+
+              <div class="flex flex-wrap items-center gap-2">
+                <Button
+                  onClick={() => void issueInvoice()}
+                  disabled={issuingInvoice() || invoiceLessonIds().length === 0}
+                >
+                  {issuingInvoice() ? "Issuing…" : "Issue invoice"}
+                </Button>
+                <Show when={invoiceError()}>
+                  <span class="text-sm text-error-foreground">{invoiceError()}</span>
+                </Show>
+              </div>
+
+              <Show when={lastInvoice()}>
+                {(invoice) => (
+                  <div class="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-emerald-900">
+                    Invoice created: {(invoice().amount / 100).toFixed(2)}{" "}
+                    {invoice().currency} · code{" "}
+                    <span class="font-mono">{invoice().activationCode}</span>
+                  </div>
+                )}
+              </Show>
+            </div>
+          </SectionCard>
           </Show>
 
           <SectionCard title="Assign goal">
