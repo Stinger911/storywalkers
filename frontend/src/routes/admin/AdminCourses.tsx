@@ -36,9 +36,18 @@ type CourseForm = {
   description: string;
   priceUsd: string;
   trialLessonUrl: string;
+  tags: string;
   goalIds: string[];
   isActive: boolean;
 };
+
+/** Tags are typed as a comma-separated list; the backend lowercases them. */
+function parseTags(value: string) {
+  return value
+    .split(",")
+    .map((tag) => tag.trim())
+    .filter(Boolean);
+}
 
 function centsToDollars(cents: number) {
   return (Math.max(0, cents) / 100).toFixed(2);
@@ -66,6 +75,7 @@ export function AdminCourses() {
     description: "",
     priceUsd: "0.00",
     trialLessonUrl: "",
+    tags: "",
     goalIds: [],
     isActive: true,
   });
@@ -117,6 +127,7 @@ export function AdminCourses() {
       description: "",
       priceUsd: "0.00",
       trialLessonUrl: "",
+      tags: "",
       goalIds: [],
       isActive: true,
     });
@@ -129,6 +140,7 @@ export function AdminCourses() {
       description: item.description ?? "",
       priceUsd: centsToDollars(item.priceUsdCents),
       trialLessonUrl: item.trialLessonUrl ?? "",
+      tags: (item.tags ?? []).join(", "),
       goalIds: item.goalIds,
       isActive: item.isActive,
     });
@@ -160,6 +172,7 @@ export function AdminCourses() {
           title: payload.title.trim(),
           description: payload.description.trim() || null,
           goalIds: payload.goalIds,
+          tags: parseTags(payload.tags),
           priceUsdCents,
           trialLessonUrl: payload.trialLessonUrl.trim() || null,
           isActive: payload.isActive,
@@ -170,6 +183,7 @@ export function AdminCourses() {
           title: payload.title.trim(),
           description: payload.description.trim() || null,
           goalIds: payload.goalIds,
+          tags: parseTags(payload.tags),
           priceUsdCents,
           trialLessonUrl: payload.trialLessonUrl.trim() || null,
           isActive: payload.isActive,
@@ -321,6 +335,11 @@ export function AdminCourses() {
                               Trial: {item.trialLessonUrl}
                             </div>
                           </Show>
+                          <Show when={(item.tags ?? []).length > 0}>
+                            <div class="mt-1 text-xs text-muted-foreground">
+                              Tags: {(item.tags ?? []).join(", ")}
+                            </div>
+                          </Show>
                         </div>
                         <div class="flex flex-wrap gap-2">
                           <Button
@@ -408,6 +427,20 @@ export function AdminCourses() {
                 onInput={(e) => setForm({ ...form(), trialLessonUrl: e.currentTarget.value })}
                 placeholder="https://example.com/trial"
               />
+            </TextField>
+
+            <TextField>
+              <TextFieldLabel for="course-tags">Tags</TextFieldLabel>
+              <TextFieldInput
+                id="course-tags"
+                value={form().tags}
+                onInput={(e) => setForm({ ...form(), tags: e.currentTarget.value })}
+                placeholder="filming, editing"
+              />
+              <p class="text-xs text-muted-foreground">
+                Comma-separated. A course tagged "filming" is hidden from students
+                who picked the voiceover format.
+              </p>
             </TextField>
 
             <div class="grid gap-2">

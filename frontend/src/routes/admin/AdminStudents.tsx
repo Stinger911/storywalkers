@@ -90,7 +90,11 @@ export function AdminStudents() {
   const [sortDir, setSortDir] = createSignal<SortDir>(
     normalizeSortDir(normalizeQueryParam(searchParams.sortDir)),
   );
-  const hasActiveFilters = () => Boolean(query().trim() || statusFilter());
+  const [trackFilter, setTrackFilter] = createSignal(
+    normalizeQueryParam(searchParams.track),
+  );
+  const hasActiveFilters = () =>
+    Boolean(query().trim() || statusFilter() || trackFilter());
   const resetPagination = () => {
     setStudentCursor(undefined);
     setStaffCursor(undefined);
@@ -106,12 +110,14 @@ export function AdminStudents() {
   const syncSearchParams = (next: {
     q?: string;
     status?: string;
+    track?: string;
     sortBy?: SortBy;
     sortDir?: SortDir;
   }) => {
     setSearchParams({
       q: next.q?.trim() ? next.q.trim() : undefined,
       status: next.status || undefined,
+      track: next.track || undefined,
       sortBy: next.sortBy === "createdAt" ? undefined : next.sortBy,
       sortDir: next.sortDir === "desc" ? undefined : next.sortDir,
     });
@@ -123,10 +129,15 @@ export function AdminStudents() {
     try {
       const search = query().trim() || undefined;
       const status = statusFilter() || undefined;
+      const track = (trackFilter() || undefined) as
+        | "self_serve"
+        | "expert"
+        | undefined;
       const [studentData, staffData] = await Promise.all([
         listStudents({
           q: search,
           status,
+          track,
           role: "student",
           limit: PAGE_SIZE,
           cursor: studentCursor(),
@@ -177,6 +188,19 @@ export function AdminStudents() {
     syncSearchParams({
       q: query(),
       status: value,
+      track: trackFilter(),
+      sortBy: sortBy(),
+      sortDir: sortDir(),
+    });
+  };
+
+  const updateTrack = (value: string) => {
+    setTrackFilter(value);
+    resetPagination();
+    syncSearchParams({
+      q: query(),
+      status: statusFilter(),
+      track: value,
       sortBy: sortBy(),
       sortDir: sortDir(),
     });
@@ -325,6 +349,21 @@ export function AdminStudents() {
           </TextField>
 
           <TextField class="w-full">
+            <TextFieldLabel for="student-track-filter">Onboarding track</TextFieldLabel>
+            <select
+              id="student-track-filter"
+              class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
+              value={trackFilter()}
+              onChange={(event) => updateTrack(event.currentTarget.value)}
+              data-testid="student-track-filter"
+            >
+              <option value="">All tracks</option>
+              <option value="expert">Waiting for expert</option>
+              <option value="self_serve">Self-serve</option>
+            </select>
+          </TextField>
+
+          <TextField class="w-full">
             <TextFieldLabel for="student-sort-by">Sort by</TextFieldLabel>
             <select
               id="student-sort-by"
@@ -412,6 +451,16 @@ export function AdminStudents() {
                                 aria-label="Questionnaire completed"
                               >
                                 <Icon name="assignment_turned_in" class="text-[16px]" />
+                              </span>
+                            </Show>
+                            <Show
+                              when={student.youtubeOnboarding?.track === "expert"}
+                            >
+                              <span
+                                class="inline-flex items-center rounded-full bg-sky-100 px-2 py-0.5 text-xs font-medium text-sky-700"
+                                title="Existing channel: the path is built by an expert"
+                              >
+                                Waiting for expert
                               </span>
                             </Show>
                           </div>

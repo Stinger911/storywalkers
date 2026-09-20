@@ -175,6 +175,66 @@ def test_patch_me_rejects_inconsistent_youtube_onboarding(monkeypatch):
     app.dependency_overrides.clear()
 
 
+def test_patch_me_notifies_admin_about_the_expert_request_once(monkeypatch):
+    users = {"u1": {"displayName": "User One", "email": "u1@example.com"}}
+    client = _client(monkeypatch, users)
+    sent: list[str] = []
+
+    async def _fake_send(message):
+        sent.append(message)
+
+    monkeypatch.setattr(auth, "send_admin_message", _fake_send)
+
+    first = client.patch(
+        "/api/me", json={"youtubeOnboarding": _existing_channel_payload()}
+    )
+    assert first.status_code == 200
+    assert len(sent) == 1
+    assert "Expert request" in sent[0]
+    # The fake store only rewrites top-level sentinels, so the nested one stays
+    # as the Firestore value itself.
+    assert (
+        users["u1"]["telegramEvents"]["expertRequestedAt"] is firestore.SERVER_TIMESTAMP
+    )
+
+    second = client.patch(
+        "/api/me", json={"youtubeOnboarding": _existing_channel_payload()}
+    )
+    assert second.status_code == 200
+    assert len(sent) == 1
+
+    app.dependency_overrides.clear()
+
+
+def test_patch_me_does_not_notify_for_the_self_serve_track(monkeypatch):
+    users = {"u1": {"displayName": "User One", "email": "u1@example.com"}}
+    client = _client(monkeypatch, users)
+    sent: list[str] = []
+
+    async def _fake_send(message):
+        sent.append(message)
+
+    monkeypatch.setattr(auth, "send_admin_message", _fake_send)
+
+    response = client.patch(
+        "/api/me",
+        json={
+            "youtubeOnboarding": {
+                "hasChannel": False,
+                "topic": "games",
+                "format": "live",
+                "purpose": "creative",
+                "targetMilestone": "first_video",
+            }
+        },
+    )
+
+    assert response.status_code == 200
+    assert sent == []
+
+    app.dependency_overrides.clear()
+
+
 def test_patch_me_clears_youtube_onboarding(monkeypatch):
     users = {
         "u1": {

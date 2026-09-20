@@ -41,6 +41,39 @@ def fmt_questionnaire_completed(user: Mapping[str, Any]) -> str:
     return f"✅ Questionnaire completed\ntime: {timestamp}\n{_user_summary(user)}"
 
 
+def fmt_expert_request(user: Mapping[str, Any]) -> str:
+    """A student with an existing channel needs a path built by a human."""
+    timestamp = _iso_now()
+    onboarding = user.get("youtubeOnboarding")
+    onboarding = onboarding if isinstance(onboarding, Mapping) else {}
+    channel = onboarding.get("channel")
+    channel = channel if isinstance(channel, Mapping) else {}
+
+    def _text(value: Any) -> str:
+        if value is None:
+            return "-"
+        text = str(value).strip()
+        return text or "-"
+
+    monetization = onboarding.get("monetizationEnabled")
+    monetization_text = (
+        "yes" if monetization is True else "no" if monetization is False else "-"
+    )
+    subscribers = channel.get("subscriberCount")
+    return (
+        "🎬 Expert request (existing channel)\n"
+        f"time: {timestamp}\n"
+        f"channel: {_text(channel.get('title'))}\n"
+        f"url: {_text(channel.get('url'))}\n"
+        f"subscribers: {_text(subscribers) if isinstance(subscribers, int) else '-'}\n"
+        f"monetization: {monetization_text}\n"
+        f"topic: {_text(onboarding.get('topic'))}\n"
+        f"format: {_text(onboarding.get('format'))}\n"
+        f"goal: {_text(onboarding.get('targetMilestone'))}\n"
+        f"{_user_summary(user)}"
+    )
+
+
 def fmt_status_changed(
     user: Mapping[str, Any],
     old: str,

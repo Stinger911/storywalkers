@@ -30,6 +30,7 @@ from app.schemas.youtube_onboarding import (
 )
 from app.services.telegram import send_admin_message
 from app.services.telegram_events import (
+    fmt_expert_request,
     fmt_lesson_completed,
     fmt_questionnaire_completed,
 )
@@ -747,6 +748,20 @@ async def patch_me(
             "questionnaireCompletedAt": firestore.SERVER_TIMESTAMP,
         }
 
+    # Students with an existing channel are handed over to a human expert, so
+    # the admin is pinged once, right after the funnel answers are saved.
+    saved_onboarding = updates.get("youtubeOnboarding")
+    should_send_expert_request = (
+        isinstance(saved_onboarding, dict)
+        and saved_onboarding.get("track") == "expert"
+        and not telegram_events.get("expertRequestedAt")
+    )
+    if should_send_expert_request:
+        updates["telegramEvents"] = {
+            **(updates.get("telegramEvents") or telegram_events),
+            "expertRequestedAt": firestore.SERVER_TIMESTAMP,
+        }
+
     updates["updatedAt"] = firestore.SERVER_TIMESTAMP
     doc_ref.update(updates)
 
@@ -821,6 +836,19 @@ async def patch_me(
                 exc_info=True,
             )
         await _call_questionnaire_completed_webhook(user["uid"])
+    if should_send_expert_request:
+        try:
+            await send_admin_message(fmt_expert_request(me_response))
+        except Exception:
+            logger.warning(
+                "expert_request_telegram_notify_failed",
+                extra={
+                    "event": "expert_request_telegram_notify_failed",
+                    "uid": me_response.get("uid"),
+                    "email": me_response.get("email"),
+                },
+                exc_info=True,
+            )
     return me_response
 
 

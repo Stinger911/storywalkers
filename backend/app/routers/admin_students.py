@@ -408,11 +408,21 @@ def _emit_status_changed_event(
     )
 
 
+def _student_track(data: dict[str, Any]) -> str | None:
+    """Onboarding track from the nested youtubeOnboarding map, if any."""
+    onboarding = data.get("youtubeOnboarding")
+    if not isinstance(onboarding, dict):
+        return None
+    track = onboarding.get("track")
+    return track if isinstance(track, str) else None
+
+
 @router.get("/students")
 async def list_students(
     user: dict = Depends(require_staff),
     status_filter: str | None = Query(None, alias="status"),
     role: str | None = Query("student"),
+    track: str | None = Query(None),
     q: str | None = Query(None),
     limit: int = Query(50, ge=1, le=100),
     cursor: str | None = Query(None),
@@ -422,6 +432,12 @@ async def list_students(
     started = time.perf_counter()
     if status_filter:
         validate_user_status_or_400(status_filter)
+    if track and track not in {"self_serve", "expert"}:
+        raise AppError(
+            code="validation_error",
+            message="track must be self_serve or expert",
+            status_code=400,
+        )
     _validate_student_sort_or_400(sort_by, sort_dir)
     db = get_firestore_client()
     query = db.collection("users")
@@ -433,7 +449,9 @@ async def list_students(
     if status_filter:
         query = query.where("status", "==", status_filter)
 
-    if q or sort_by == "progress":
+    # The onboarding track lives in a nested map, so it is filtered in memory
+    # together with the other non-indexable cases below.
+    if q or track or sort_by == "progress":
         # Substring search is not indexable in Firestore with the current schema.
         # Progress sorting also needs a one-time backfill before it can safely use
         # order_by("progressPercent") without omitting legacy docs missing the field.
@@ -456,6 +474,8 @@ async def list_students(
                 if q_lower in (item.get("email") or "").lower()
                 or q_lower in (item.get("displayName") or "").lower()
             ]
+        if track:
+            items = [item for item in items if _student_track(item) == track]
         items = _sort_student_items(items, sort_by=sort_by, sort_dir=sort_dir)
         total = len(items)
 

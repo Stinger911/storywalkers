@@ -31,6 +31,7 @@ export type AdminCourse = {
   title: string
   description?: string | null
   goalIds: string[]
+  tags?: string[]
   priceUsdCents: number
   trialLessonUrl?: string | null
   isActive: boolean
@@ -141,6 +142,25 @@ type Student = {
   }
   telegramEvents?: {
     questionnaireCompletedAt?: unknown
+    expertRequestedAt?: unknown
+  } | null
+  youtubeOnboarding?: {
+    hasChannel?: boolean
+    channel?: {
+      title?: string | null
+      url?: string | null
+      subscriberCount?: number | null
+      hiddenSubscriberCount?: boolean
+      videoCount?: number | null
+      viewCount?: number | null
+      subscriberCountSource?: 'api' | 'manual'
+    } | null
+    topic?: string
+    format?: string
+    purpose?: string | null
+    monetizationEnabled?: boolean | null
+    targetMilestone?: string
+    track?: 'self_serve' | 'expert' | null
   } | null
   isFirstHundred?: boolean
   progressPercent?: number
@@ -281,6 +301,7 @@ export async function createAdminCourse(payload: {
   title: string
   description?: string | null
   goalIds: string[]
+  tags?: string[]
   priceUsdCents: number
   trialLessonUrl?: string | null
   isActive?: boolean
@@ -298,6 +319,7 @@ export async function patchAdminCourse(
     title?: string
     description?: string | null
     goalIds?: string[]
+    tags?: string[]
     priceUsdCents?: number
     trialLessonUrl?: string | null
     isActive?: boolean
@@ -436,6 +458,7 @@ export async function replaceGoalTemplateSteps(
 export async function listStudents(params?: {
   status?: string
   role?: string
+  track?: 'self_serve' | 'expert'
   q?: string
   limit?: number
   sortBy?: 'createdAt' | 'progress'
@@ -445,6 +468,7 @@ export async function listStudents(params?: {
   const query = new URLSearchParams()
   if (params?.status) query.set('status', params.status)
   if (params?.role) query.set('role', params.role)
+  if (params?.track) query.set('track', params.track)
   if (params?.q) query.set('q', params.q)
   if (params?.limit) query.set('limit', String(params.limit))
   if (params?.sortBy) query.set('sortBy', params.sortBy)

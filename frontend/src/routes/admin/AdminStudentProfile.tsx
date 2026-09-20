@@ -79,6 +79,24 @@ type StudentProfile = {
     notes?: string | null;
   };
   selectedCourses?: string[] | null;
+  youtubeOnboarding?: {
+    hasChannel?: boolean;
+    channel?: {
+      title?: string | null;
+      url?: string | null;
+      subscriberCount?: number | null;
+      hiddenSubscriberCount?: boolean;
+      videoCount?: number | null;
+      viewCount?: number | null;
+      subscriberCountSource?: "api" | "manual";
+    } | null;
+    topic?: string;
+    format?: string;
+    purpose?: string | null;
+    monetizationEnabled?: boolean | null;
+    targetMilestone?: string;
+    track?: "self_serve" | "expert" | null;
+  } | null;
   preferredCurrency?: "USD" | "EUR" | "PLN" | "RUB" | null;
   subscriptionSelected?: boolean | null;
   telegramEvents?: {
@@ -874,6 +892,85 @@ export function AdminStudentProfile() {
               </Button>
             </div>
           </SectionCard>
+
+          <Show when={student()?.youtubeOnboarding}>
+            {(onboarding) => (
+              <SectionCard title="YouTube onboarding">
+                <div class="grid gap-2 text-sm">
+                  <Show when={onboarding().track === "expert"}>
+                    <div class="rounded-md border border-sky-200 bg-sky-50 px-3 py-2 text-sky-800">
+                      Existing channel: the path is built by an expert. Lessons are
+                      invoiced manually after the consultation.
+                    </div>
+                  </Show>
+                  <div class="grid gap-1 md:grid-cols-2">
+                    <div>
+                      <span class="text-muted-foreground">Channel: </span>
+                      <Show
+                        when={onboarding().channel?.url}
+                        fallback={
+                          <span>{onboarding().channel?.title || "No channel"}</span>
+                        }
+                      >
+                        <a
+                          class="font-medium text-primary underline"
+                          href={onboarding().channel?.url ?? undefined}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          {onboarding().channel?.title || onboarding().channel?.url}
+                        </a>
+                      </Show>
+                    </div>
+                    <div>
+                      <span class="text-muted-foreground">Subscribers: </span>
+                      <span>
+                        {onboarding().channel?.subscriberCount ?? "—"}
+                        <Show
+                          when={
+                            onboarding().channel?.subscriberCountSource === "manual"
+                          }
+                        >
+                          {" "}
+                          (typed in by the student)
+                        </Show>
+                      </span>
+                    </div>
+                    <div>
+                      <span class="text-muted-foreground">Videos: </span>
+                      <span>{onboarding().channel?.videoCount ?? "—"}</span>
+                    </div>
+                    <div>
+                      <span class="text-muted-foreground">Views: </span>
+                      <span>{onboarding().channel?.viewCount ?? "—"}</span>
+                    </div>
+                    <div>
+                      <span class="text-muted-foreground">Monetization: </span>
+                      <span>
+                        {onboarding().monetizationEnabled === true
+                          ? "enabled"
+                          : onboarding().monetizationEnabled === false
+                            ? "not yet"
+                            : "—"}
+                      </span>
+                    </div>
+                    <div>
+                      <span class="text-muted-foreground">Topic: </span>
+                      <span>{onboarding().topic || "—"}</span>
+                    </div>
+                    <div>
+                      <span class="text-muted-foreground">Format: </span>
+                      <span>{onboarding().format || "—"}</span>
+                    </div>
+                    <div>
+                      <span class="text-muted-foreground">Goal: </span>
+                      <span>{onboarding().targetMilestone || "—"}</span>
+                    </div>
+                  </div>
+                </div>
+              </SectionCard>
+            )}
+          </Show>
 
           <SectionCard title="Assign goal">
             <div class="grid gap-4">
