@@ -23,6 +23,8 @@ export type Goal = {
   id: string
   title: string
   description?: string | null
+  /** Stable id for landing links, e.g. /start/channel?goal=youtube */
+  slug?: string | null
   intakeQuestions?: GoalIntakeQuestion[]
 }
 

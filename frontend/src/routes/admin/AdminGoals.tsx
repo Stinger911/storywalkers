@@ -40,6 +40,7 @@ type GoalForm = {
   id?: string;
   title: string;
   description: string;
+  slug: string;
   intakeQuestions: GoalIntakeQuestion[];
 };
 
@@ -79,6 +80,7 @@ export function AdminGoals() {
   const [form, setForm] = createSignal<GoalForm>({
     title: "",
     description: "",
+    slug: "",
     intakeQuestions: [],
   });
 
@@ -104,7 +106,7 @@ export function AdminGoals() {
   });
 
   const resetForm = () => {
-    setForm({ title: "", description: "", intakeQuestions: [] });
+    setForm({ title: "", description: "", slug: "", intakeQuestions: [] });
   };
 
   const selectItem = (item: Goal) => {
@@ -112,6 +114,7 @@ export function AdminGoals() {
       id: item.id,
       title: item.title,
       description: item.description ?? "",
+      slug: item.slug ?? "",
       intakeQuestions: [...(item.intakeQuestions ?? [])].sort(
         (a, b) => a.order - b.order,
       ),
@@ -175,6 +178,7 @@ export function AdminGoals() {
         await updateGoal(currentId, {
           title: payload.title.trim(),
           description: payload.description.trim() || null,
+          slug: payload.slug.trim().toLowerCase() || null,
           intakeQuestions,
         });
         await load();
@@ -194,6 +198,7 @@ export function AdminGoals() {
         await createGoal({
           title: payload.title.trim(),
           description: payload.description.trim() || null,
+          slug: payload.slug.trim().toLowerCase() || null,
           intakeQuestions,
         });
         resetForm();
@@ -296,6 +301,11 @@ export function AdminGoals() {
                           <div class="text-sm text-muted-foreground">
                             {item.description || "No description yet"}
                           </div>
+                          {item.slug ? (
+                            <div class="mt-1 font-mono text-xs text-muted-foreground">
+                              slug: {item.slug}
+                            </div>
+                          ) : null}
                           <div class="mt-1 text-xs text-muted-foreground">
                             {(item.intakeQuestions ?? []).length} intake
                             questions
@@ -359,6 +369,22 @@ export function AdminGoals() {
                   }
                   placeholder="Add a short description"
                 />
+              </TextField>
+              <TextField>
+                <TextFieldLabel for="goal-slug">Slug</TextFieldLabel>
+                <TextFieldInput
+                  id="goal-slug"
+                  value={form().slug}
+                  onInput={(e) =>
+                    setForm({ ...form(), slug: e.currentTarget.value })
+                  }
+                  placeholder="youtube"
+                />
+                <p class="text-xs text-muted-foreground">
+                  Stable id for landing links: /start/channel?goal=youtube. Lowercase
+                  letters, digits, hyphen and underscore; must be unique across goals.
+                  Leave empty if the goal has no landing page.
+                </p>
               </TextField>
 
               <div class="grid gap-3 rounded-xl border border-border/70 p-4">
