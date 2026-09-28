@@ -22,6 +22,7 @@ tags:
   - name: Library
   - name: Courses
   - name: Public
+  - name: Admin - CRM
 
 components:
   securitySchemes:
@@ -504,6 +505,87 @@ components:
                     order:
                       type: integer
                       minimum: 0
+
+    CrmContact:
+      type: object
+      required: [id]
+      properties:
+        id: { type: string }
+        userUid:
+          type: string
+          nullable: true
+          description: linked account, when the contact has one
+        email:
+          type: string
+          nullable: true
+          description: lowercased; the key the spreadsheet import matches on
+        name: { type: string, nullable: true }
+        telegram: { type: string, nullable: true }
+        channelUrl: { type: string, nullable: true, format: uri }
+        status:
+          type: string
+          nullable: true
+          enum: [sale, follow_up, no_answer, not_actual, irrelevant, duplicate, fake]
+        statusLabel:
+          type: string
+          nullable: true
+          description: Russian label for the status code
+        statusRaw:
+          type: string
+          nullable: true
+          description: original spreadsheet text, kept so the import loses nothing
+        nextPingAt:
+          type: string
+          nullable: true
+          format: date
+          example: "2026-10-01"
+        lastNoteText: { type: string, nullable: true }
+        lastNoteAt: { type: string, format: date-time, nullable: true }
+        createdAt: { type: string, format: date-time, nullable: true }
+        updatedAt: { type: string, format: date-time, nullable: true }
+
+    CrmContactWrite:
+      type: object
+      additionalProperties: false
+      description: >
+        On create at least one of email, telegram or name is required. On patch
+        every field is optional and only the sent ones change.
+      properties:
+        userUid: { type: string, nullable: true }
+        email: { type: string, nullable: true, maxLength: 320 }
+        name: { type: string, nullable: true, maxLength: 200 }
+        telegram: { type: string, nullable: true, maxLength: 200 }
+        channelUrl: { type: string, nullable: true, format: uri, maxLength: 300 }
+        status:
+          type: string
+          nullable: true
+          enum: [sale, follow_up, no_answer, not_actual, irrelevant, duplicate, fake]
+        statusRaw: { type: string, nullable: true, maxLength: 200 }
+        nextPingAt: { type: string, nullable: true, format: date }
+
+    CrmNote:
+      type: object
+      required: [id, text]
+      properties:
+        id: { type: string }
+        text: { type: string, maxLength: 4000 }
+        authorUid: { type: string, nullable: true }
+        authorName: { type: string }
+        imported:
+          type: boolean
+          description: true for entries carried over from the spreadsheet
+        createdAt: { type: string, format: date-time, nullable: true }
+
+    CrmContactListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/CrmContact"
+        nextCursor: { type: string, nullable: true }
+        total: { type: integer, minimum: 0 }
 
     CourseSummary:
       type: object
@@ -3073,6 +3155,200 @@ paths:
           description: No Content
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /admin/crm/statuses:
+    get:
+      tags: [Admin - CRM]
+      summary: CRM status codes with Russian labels (admin only)
+      operationId: adminListCrmStatuses
+      responses:
+        "200":
+          description: OK
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /admin/crm/contacts:
+    get:
+      tags: [Admin - CRM]
+      summary: List CRM contacts (admin only)
+      operationId: adminListCrmContacts
+      description: >
+        Filtering and paging happen in memory: a few hundred contacts do not
+        justify composite indexes for status + ping date + substring search.
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [sale, follow_up, no_answer, not_actual, irrelevant, duplicate, fake, none]
+          description: "`none` selects contacts with no status yet"
+        - in: query
+          name: ping
+          schema: { type: string, enum: [today, overdue, due, none] }
+          description: "`due` is overdue plus today"
+        - in: query
+          name: q
+          schema: { type: string, maxLength: 200 }
+          description: substring of name, email or telegram
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+        - in: query
+          name: cursor
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CrmContactListResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [Admin - CRM]
+      summary: Create a CRM contact, including a lead without an account (admin only)
+      operationId: adminCreateCrmContact
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CrmContactWrite"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CrmContact"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          description: A contact with this email already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /admin/crm/contacts/{contactId}:
+    parameters:
+      - in: path
+        name: contactId
+        required: true
+        schema: { type: string }
+    get:
+      tags: [Admin - CRM]
+      summary: Contact with its feedback log (admin only)
+      operationId: adminGetCrmContact
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [contact, notes]
+                properties:
+                  contact:
+                    $ref: "#/components/schemas/CrmContact"
+                  notes:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/CrmNote"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      tags: [Admin - CRM]
+      summary: Update status, next ping or contact details (admin only)
+      operationId: adminPatchCrmContact
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CrmContactWrite"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CrmContact"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: A contact with this email already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /admin/crm/contacts/{contactId}/notes:
+    post:
+      tags: [Admin - CRM]
+      summary: Add an entry to the feedback log (admin only)
+      operationId: adminCreateCrmNote
+      parameters:
+        - in: path
+          name: contactId
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [text]
+              additionalProperties: false
+              properties:
+                text: { type: string, minLength: 1, maxLength: 4000 }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CrmNote"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /admin/crm/contacts/{contactId}/notes/{noteId}:
+    delete:
+      tags: [Admin - CRM]
+      summary: Delete a feedback entry (admin only)
+      operationId: adminDeleteCrmNote
+      parameters:
+        - in: path
+          name: contactId
+          required: true
+          schema: { type: string }
+        - in: path
+          name: noteId
+          required: true
+          schema: { type: string }
+      responses:
+        "204":
+          description: Deleted
         "403":
           $ref: "#/components/responses/Forbidden"
         "404":

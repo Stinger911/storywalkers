@@ -12,6 +12,7 @@ from app.core.logging import get_logger, setup_logging
 from app.core.middleware import RequestIdMiddleware, RequestLoggingMiddleware
 from app.routers import (
     admin_courses,
+    admin_crm,
     admin_goals,
     admin_payments,
     admin_settings,
@@ -176,6 +177,7 @@ app.include_router(checkout.router)
 app.include_router(courses.router)
 app.include_router(public_onboarding.router)
 app.include_router(admin_courses.router)
+app.include_router(admin_crm.router)
 app.include_router(admin_payments.router)
 app.include_router(admin_students.router)
 app.include_router(admin_step_completions.router)

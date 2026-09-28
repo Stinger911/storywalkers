@@ -310,3 +310,10 @@ def require_staff(user: dict = Depends(get_current_user)) -> dict:
     if role != "staff":
         raise forbidden_error()
     return user
+
+
+def require_admin(user: dict = Depends(get_current_user)) -> dict:
+    """Stricter than require_staff: experts are staff too, admins are not."""
+    if user.get("roleRaw") != "admin":
+        raise forbidden_error()
+    return user
