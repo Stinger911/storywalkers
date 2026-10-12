@@ -733,6 +733,126 @@ export async function listReferralRegistrations(
   return handleJson<ApiList<ReferralRegistration>>(response)
 }
 
+export type CrmContactStatus =
+  | 'sale'
+  | 'follow_up'
+  | 'no_answer'
+  | 'not_actual'
+  | 'irrelevant'
+  | 'duplicate'
+  | 'fake'
+
+export type CrmStatusOption = {
+  value: CrmContactStatus
+  label: string
+}
+
+/** Filter for the "next ping" column, resolved on the backend. */
+export type CrmPingFilter = 'today' | 'overdue' | 'due' | 'none'
+
+export type CrmContact = {
+  id: string
+  userUid?: string | null
+  email?: string | null
+  name?: string | null
+  telegram?: string | null
+  channelUrl?: string | null
+  status?: CrmContactStatus | null
+  /** Russian label for the status, so the UI never hardcodes the wording. */
+  statusLabel?: string | null
+  /** Original spreadsheet wording, kept for imported rows. */
+  statusRaw?: string | null
+  nextPingAt?: string | null
+  lastNoteText?: string | null
+  lastNoteAt?: string | null
+  createdAt?: unknown
+  updatedAt?: unknown
+}
+
+export type CrmNote = {
+  id: string
+  text: string
+  authorUid?: string | null
+  authorName: string
+  imported: boolean
+  createdAt?: unknown
+}
+
+export type CrmContactWrite = {
+  email?: string | null
+  name?: string | null
+  telegram?: string | null
+  channelUrl?: string | null
+  status?: CrmContactStatus | null
+  nextPingAt?: string | null
+  userUid?: string | null
+}
+
+export async function listCrmStatuses() {
+  const response = await apiFetch('/api/admin/crm/statuses')
+  return handleJson<{ items: CrmStatusOption[] }>(response)
+}
+
+export async function listCrmContacts(params?: {
+  status?: CrmContactStatus | 'none'
+  ping?: CrmPingFilter
+  q?: string
+  limit?: number
+  cursor?: string
+}) {
+  const query = new URLSearchParams()
+  if (params?.status) query.set('status', params.status)
+  if (params?.ping) query.set('ping', params.ping)
+  if (params?.q) query.set('q', params.q)
+  if (params?.limit) query.set('limit', String(params.limit))
+  if (params?.cursor) query.set('cursor', params.cursor)
+  const suffix = query.toString()
+  const response = await apiFetch(
+    `/api/admin/crm/contacts${suffix ? `?${suffix}` : ''}`,
+  )
+  return handleJson<ApiList<CrmContact>>(response)
+}
+
+export async function createCrmContact(payload: CrmContactWrite) {
+  const response = await apiFetch('/api/admin/crm/contacts', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+  return handleJson<CrmContact>(response)
+}
+
+export async function getCrmContact(id: string) {
+  const response = await apiFetch(`/api/admin/crm/contacts/${id}`)
+  return handleJson<{ contact: CrmContact; notes: CrmNote[] }>(response)
+}
+
+export async function updateCrmContact(id: string, payload: CrmContactWrite) {
+  const response = await apiFetch(`/api/admin/crm/contacts/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  })
+  return handleJson<CrmContact>(response)
+}
+
+export async function addCrmNote(contactId: string, text: string) {
+  const response = await apiFetch(`/api/admin/crm/contacts/${contactId}/notes`, {
+    method: 'POST',
+    body: JSON.stringify({ text }),
+  })
+  return handleJson<CrmNote>(response)
+}
+
+export async function deleteCrmNote(contactId: string, noteId: string) {
+  const response = await apiFetch(
+    `/api/admin/crm/contacts/${contactId}/notes/${noteId}`,
+    { method: 'DELETE' },
+  )
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}))
+    throw new Error(payload?.error?.message ?? 'Delete failed')
+  }
+}
+
 export type {
   Category,
   StepTemplate,

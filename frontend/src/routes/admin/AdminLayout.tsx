@@ -12,7 +12,15 @@ type AdminLayoutProps = {
   children?: JSX.Element;
 };
 
-const adminNavItems = [
+type AdminNavItem = {
+  href: string;
+  label: string;
+  icon: string;
+  /** Hidden from experts: they are staff, but the CRM is not theirs. */
+  adminOnly?: boolean;
+};
+
+const adminNavItems: AdminNavItem[] = [
   { href: "/admin/students", label: "Students", icon: "group" },
   { href: "/admin/questions", label: "Questions", icon: "quiz" },
   { href: "/admin/library", label: "Library", icon: "menu_book" },
@@ -26,7 +34,8 @@ const adminNavItems = [
   },
   { href: "/admin/payments", label: "Payments", icon: "payments" },
   { href: "/admin/referrals", label: "Referrals", icon: "campaign" },
-] as const;
+  { href: "/admin/crm", label: "CRM", icon: "contacts", adminOnly: true },
+];
 
 export function AdminLayout(props: AdminLayoutProps) {
   const auth = useAuth();
@@ -39,6 +48,10 @@ export function AdminLayout(props: AdminLayoutProps) {
     (href !== "/admin/home" &&
       href !== "/admin" &&
       currentPath().startsWith(`${href}/`));
+  const visibleNavItems = () =>
+    adminNavItems.filter(
+      (item) => !item.adminOnly || auth.me()?.roleRaw === "admin",
+    );
   const userInitials = () =>
     (auth.me()?.displayName || "Admin")
       .split(/\s+/)
@@ -128,7 +141,7 @@ export function AdminLayout(props: AdminLayoutProps) {
                       <Icon name="dashboard" class="text-[20px]" />
                       <span>Overview</span>
                     </A>
-                    {adminNavItems.map((item) => (
+                    {visibleNavItems().map((item) => (
                       <A
                         href={item.href}
                         class={cn(

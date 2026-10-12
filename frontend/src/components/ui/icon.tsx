@@ -53,6 +53,22 @@ const icons: Record<string, () => JSX.Element> = {
       <path d="m6 6 12 12" />
     </>
   ),
+  contacts: () => (
+    <>
+      <path d="M3 5h18v14H3z" />
+      <circle cx="12" cy="11" r="2.5" />
+      <path d="M8.5 16.5a3.5 3.5 0 0 1 7 0" />
+    </>
+  ),
+  delete: () => (
+    <>
+      <path d="M4 7h16" />
+      <path d="M9 7V4h6v3" />
+      <path d="M6 7l1 13h10l1-13" />
+      <path d="M10 11v6" />
+      <path d="M14 11v6" />
+    </>
+  ),
   dashboard: () => (
     <>
       <path d="M4 4h7v7H4z" />
@@ -67,6 +83,7 @@ const icons: Record<string, () => JSX.Element> = {
       <path d="m14 7 3 3" />
     </>
   ),
+  expand_less: () => <path d="m18 15-6-6-6 6" />,
   expand_more: () => <path d="m6 9 6 6 6-6" />,
   fact_check: () => (
     <>

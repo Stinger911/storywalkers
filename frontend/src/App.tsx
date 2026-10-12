@@ -102,6 +102,11 @@ const AdminPaymentDetail = lazy(async () => {
   return { default: module.AdminPaymentDetail };
 });
 
+const AdminCrm = lazy(async () => {
+  const module = await import("./routes/admin/AdminCrm.tsx");
+  return { default: module.AdminCrm };
+});
+
 const AdminLibrary = lazy(async () => {
   const module = await import("./routes/admin/AdminLibrary.tsx");
   return { default: module.AdminLibrary };
@@ -287,6 +292,12 @@ const AdminReferralRegistrationsRoute = () => (
   </AdminLayout>
 );
 
+const AdminCrmRoute = () => (
+  <AdminLayout>
+    <AdminCrm />
+  </AdminLayout>
+);
+
 const StudentProfileRoute = () => (
   <StudentLayout>
     <StudentProfile />
@@ -396,6 +407,7 @@ export default function App() {
           <Route path="/admin/library/:id" component={AdminLibraryDetailRoute} />
           <Route path="/admin/categories" component={AdminCategoriesRoute} />
           <Route path="/admin/goals" component={AdminGoalsRoute} />
+          <Route path="/admin/crm" component={AdminCrmRoute} />
           <Route path="*" component={NotFound} />
         </Router>
       </Suspense>
