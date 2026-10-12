@@ -826,6 +826,16 @@ export async function getCrmContact(id: string) {
   return handleJson<{ contact: CrmContact; notes: CrmNote[] }>(response)
 }
 
+/** Pipeline card for a student profile; `linked` is false for an email-only match. */
+export async function getCrmContactByUser(uid: string) {
+  const response = await apiFetch(`/api/admin/crm/contacts/by-user/${uid}`)
+  return handleJson<{
+    contact: CrmContact | null
+    notes: CrmNote[]
+    linked: boolean
+  }>(response)
+}
+
 export async function updateCrmContact(id: string, payload: CrmContactWrite) {
   const response = await apiFetch(`/api/admin/crm/contacts/${id}`, {
     method: 'PATCH',

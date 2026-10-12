@@ -16,6 +16,7 @@ from app.repositories.crm import (
     create_contact,
     delete_note,
     find_contact_by_email,
+    find_contact_by_user_uid,
     get_contact,
     list_contacts,
     list_notes,
@@ -152,6 +153,36 @@ async def create_crm_contact(
             status_code=409,
         )
     return _contact_payload(create_contact(db, payload))
+
+
+@router.get("/contacts/by-user/{uid}")
+async def get_crm_contact_by_user(
+    uid: str,
+    user: dict = Depends(require_admin),
+):
+    """The pipeline card for a student profile.
+
+    Falls back to the email on the account: contacts imported before the user
+    registered carry no uid yet, and the admin can link them from the profile.
+    """
+    _ = user
+    db = get_firestore_client()
+    contact = find_contact_by_user_uid(db, uid)
+    linked = contact is not None
+    if contact is None:
+        profile = db.collection("users").document(uid).get()
+        email = (profile.to_dict() or {}).get("email") if profile.exists else None
+        if email:
+            contact = find_contact_by_email(db, email)
+    if contact is None:
+        return {"contact": None, "notes": [], "linked": False}
+    return {
+        "contact": _contact_payload(contact),
+        "notes": [
+            _note_payload(note) for note in list_notes(db, contact.id, limit=_MAX_NOTES)
+        ],
+        "linked": linked,
+    }
 
 
 @router.get("/contacts/{contact_id}")

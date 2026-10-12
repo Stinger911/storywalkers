@@ -14,6 +14,7 @@ from app.core.config import get_settings
 from app.core.errors import AppError, forbidden_error, unauthorized_error
 from app.core.logging import get_logger
 from app.db.firestore import get_firestore_client, should_mark_first_hundred_student
+from app.repositories.crm import link_or_create_contact
 from app.schemas.youtube_onboarding import sanitize_youtube_onboarding
 from app.services.telegram import send_admin_message
 from app.services.telegram_events import fmt_registration
@@ -270,6 +271,27 @@ async def get_current_user(
                 "registration_telegram_notify_failed",
                 extra={
                     "event": "registration_telegram_notify_failed",
+                    "uid": uid,
+                    "email": created_profile.get("email"),
+                },
+                exc_info=True,
+            )
+        try:
+            # The new account joins the sales pipeline right away, reusing the
+            # imported lead with the same email when there is one.
+            link_or_create_contact(
+                firestore,
+                uid=uid,
+                email=created_profile.get("email") or None,
+                name=created_profile.get("displayName") or None,
+            )
+        except Exception:
+            # The CRM is a side effect of registration, never a reason to fail
+            # it: the admin can still add the contact by hand.
+            logger.warning(
+                "registration_crm_contact_failed",
+                extra={
+                    "event": "registration_crm_contact_failed",
                     "uid": uid,
                     "email": created_profile.get("email"),
                 },

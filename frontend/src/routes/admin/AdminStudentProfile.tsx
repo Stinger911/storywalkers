@@ -7,6 +7,7 @@ import { Page } from "../../components/ui/page";
 import { RightRail } from "../../components/ui/right-rail";
 import { RailCard } from "../../components/ui/rail-card";
 import { SectionCard } from "../../components/ui/section-card";
+import { StudentCrmCard } from "./StudentCrmCard";
 import { SmallStatBadge } from "../../components/ui/small-stat-badge";
 import { EditableText } from "../../components/ui/editable-text";
 import { useAuth } from "../../lib/auth";
@@ -1042,6 +1043,12 @@ export function AdminStudentProfile() {
               </SectionCard>
             )}
           </Show>
+
+          <StudentCrmCard
+            uid={uid()}
+            email={student()?.email}
+            displayName={student()?.displayName}
+          />
 
           <Show when={canIssueInvoice()}>
           <SectionCard title="Issue an invoice">

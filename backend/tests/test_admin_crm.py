@@ -5,6 +5,7 @@ from google.cloud import firestore
 
 from app.auth import deps as auth_deps
 from app.main import app
+from app.repositories.crm import link_or_create_contact
 from app.routers import admin_crm
 from app.schemas.crm import Contact
 from app.services.crm import filter_contacts
@@ -112,14 +113,17 @@ class FakeDoc:
 
 
 class FakeFirestore:
-    def __init__(self, contacts=None, notes=None):
+    def __init__(self, contacts=None, notes=None, users=None):
         self.contacts = contacts if contacts is not None else {}
         # notes[contact_id]["notes"][note_id]
         self.notes = notes if notes is not None else {}
+        self.users = users if users is not None else {}
 
     def collection(self, name):
         if name == "contacts":
             return FakeCollection(self.contacts, self.notes)
+        if name == "users":
+            return FakeCollection(self.users)
         raise ValueError(f"unsupported collection {name}")
 
 
@@ -416,3 +420,188 @@ def test_statuses_dictionary_is_served(monkeypatch):
     assert len(items) == 7
 
     app.dependency_overrides.clear()
+
+
+# --- the student profile card ----------------------------------------------
+
+
+def test_contact_by_user_returns_the_linked_contact_with_notes(monkeypatch):
+    fake_db = FakeFirestore(
+        contacts={
+            "c1": {"email": "a@x.ru", "name": "Анна", "userUid": "u1", "updatedAt": NOW}
+        },
+        notes={"c1": {"notes": {"n1": {"text": "Перенесено", "imported": True}}}},
+    )
+    client = _client(monkeypatch, fake_db)
+
+    payload = client.get("/api/admin/crm/contacts/by-user/u1").json()
+
+    assert payload["linked"] is True
+    assert payload["contact"]["id"] == "c1"
+    assert [note["text"] for note in payload["notes"]] == ["Перенесено"]
+
+    app.dependency_overrides.clear()
+
+
+def test_contact_by_user_falls_back_to_the_account_email(monkeypatch):
+    """An imported lead has no uid until someone links it."""
+    fake_db = FakeFirestore(
+        contacts={"c1": {"email": "a@x.ru", "name": "Анна", "updatedAt": NOW}},
+        users={"u1": {"email": "a@x.ru"}},
+    )
+    client = _client(monkeypatch, fake_db)
+
+    payload = client.get("/api/admin/crm/contacts/by-user/u1").json()
+
+    assert payload["contact"]["id"] == "c1"
+    assert payload["linked"] is False
+
+    app.dependency_overrides.clear()
+
+
+def test_contact_by_user_is_empty_when_nothing_matches(monkeypatch):
+    fake_db = FakeFirestore(users={"u1": {"email": "nobody@x.ru"}})
+    client = _client(monkeypatch, fake_db)
+
+    payload = client.get("/api/admin/crm/contacts/by-user/u1").json()
+
+    assert payload == {"contact": None, "notes": [], "linked": False}
+    assert client.get("/api/admin/crm/contacts/by-user/u1").status_code == 200
+
+    app.dependency_overrides.clear()
+
+
+# --- registration -----------------------------------------------------------
+
+
+def test_registration_links_the_imported_lead_instead_of_duplicating_it():
+    fake_db = FakeFirestore(
+        contacts={
+            "c1": {
+                "email": "a@x.ru",
+                "name": None,
+                "status": "follow_up",
+                "updatedAt": NOW,
+            }
+        }
+    )
+
+    contact = link_or_create_contact(
+        fake_db, uid="u1", email="a@x.ru", name="Анна Петрова"
+    )
+
+    assert contact is not None
+    assert contact.id == "c1"
+    assert len(fake_db.contacts) == 1
+    assert fake_db.contacts["c1"]["userUid"] == "u1"
+    # The imported status survives, and the empty name gets filled in.
+    assert fake_db.contacts["c1"]["status"] == "follow_up"
+    assert fake_db.contacts["c1"]["name"] == "Анна Петрова"
+
+
+def test_registration_creates_a_contact_when_the_email_is_new():
+    fake_db = FakeFirestore()
+
+    contact = link_or_create_contact(fake_db, uid="u2", email="New@X.ru", name="Борис")
+
+    assert contact is not None
+    assert contact.email == "new@x.ru"
+    assert contact.userUid == "u2"
+    assert contact.status is None
+
+
+def test_registration_contact_is_idempotent_and_skips_empty_identities():
+    fake_db = FakeFirestore(
+        contacts={"c1": {"email": "a@x.ru", "userUid": "u1", "updatedAt": NOW}}
+    )
+
+    again = link_or_create_contact(fake_db, uid="u1", email="other@x.ru", name="Другое")
+
+    assert again is not None
+    assert again.id == "c1"
+    assert len(fake_db.contacts) == 1
+    # A second login must not rewrite what the admin edited by hand.
+    assert fake_db.contacts["c1"]["email"] == "a@x.ru"
+
+    assert link_or_create_contact(fake_db, uid="u3", email=None, name=None) is None
+    assert len(fake_db.contacts) == 1
+
+
+def test_registration_puts_the_new_account_into_the_pipeline(monkeypatch):
+    """The glue in get_current_user, not just the repository helper."""
+    import asyncio
+    from types import SimpleNamespace
+
+    from fastapi.security import HTTPAuthorizationCredentials
+
+    fake_db = FakeFirestore(
+        contacts={"c1": {"email": "anna@x.ru", "name": None, "updatedAt": NOW}}
+    )
+
+    monkeypatch.setattr(
+        auth_deps,
+        "verify_id_token",
+        lambda token: {"uid": "u9", "email": "anna@x.ru", "name": "Анна"},
+    )
+    monkeypatch.setattr(auth_deps, "get_firestore_client", lambda: fake_db)
+    monkeypatch.setattr(
+        auth_deps, "should_mark_first_hundred_student", lambda db, role: False
+    )
+
+    async def _noop(*args, **kwargs):
+        return None
+
+    monkeypatch.setattr(auth_deps, "send_admin_message", _noop)
+
+    user = asyncio.run(
+        auth_deps.get_current_user(
+            SimpleNamespace(state=SimpleNamespace()),
+            HTTPAuthorizationCredentials(scheme="Bearer", credentials="token"),
+        )
+    )
+
+    assert user["uid"] == "u9"
+    # The imported lead got linked instead of a second contact appearing.
+    assert len(fake_db.contacts) == 1
+    assert fake_db.contacts["c1"]["userUid"] == "u9"
+    assert fake_db.contacts["c1"]["name"] == "Анна"
+
+
+def test_registration_survives_a_crm_failure(monkeypatch):
+    """A broken pipeline write must not block someone from signing up."""
+    import asyncio
+    from types import SimpleNamespace
+
+    from fastapi.security import HTTPAuthorizationCredentials
+
+    fake_db = FakeFirestore()
+
+    monkeypatch.setattr(
+        auth_deps,
+        "verify_id_token",
+        lambda token: {"uid": "u9", "email": "anna@x.ru", "name": "Анна"},
+    )
+    monkeypatch.setattr(auth_deps, "get_firestore_client", lambda: fake_db)
+    monkeypatch.setattr(
+        auth_deps, "should_mark_first_hundred_student", lambda db, role: False
+    )
+
+    async def _noop(*args, **kwargs):
+        return None
+
+    monkeypatch.setattr(auth_deps, "send_admin_message", _noop)
+
+    def _boom(*args, **kwargs):
+        raise RuntimeError("firestore is down")
+
+    monkeypatch.setattr(auth_deps, "link_or_create_contact", _boom)
+
+    user = asyncio.run(
+        auth_deps.get_current_user(
+            SimpleNamespace(state=SimpleNamespace()),
+            HTTPAuthorizationCredentials(scheme="Bearer", credentials="token"),
+        )
+    )
+
+    assert user["uid"] == "u9"
+    assert fake_db.users["u9"]["email"] == "anna@x.ru"

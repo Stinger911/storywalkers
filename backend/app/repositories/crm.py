@@ -45,6 +45,13 @@ def find_contact_by_email(db: firestore.Client, email: str) -> Contact | None:
     return None
 
 
+def find_contact_by_user_uid(db: firestore.Client, uid: str) -> Contact | None:
+    query = _contacts_collection(db).where("userUid", "==", uid).limit(1)
+    for snap in query.stream():
+        return _contact_from_snapshot(snap)
+    return None
+
+
 def list_contacts(db: firestore.Client) -> list[Contact]:
     """All contacts, freshest first.
 
@@ -67,6 +74,33 @@ def create_contact(db: firestore.Client, payload: ContactCreate) -> Contact:
     doc_ref = _contacts_collection(db).document()
     doc_ref.set(data)
     return _contact_from_snapshot(doc_ref.get())
+
+
+def link_or_create_contact(
+    db: firestore.Client,
+    *,
+    uid: str,
+    email: str | None,
+    name: str | None,
+) -> Contact | None:
+    """Put a freshly registered user into the pipeline.
+
+    An imported lead keeps its history: the row with the same email gets
+    linked to the account instead of a second one appearing next to it.
+    Returns None when there is nothing to store (no email and no name).
+    """
+    linked = find_contact_by_user_uid(db, uid)
+    if linked:
+        return linked
+    existing = find_contact_by_email(db, email) if email else None
+    if existing:
+        updates: dict[str, Any] = {"userUid": uid}
+        if not existing.name and name:
+            updates["name"] = name
+        return update_contact(db, existing.id, updates)
+    if not (email or name):
+        return None
+    return create_contact(db, ContactCreate(userUid=uid, email=email, name=name))
 
 
 def update_contact(

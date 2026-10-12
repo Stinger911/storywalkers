@@ -3239,6 +3239,42 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
 
+  /admin/crm/contacts/by-user/{uid}:
+    parameters:
+      - in: path
+        name: uid
+        required: true
+        schema: { type: string }
+    get:
+      tags: [Admin - CRM]
+      summary: Pipeline card for a student account (admin only)
+      description: >-
+        Looks the contact up by uid, then by the email on the account, so a
+        lead imported before registration is still found. `linked` is false
+        when the match came from the email and the contact carries no uid yet.
+      operationId: adminGetCrmContactByUser
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [contact, notes, linked]
+                properties:
+                  contact:
+                    nullable: true
+                    allOf:
+                      - $ref: "#/components/schemas/CrmContact"
+                  notes:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/CrmNote"
+                  linked:
+                    type: boolean
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
   /admin/crm/contacts/{contactId}:
     parameters:
       - in: path
