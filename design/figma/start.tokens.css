@@ -1,0 +1,140 @@
+/*
+ * StoryWalkers — onboarding design tokens (measured from design/figma/*.png).
+ *
+ * Scope: everything under `.start-theme` (the /start/* onboarding). Drop-in for
+ * frontend/src/routes/start/startTheme.css, which already consumes most of these names.
+ * Machine-readable twin: design/figma/tokens.json. Spec: design/DESIGN-START.md.
+ *
+ * Do not introduce literal colours in components — every value in the UI comes from here.
+ */
+
+.start-theme {
+  /* ---------- brand ---------- */
+  --st-orange: #e95002; /* gradient start; was #ea580c */
+  --st-red: #d91617; /* gradient end / heading colour */
+  --st-red-hover: #cf1518;
+  --st-red-stroke: #de3234; /* 1px stroke of selected chip / tile */
+  --st-red-border: var(--st-red-stroke); /* alias kept for startTheme.css (had #d9272e) */
+  --st-red-soft: #fbe7e7; /* selected fill, "Итого" row, secondary "no" tile */
+
+  /* ---------- surfaces ---------- */
+  --st-page: #ffffff;
+  --st-surface: #ffffff; /* was #fafafa — the frames are pure white */
+  --st-surface-subtle: #f9f9f9; /* idle chip / idle tile */
+  --st-surface-ghost: #f4f4f4;
+  --st-surface-disabled: #ececec;
+
+  /* ---------- text ---------- */
+  --st-ink: #000000; /* frames use true black */
+  --st-ink-soft: #606060; /* lead paragraphs */
+  --st-muted: #8a8a8a; /* placeholders, summary labels */
+  --st-disabled: #b0b0b0;
+  --st-on-brand: #ffffff;
+
+  /* ---------- borders ---------- */
+  --st-line: #dbdbdb;
+  --st-line-disabled: #e3e3e3;
+  --st-border-secondary: #f08a5d;
+
+  /* ---------- gradients ---------- */
+  --st-grad: linear-gradient(90deg, var(--st-orange) 0%, var(--st-red) 100%); /* buttons, callout */
+  --st-grad-hover: linear-gradient(90deg, #f0510a 0%, var(--st-red-hover) 100%);
+  --st-grad-vertical: linear-gradient(180deg, #e95102 0%, #dd2412 100%); /* right-rail brand card */
+  --st-grad-disabled: linear-gradient(90deg, #b9b9b9 0%, #7c7c7c 100%);
+
+  /* ---------- type ---------- */
+  --st-font-display: "Unbounded", "Russo One", "Inter", system-ui, sans-serif;
+  --st-font-body: "Inter", system-ui, sans-serif;
+  --st-text-heading-lg: 1.5rem; /* 24px, cap 17px in the frames */
+  --st-text-heading-md: 1.25rem;
+  --st-text-body: 1rem; /* 16px */
+  --st-text-body-sm: 0.8125rem;
+  --st-text-label: 0.6875rem; /* 11px uppercase */
+  --st-text-button: 0.75rem; /* 12px uppercase */
+  --st-leading-heading: 1.25;
+  --st-leading-body: 1.55;
+  --st-tracking-label: 0.1em;
+  --st-tracking-button: 0.06em;
+
+  /* ---------- space (8pt rhythm, 4px half-step) ---------- */
+  --st-space-2xs: 0.25rem;
+  --st-space-xs: 0.5rem;
+  --st-space-sm: 0.75rem;
+  --st-space-md: 1rem;
+  --st-space-lg: 1.5rem;
+  --st-space-xl: 2rem;
+  --st-space-2xl: 3rem;
+  --st-space-3xl: 4rem;
+
+  /* ---------- radius ---------- */
+  --st-radius-chip: 6px; /* stepper chip, tiles, inputs, dropdown, rows */
+  --st-radius-card: 21px; /* measured; the implementation uses 32px */
+  --st-radius-rail: 24px;
+  --st-radius-pill: 999px;
+  --st-radius-check: 3px;
+
+  /* ---------- size ---------- */
+  --st-control-h: 50px;
+  --st-chip-h: 37px;
+  --st-card-border: 2px;
+  --st-content-w: 852px;
+  --st-rail-w: 367px;
+
+  /* ---------- elevation ---------- */
+  --st-shadow-cta: 0 8px 18px -8px rgba(217, 26, 28, 0.65);
+  --st-shadow-cta-hover: 0 10px 22px -8px rgba(217, 26, 28, 0.8);
+  --st-shadow-dropdown: 0 12px 24px -12px rgba(0, 0, 0, 0.25);
+  --st-halftone-colour: #bcbcbc;
+  --st-halftone-pitch: 3px;
+  /* the "sticker" shadow: dot grid strip glued under a card, no blur */
+  --st-halftone-image: radial-gradient(var(--st-halftone-colour) 0.7px, transparent 0.8px);
+  --st-halftone-size: var(--st-halftone-pitch) var(--st-halftone-pitch);
+
+  /* ---------- motion ---------- */
+  --st-motion-fast: 150ms;
+  --st-motion-enter: 350ms;
+  --st-ease: ease;
+  --st-ease-out: ease-out;
+}
+
+/* Halftone strip — apply to any element that needs the sticker shadow. */
+.start-theme .st-halftone::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: auto 6px -9px 6px;
+  height: 22px;
+  border-radius: 0 0 30px 30px;
+  background-image: var(--st-halftone-image);
+  background-size: var(--st-halftone-size);
+}
+
+/* Type helpers, so pages stop re-declaring sizes inline. */
+.start-theme .st-heading {
+  font-family: var(--st-font-display);
+  font-size: var(--st-text-heading-lg);
+  font-weight: 600;
+  line-height: var(--st-leading-heading);
+  letter-spacing: 0.01em;
+  color: var(--st-red);
+  text-align: center;
+}
+
+.start-theme .st-label {
+  font-size: var(--st-text-label);
+  font-weight: 600;
+  letter-spacing: var(--st-tracking-label);
+  text-transform: uppercase;
+}
+
+.start-theme .st-body {
+  font-size: var(--st-text-body);
+  line-height: var(--st-leading-body);
+  color: var(--st-ink);
+}
+
+.start-theme .st-body-soft {
+  font-size: var(--st-text-body);
+  line-height: var(--st-leading-body);
+  color: var(--st-ink-soft);
+}
