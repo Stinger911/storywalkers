@@ -254,6 +254,23 @@ describe("Firestore security rules (MVP)", () => {
     await assertFails(updateDoc(userRef(dbA, studentA.uid), { createdAt: new Date() }));
   });
 
+  test("Only staff can create user docs: a client cannot create its own profile", async () => {
+    const newcomer = { uid: "NEWCOMER", token: { email: "new@test.local" } };
+    const dbNew = testEnv.authenticatedContext(newcomer.uid, newcomer.token).firestore();
+    const profile = {
+      role: "student",
+      email: "new@test.local",
+      displayName: "New",
+      createdAt: new Date(),
+    };
+
+    await assertFails(setDoc(userRef(dbNew, newcomer.uid), { ...profile, status: "disabled" }));
+    await assertFails(setDoc(userRef(dbNew, newcomer.uid), { ...profile, status: "active" }));
+
+    const dbStaff = testEnv.authenticatedContext(staff.uid, staff.token).firestore();
+    await assertSucceeds(setDoc(userRef(dbStaff, newcomer.uid), { ...profile, status: "disabled" }));
+  });
+
   test("Student can read own plan and steps; cannot read other student's plan/steps", async () => {
     const dbA = testEnv.authenticatedContext(studentA.uid, studentA.token).firestore();
 

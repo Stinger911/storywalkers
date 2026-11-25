@@ -80,17 +80,9 @@ service cloud.firestore {
       // Read: self or staff
       allow get, list: if isStaff() || isSelf(uid);
 
-      // Create:
-      // - staff can create any user doc
-      // - allow self-create minimal profile (optional). If you want admin-only provisioning, remove the self-create branch.
-      allow create: if isStaff()
-        || (isSelf(uid)
-            // Minimal safe shape on self-create
-            && request.resource.data.role == "student"
-            && request.resource.data.status in ["disabled", "active", "community_only", "expired"]
-            && request.resource.data.email is string
-            && request.resource.data.displayName is string
-            && request.resource.data.createdAt is timestamp);
+      // Create: staff only. The backend creates profiles with the Admin SDK;
+      // a client must not choose its own status or access flags.
+      allow create: if isStaff();
 
       // Update:
       // - staff full control

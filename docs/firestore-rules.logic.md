@@ -58,6 +58,7 @@ For MVP, the rules treat `admin` and `expert` as “staff”.
 ### Student access
 
 - Read: ✅ only `users/{auth.uid}`
+- Create: ❌ never from the client. The backend creates the profile.
 - Write: ⚠️ limited / preferably via backend
   - Student may update only:
     - `displayName` (optional)
