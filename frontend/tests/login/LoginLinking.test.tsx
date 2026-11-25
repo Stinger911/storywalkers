@@ -40,7 +40,10 @@ vi.mock("firebase/auth", () => ({
   getAuth: () => authMock,
   setPersistence: () => Promise.resolve(),
   browserLocalPersistence: {},
-  GoogleAuthProvider: vi.fn(() => ({})),
+  // A constructor mock: arrow functions cannot be called with `new`.
+  GoogleAuthProvider: vi.fn(function GoogleAuthProvider() {
+    return {};
+  }),
   signInWithPopup: signInWithPopupMock,
   createUserWithEmailAndPassword: createUserWithEmailAndPasswordMock,
   signInWithEmailAndPassword: signInWithEmailAndPasswordMock,
