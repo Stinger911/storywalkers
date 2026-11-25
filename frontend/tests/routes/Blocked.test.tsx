@@ -52,7 +52,7 @@ describe("Blocked route", () => {
 
     expect(
       screen.getByRole("link", { name: "Continue onboarding" }),
-    ).toHaveAttribute("href", "/onboarding/goal");
+    ).toHaveAttribute("href", "/start");
 
     const button = screen.getByRole("button", { name: "Log out" });
     fireEvent.click(button);

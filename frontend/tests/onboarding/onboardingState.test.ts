@@ -34,7 +34,7 @@ function baseMe(): MeProfile {
 describe("onboardingState", () => {
   it("computes next step in order", () => {
     const me1 = baseMe();
-    expect(getNextOnboardingStep(me1)).toBe("goal");
+    expect(getNextOnboardingStep(me1)).toBe("start");
 
     const me2 = {
       ...baseMe(),
@@ -50,7 +50,7 @@ describe("onboardingState", () => {
         telegram: "@alice",
       },
     };
-    expect(getNextOnboardingStep(me3)).toBe("courses");
+    expect(getNextOnboardingStep(me3)).toBe("start");
 
     const me4 = { ...me3, selectedCourses: ["course-1"] };
     expect(getNextOnboardingStep(me4)).toBe("checkout");
@@ -70,8 +70,7 @@ describe("onboardingState", () => {
     };
 
     expect(canAccessOnboardingStep(me, "profile")).toBe(true);
-    expect(canAccessOnboardingStep(me, "goal")).toBe(true);
-    expect(canAccessOnboardingStep(me, "courses")).toBe(true);
+    expect(canAccessOnboardingStep(me, "start")).toBe(true);
     expect(canAccessOnboardingStep(me, "checkout")).toBe(false);
   });
 
@@ -160,7 +159,6 @@ describe("onboardingState", () => {
     expect(isOnboardingIncomplete(withProfile)).toBe(false);
     expect(canAccessOnboardingStep(withProfile, "expert")).toBe(true);
     expect(canAccessOnboardingStep(withProfile, "checkout")).toBe(false);
-    expect(canAccessOnboardingStep(withProfile, "courses")).toBe(false);
   });
 
   it("keeps the self-serve track away from the expert screen", () => {
@@ -193,7 +191,7 @@ describe("onboardingState", () => {
     };
 
     expect(isExpertTrack(legacy)).toBe(false);
-    expect(getNextOnboardingStep(legacy)).toBe("courses");
+    expect(getNextOnboardingStep(legacy)).toBe("start");
     expect(isOnboardingIncomplete(legacy)).toBe(true);
   });
 });

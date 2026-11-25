@@ -202,7 +202,7 @@ export function Login() {
   async function redirectIfLoggedIn(silent = false) {
     // Answers collected before registration are saved first, so /api/me below
     // already reflects the goal and the path chosen in the funnel.
-    await syncDraftToMe();
+    const synced = await syncDraftToMe();
     const response = await apiFetch("/api/me");
     if (response.ok) {
       const data = (await response.json()) as MeProfile;
@@ -217,9 +217,20 @@ export function Login() {
       if (data.role === "staff") {
         window.location.href = "/admin/home";
       } else {
-        window.location.href = isOnboardingIncomplete(data)
-          ? onboardingPath(getNextOnboardingStep(data))
-          : "/student/home";
+        // A student who has just finished the funnel continues to payment (or to
+        // the expert) even with a complete account: sending them home would show
+        // an unpaid account the blocked page.
+        if (!isOnboardingIncomplete(data) && synced !== "synced") {
+          window.location.href = "/student/home";
+          return;
+        }
+        const step = getNextOnboardingStep(data);
+        // Answers were saved but the path could not be resolved: show the plan
+        // step, which reports the problem, rather than the first question.
+        window.location.href =
+          step === "start" && synced === "synced"
+            ? "/start/plan"
+            : onboardingPath(step);
       }
     } else if (!silent) {
       setError(t("login.errors.profileMissing"));

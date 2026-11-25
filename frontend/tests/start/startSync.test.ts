@@ -134,6 +134,8 @@ describe("syncDraftToMe", () => {
     const body = patchedBody();
     expect(body.selectedGoalId).toBeUndefined();
     expect(body.youtubeOnboarding).toBeTruthy();
+    // Kept so the funnel can be finished once the goal resolves.
+    expect(readDraft().hasChannel).toBe(false);
   });
 
   it("keeps the draft when the request fails", async () => {

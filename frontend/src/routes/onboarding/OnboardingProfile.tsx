@@ -7,6 +7,7 @@ import type { MeProfile, PatchMePayload } from "../../lib/auth";
 import { useI18n } from "../../lib/i18n";
 import { ButtonRow, StartButton, StartError, StartInput } from "../start/StartUi";
 import { OnboardingLayout } from "./OnboardingLayout";
+import { hasSelectedContent, onboardingPath } from "./onboardingState";
 
 const PHONE_LIKE_RE = /^[0-9+\-\s()]+$/;
 
@@ -151,9 +152,14 @@ export function OnboardingProfile() {
     const ok = await save();
     if (!ok) return;
     // Students who already had a channel get their path from a live expert,
-    // so they skip course selection and checkout.
-    const isExpert = auth.me()?.youtubeOnboarding?.track === "expert";
-    void navigate(isExpert ? "/onboarding/expert" : "/onboarding/courses");
+    // so they skip checkout. Without a picked path they go back to the funnel.
+    const me = auth.me();
+    if (me?.youtubeOnboarding?.track === "expert") {
+      void navigate("/onboarding/expert");
+      return;
+    }
+    const hasPath = Boolean(me && (hasSelectedContent(me) || me.subscriptionSelected));
+    void navigate(onboardingPath(hasPath ? "checkout" : "start"));
   };
 
   return (
@@ -293,13 +299,6 @@ export function OnboardingProfile() {
       </Show>
 
       <ButtonRow>
-        <StartButton
-          variant="secondary"
-          onClick={() => void navigate("/onboarding/goal")}
-          disabled={saving()}
-        >
-          {t("student.onboarding.profile.back")}
-        </StartButton>
         <StartButton variant="secondary" onClick={() => void save()} disabled={saving()}>
           {saving()
             ? t("student.onboarding.common.saving")

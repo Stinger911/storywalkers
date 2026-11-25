@@ -31,7 +31,7 @@ export function Blocked() {
   const [params] = useSearchParams();
   const variant = () => normalizeVariant(params.type);
   const onboardingHref = () =>
-    auth.me() ? onboardingPath(getNextOnboardingStep(auth.me()!)) : "/onboarding/goal";
+    auth.me() ? onboardingPath(getNextOnboardingStep(auth.me()!)) : "/start";
   const content = (): BlockedVariantContent =>
     variant() === "expired"
       ? {

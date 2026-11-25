@@ -1,61 +1,10 @@
 import type { MeProfile } from "../../lib/auth";
 
-export type OnboardingStep =
-  | "profile"
-  | "goal"
-  | "courses"
-  | "checkout"
-  | "expert";
-
-// The stepper shows the self-serve path only; "expert" is a separate screen.
-export const ONBOARDING_STEPS: OnboardingStep[] = [
-  "goal",
-  "profile",
-  "courses",
-  "checkout",
-];
-
-const ONBOARDING_GOAL_CACHE_KEY = "storywalkers:onboarding-goal";
-
-export type CachedOnboardingGoal = {
-  goalId: string;
-  goalTitle?: string | null;
-};
+/** "start" is the public funnel under /start; the rest live under /onboarding. */
+export type OnboardingStep = "start" | "profile" | "checkout" | "expert";
 
 export function onboardingPath(step: OnboardingStep): string {
-  return `/onboarding/${step}`;
-}
-
-export function readCachedOnboardingGoal(): CachedOnboardingGoal | null {
-  if (typeof window === "undefined") return null;
-  const raw = window.sessionStorage.getItem(ONBOARDING_GOAL_CACHE_KEY);
-  if (!raw) return null;
-  try {
-    const parsed = JSON.parse(raw) as CachedOnboardingGoal;
-    if (!parsed?.goalId || typeof parsed.goalId !== "string") return null;
-    return {
-      goalId: parsed.goalId,
-      goalTitle:
-        typeof parsed.goalTitle === "string" && parsed.goalTitle.trim()
-          ? parsed.goalTitle
-          : null,
-    };
-  } catch {
-    return null;
-  }
-}
-
-export function writeCachedOnboardingGoal(goal: CachedOnboardingGoal) {
-  if (typeof window === "undefined") return;
-  const goalId = goal.goalId.trim();
-  if (!goalId) return;
-  window.sessionStorage.setItem(
-    ONBOARDING_GOAL_CACHE_KEY,
-    JSON.stringify({
-      goalId,
-      goalTitle: goal.goalTitle?.trim() || null,
-    }),
-  );
+  return step === "start" ? "/start" : `/onboarding/${step}`;
 }
 
 export function isProfileComplete(me: MeProfile): boolean {
@@ -77,21 +26,23 @@ export function isExpertTrack(me: MeProfile): boolean {
 }
 
 export function getNextOnboardingStep(me: MeProfile): OnboardingStep {
-  if (!me.selectedGoalId) return "goal";
+  if (!me.selectedGoalId) return "start";
   if (!isProfileComplete(me)) return "profile";
   // The expert builds the path, so course selection and checkout are skipped.
   if (isExpertTrack(me)) return "expert";
   if (!hasSelectedContent(me)) {
-    return me.subscriptionSelected === true ? "checkout" : "courses";
+    return me.subscriptionSelected === true ? "checkout" : "start";
   }
   return "checkout";
 }
 
 export function canAccessOnboardingStep(me: MeProfile, step: OnboardingStep): boolean {
   if (step === "expert") return isExpertTrack(me);
-  const next = getNextOnboardingStep(me);
-  if (next === "expert") return step === "goal" || step === "profile";
-  return stepIndex(step) <= stepIndex(next);
+  // The funnel is public; it is also where a path is picked again.
+  if (step === "start") return true;
+  if (!me.selectedGoalId) return false;
+  if (step === "profile") return true;
+  return getNextOnboardingStep(me) === "checkout";
 }
 
 export function isOnboardingIncomplete(me: MeProfile): boolean {
@@ -104,8 +55,4 @@ export function isOnboardingIncomplete(me: MeProfile): boolean {
     !me.selectedGoalId ||
     !hasSelectedContent(me)
   );
-}
-
-export function stepIndex(step: OnboardingStep): number {
-  return ONBOARDING_STEPS.indexOf(step);
 }

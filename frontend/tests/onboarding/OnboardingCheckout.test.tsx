@@ -1,9 +1,14 @@
 import { fireEvent, render, screen, waitFor } from "@solidjs/testing-library";
+import { createSignal } from "solid-js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { I18nProvider } from "../../src/lib/i18n";
 import { createCheckoutIntent } from "../../src/lib/checkoutApi";
-import { listCourseLessons, listCourses } from "../../src/lib/coursesApi";
+import {
+  listCourseLessons,
+  listCourses,
+  type CourseLesson,
+} from "../../src/lib/coursesApi";
 import { getFxRates } from "../../src/lib/fxApi";
 import { OnboardingCheckout } from "../../src/routes/onboarding/OnboardingCheckout";
 
@@ -21,6 +26,8 @@ type MeState = {
   subscriptionSelected: boolean | null;
   isFirstHundred: boolean;
 };
+
+const refreshMeMock = vi.fn();
 
 const baseMe = (): MeState => ({
   uid: "u1",
@@ -42,6 +49,7 @@ const baseMe = (): MeState => ({
 });
 
 let meState = baseMe();
+let readMe: () => MeState | null = () => meState;
 
 vi.mock("@solidjs/router", () => ({
   A: (props: { href: string; children: unknown; class?: string }) => (
@@ -53,8 +61,9 @@ vi.mock("@solidjs/router", () => ({
 
 vi.mock("../../src/lib/auth", () => ({
   useAuth: () => ({
-    me: () => meState,
+    me: () => readMe(),
     patchMe: vi.fn(),
+    refreshMe: refreshMeMock,
   }),
 }));
 
@@ -95,6 +104,9 @@ const courseOne = {
 describe("OnboardingCheckout", () => {
   beforeEach(() => {
     meState = baseMe();
+    readMe = () => meState;
+    refreshMeMock.mockReset();
+    refreshMeMock.mockResolvedValue(undefined);
     vi.mocked(listCourses).mockReset();
     vi.mocked(listCourseLessons).mockReset();
     vi.mocked(createCheckoutIntent).mockReset();
@@ -104,6 +116,75 @@ describe("OnboardingCheckout", () => {
       rates: { USD: 1, EUR: 0.9, RUB: 90 },
       updatedAt: null,
     });
+  });
+
+  it("loads lesson titles when the account arrives after mount", async () => {
+    const [account, setAccount] = createSignal<MeState | null>(null);
+    readMe = account;
+    vi.mocked(listCourses).mockResolvedValue({ items: [courseOne] });
+    vi.mocked(listCourseLessons).mockResolvedValue({
+      items: [{ id: "lesson-1", title: "Lesson One" } as CourseLesson],
+    });
+
+    render(() => (
+      <I18nProvider>
+        <OnboardingCheckout />
+      </I18nProvider>
+    ));
+    setAccount({
+      ...baseMe(),
+      selectedCourses: [],
+      selectedLessons: [{ courseId: "course-1", lessonId: "lesson-1" }],
+    });
+
+    expect(await screen.findByText("Course One · Lesson One")).toBeInTheDocument();
+    expect(listCourseLessons).toHaveBeenCalledTimes(1);
+  });
+
+  it("reloads the account and opens the dashboard after a free checkout", async () => {
+    meState = { ...baseMe(), isFirstHundred: true };
+    vi.mocked(listCourses).mockResolvedValue({ items: [courseOne] });
+    vi.mocked(createCheckoutIntent).mockResolvedValue({
+      paymentId: "p1",
+      redirectUrl: "https://boosty.example/pay",
+      amount: 0,
+      currency: "USD",
+      activationCode: "SW-FREE1234",
+      instructionsText: "No payment is required.",
+    });
+    let finishRefresh = () => {};
+    refreshMeMock.mockReturnValue(
+      new Promise<void>((resolve) => {
+        finishRefresh = resolve;
+      }),
+    );
+
+    render(() => (
+      <I18nProvider>
+        <OnboardingCheckout />
+      </I18nProvider>
+    ));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Create payment instructions" }),
+    );
+
+    await waitFor(() => expect(refreshMeMock).toHaveBeenCalledTimes(1));
+    // Not offered until the account is reloaded.
+    expect(screen.queryByRole("link", { name: "Go to dashboard" })).toBeNull();
+    finishRefresh();
+
+    expect(
+      await screen.findByRole("link", { name: "Go to dashboard" }),
+    ).toHaveAttribute("href", "/student/home");
+    expect(screen.getByRole("status")).toHaveTextContent("Your access is open.");
+    expect(screen.queryByRole("link", { name: "Back" })).toBeNull();
+    expect(screen.queryByText("No payment is required.")).toBeNull();
+    // The community price stays on the screen, with the way to pay it.
+    expect(screen.getAllByText("$22.22")).toHaveLength(2);
+    expect(screen.getByRole("link", { name: "Go to Boosty" })).toHaveAttribute(
+      "href",
+      "https://boosty.example/pay",
+    );
   });
 
   it("renders summary, total and creates a payment intent", async () => {
@@ -219,7 +300,7 @@ describe("OnboardingCheckout", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        "You are in the first 100 students cohort. The team will confirm your access manually.",
+        "You are among the first 100 students. Access opens automatically.",
       ),
     ).toBeInTheDocument();
     expect(

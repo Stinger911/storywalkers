@@ -36,6 +36,14 @@ const { apiFetchMock } = vi.hoisted(() => ({
   apiFetchMock: vi.fn(),
 }));
 
+const { syncDraftMock } = vi.hoisted(() => ({
+  syncDraftMock: vi.fn(),
+}));
+
+vi.mock("../../src/routes/start/startSync", () => ({
+  syncDraftToMe: syncDraftMock,
+}));
+
 vi.mock("firebase/auth", () => ({
   getAuth: () => authMock,
   setPersistence: () => Promise.resolve(),
@@ -110,6 +118,8 @@ describe("Login linking", () => {
     signInWithEmailAndPasswordMock.mockReset();
     signInWithPopupMock.mockReset();
     apiFetchMock.mockReset();
+    syncDraftMock.mockReset();
+    syncDraftMock.mockResolvedValue("empty");
     localStorage.clear();
     mockApiUnauthorized();
   });
@@ -227,6 +237,66 @@ describe("Login linking", () => {
         "Password reset email sent. Check your inbox for next steps.",
       ),
     ).toBeInTheDocument();
+  });
+
+  describe("redirect of a signed-in student with a complete account", () => {
+    const me = {
+      role: "student",
+      status: "disabled",
+      selectedGoalId: "goal-1",
+      selectedCourses: ["course-1"],
+      profileForm: { submitted: true, telegram: "@alice" },
+    };
+    const originalLocation = window.location;
+    let target = "";
+
+    beforeEach(() => {
+      target = "";
+      Object.defineProperty(window, "location", {
+        configurable: true,
+        value: {
+          origin: originalLocation.origin,
+          get href() {
+            return target || originalLocation.href;
+          },
+          set href(value: string) {
+            target = value;
+          },
+        },
+      });
+      isSignInWithEmailLinkMock.mockReturnValue(false);
+      apiFetchMock.mockResolvedValue({ ok: true, status: 200, json: async () => me });
+    });
+
+    afterEach(() => {
+      Object.defineProperty(window, "location", {
+        configurable: true,
+        value: originalLocation,
+      });
+    });
+
+    const renderLogin = () =>
+      render(() => (
+        <ThemeProvider>
+          <I18nProvider>
+            <Login />
+          </I18nProvider>
+        </ThemeProvider>
+      ));
+
+    it("goes to payment right after the funnel", async () => {
+      syncDraftMock.mockResolvedValue("synced");
+
+      renderLogin();
+
+      await waitFor(() => expect(target).toBe("/onboarding/checkout"));
+    });
+
+    it("goes home on a plain sign-in", async () => {
+      renderLogin();
+
+      await waitFor(() => expect(target).toBe("/student/home"));
+    });
   });
 
   it("switches between sign-in and registration modes", async () => {

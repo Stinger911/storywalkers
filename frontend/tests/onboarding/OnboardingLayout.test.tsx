@@ -30,8 +30,8 @@ vi.mock("../../src/components/Loading", () => ({
   Loading: () => <div data-testid="loading">Loading</div>,
 }));
 
-vi.mock("../../src/routes/student/StudentLayout", () => ({
-  StudentLayout: (props: { children?: unknown }) => <div>{props.children}</div>,
+vi.mock("../../src/routes/start/StartLayout", () => ({
+  StartLayout: (props: { children?: unknown }) => <div>{props.children}</div>,
 }));
 
 vi.mock("../../src/lib/auth", () => ({
@@ -44,12 +44,6 @@ vi.mock("../../src/lib/auth", () => ({
 vi.mock("../../src/lib/i18n", () => ({
   useI18n: () => ({
     t: (key: string) => key,
-  }),
-}));
-
-vi.mock("../../src/lib/theme", () => ({
-  useTheme: () => ({
-    theme: () => "light",
   }),
 }));
 
@@ -73,11 +67,12 @@ describe("OnboardingLayout", () => {
   });
 
   it("allows navigating back to earlier onboarding steps", async () => {
-    pathnameState = "/onboarding/goal";
+    // The profile is filled but nothing is picked: the profile stays open.
+    pathnameState = "/onboarding/profile";
 
     render(() => (
-      <OnboardingLayout step="goal" title="Goal">
-        <div>Goal step</div>
+      <OnboardingLayout step="profile" title="Profile">
+        <div>Profile step</div>
       </OnboardingLayout>
     ));
 
@@ -96,7 +91,7 @@ describe("OnboardingLayout", () => {
     ));
 
     await waitFor(() => {
-      expect(navigateMock).toHaveBeenCalledWith("/onboarding/courses", { replace: true });
+      expect(navigateMock).toHaveBeenCalledWith("/start", { replace: true });
     });
   });
 });

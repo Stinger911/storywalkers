@@ -79,7 +79,7 @@ describe("StudentHomeRoute", () => {
   it("redirects to onboarding step when onboarding is incomplete", () => {
     meState = { role: "student", status: "active", selectedGoalId: null, profileForm: {}, selectedCourses: [] };
     render(() => <StudentHomeRoute />);
-    expect(screen.getByTestId("navigate")).toHaveTextContent("/onboarding/goal");
+    expect(screen.getByTestId("navigate")).toHaveTextContent("/start");
   });
 
   it("renders student home shell when onboarding is complete", () => {
@@ -100,6 +100,6 @@ describe("StudentHomeRoute", () => {
       selectedCourses: [],
     };
     render(() => <StudentHomeRoute />);
-    expect(screen.getByTestId("navigate")).toHaveTextContent("/onboarding/goal");
+    expect(screen.getByTestId("navigate")).toHaveTextContent("/start");
   });
 });

@@ -53,14 +53,14 @@ describe("resolveGuardRedirect", () => {
       resolveGuardRedirect({
         me: student("disabled"),
         requiredRole: "student",
-        pathname: "/onboarding/goal",
+        pathname: "/onboarding/profile",
       }),
     ).toBeNull();
     expect(
       resolveGuardRedirect({
         me: student("disabled"),
         requiredRole: "student",
-        pathname: "/onboarding/courses",
+        pathname: "/onboarding/checkout",
       }),
     ).toBeNull();
   });

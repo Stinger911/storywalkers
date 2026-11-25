@@ -1,7 +1,16 @@
 import { useNavigate } from "@solidjs/router";
-import { createEffect, createMemo, createResource, createSignal, For, Show } from "solid-js";
+import {
+  createEffect,
+  createMemo,
+  createResource,
+  createSignal,
+  For,
+  on,
+  Show,
+} from "solid-js";
 
 import { Skeleton } from "../../components/ui/skeleton";
+import { useAuth } from "../../lib/auth";
 import { formatCents } from "../../lib/coursesApi";
 import { useI18n } from "../../lib/i18n";
 import {
@@ -29,6 +38,7 @@ function perLessonCents(course: PlanCourse): number | null {
 export function StartPlan() {
   const { t } = useI18n();
   const navigate = useNavigate();
+  const auth = useAuth();
 
   const initial = readDraft();
   if (!canAccessStep(initial, "plan")) {
@@ -41,10 +51,14 @@ export function StartPlan() {
   const isExpertTrack = () => draft().hasChannel === true;
   const update = (patch: Partial<StartDraft>) => setDraft(writeDraft(patch));
 
-  const [plan, { refetch }] = createResource(
+  // Selecting courses rewrites the draft; the plan is refetched only when the
+  // parameters it depends on change.
+  const planParams = createMemo(
     () => (isExpertTrack() ? null : { goal: draft().goalSlug, format: draft().format }),
-    (params) => (params ? getOnboardingPlan(params) : null),
+    undefined,
+    { equals: (a, b) => a?.goal === b?.goal && a?.format === b?.format },
   );
+  const [plan, { refetch }] = createResource(planParams, getOnboardingPlan);
 
   const [tab, setTab] = createSignal<PathTab>("courses");
   const [openCourse, setOpenCourse] = createSignal<string | null>(null);
@@ -57,14 +71,16 @@ export function StartPlan() {
   const loadedPlan = () => (plan.error ? undefined : plan());
   const courses = () => loadedPlan()?.courses ?? [];
 
-  // The whole path is preselected the first time the plan is shown.
-  createEffect(() => {
-    const loaded = loadedPlan();
-    if (!loaded || isExpertTrack()) return;
-    const current = draft();
-    if (current.selectedCourses.length > 0 || current.selectedLessons.length > 0) return;
-    update({ selectedCourses: loaded.courses.map((course) => course.id) });
-  });
+  // The whole path is preselected when the plan arrives. `on` keeps the effect
+  // from tracking the selection, so clearing it stays cleared.
+  createEffect(
+    on(loadedPlan, (loaded) => {
+      if (!loaded || isExpertTrack()) return;
+      const current = draft();
+      if (current.selectedCourses.length > 0 || current.selectedLessons.length > 0) return;
+      update({ selectedCourses: loaded.courses.map((course) => course.id) });
+    }),
+  );
 
   const isCourseSelected = (id: string) => draft().selectedCourses.includes(id);
   const lessonIds = (courseId: string) =>
@@ -236,16 +252,17 @@ export function StartPlan() {
                           data-selected={isCourseSelected(course.id) || lessonIds(course.id).length > 0}
                         >
                           <div class="flex flex-wrap items-center gap-3 px-6 py-4">
-                            <label class="flex min-w-0 flex-1 cursor-pointer items-center gap-3">
+                            {/* The title takes its own row: real course names are long. */}
+                            <label class="flex w-full cursor-pointer items-center gap-3">
                               <StartCheckbox
                                 checked={isCourseSelected(course.id)}
                                 onChange={() => toggleCourse(course.id)}
                                 aria-label={course.title}
                               />
-                              <h2 class="min-w-0 text-sm font-bold">{course.title}</h2>
+                              <h2 class="min-w-0 break-words text-sm font-bold">{course.title}</h2>
                             </label>
                             <span class="rounded-full border border-[var(--st-line)] bg-[#f4f4f4] px-3 py-1 text-[0.65rem]">
-                              {course.lessonCount} {t("start.plan.lessonsSuffix")}
+                              {t("start.plan.lessonsCount", { count: course.lessonCount })}
                             </span>
                             <Show when={course.priceUsdCents !== null}>
                               <span class="text-xs font-bold">{price(course.priceUsdCents)}</span>
@@ -323,7 +340,10 @@ export function StartPlan() {
         <StartButton variant="secondary" onClick={() => navigate(startPath("goal"))}>
           {t("start.plan.back")}
         </StartButton>
-        <StartButton onClick={register}>{t("start.plan.register")}</StartButton>
+        {/* /login saves the answers; a signed-in student passes straight through. */}
+        <StartButton onClick={register}>
+          {auth.me() ? t("start.plan.continue") : t("start.plan.register")}
+        </StartButton>
       </ButtonRow>
     </StartLayout>
   );

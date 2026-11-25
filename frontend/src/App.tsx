@@ -1,4 +1,4 @@
-import { Route, Router } from "@solidjs/router";
+import { Navigate, Route, Router } from "@solidjs/router";
 import { Suspense, lazy, onMount } from "solid-js";
 import "./App.css";
 import { AdminLayout } from "./routes/admin/AdminLayout.tsx";
@@ -177,19 +177,9 @@ const StartPlan = lazy(async () => {
   return { default: module.StartPlan };
 });
 
-const OnboardingGoal = lazy(async () => {
-  const module = await import("./routes/onboarding/OnboardingGoal.tsx");
-  return { default: module.OnboardingGoal };
-});
-
 const OnboardingProfile = lazy(async () => {
   const module = await import("./routes/onboarding/OnboardingProfile.tsx");
   return { default: module.OnboardingProfile };
-});
-
-const OnboardingCourses = lazy(async () => {
-  const module = await import("./routes/onboarding/OnboardingCourses.tsx");
-  return { default: module.OnboardingCourses };
 });
 
 const OnboardingExpert = lazy(async () => {
@@ -353,9 +343,9 @@ const AdminLibraryDetailRoute = () => (
   </AdminLayout>
 );
 
-const OnboardingGoalRoute = () => <OnboardingGoal />;
+// Goal and course selection moved into the /start funnel; keep old links working.
+const StartRedirect = () => <Navigate href="/start" />;
 const OnboardingProfileRoute = () => <OnboardingProfile />;
-const OnboardingCoursesRoute = () => <OnboardingCourses />;
 const OnboardingCheckoutRoute = () => <OnboardingCheckout />;
 
 export default function App() {
@@ -384,9 +374,9 @@ export default function App() {
           <Route path="/start/topic" component={StartTopic} />
           <Route path="/start/goal" component={StartGoal} />
           <Route path="/start/plan" component={StartPlan} />
-          <Route path="/onboarding/goal" component={OnboardingGoalRoute} />
+          <Route path="/onboarding/goal" component={StartRedirect} />
           <Route path="/onboarding/profile" component={OnboardingProfileRoute} />
-          <Route path="/onboarding/courses" component={OnboardingCoursesRoute} />
+          <Route path="/onboarding/courses" component={StartRedirect} />
           <Route path="/onboarding/checkout" component={OnboardingCheckoutRoute} />
           <Route path="/onboarding/expert" component={OnboardingExpert} />
           <Route path="/admin" component={AdminHomeRoute} />

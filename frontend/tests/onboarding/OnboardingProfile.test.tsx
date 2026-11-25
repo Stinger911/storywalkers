@@ -123,7 +123,7 @@ describe("OnboardingProfile", () => {
     });
   });
 
-  it("navigates to courses on Next after successful save", async () => {
+  it("returns to the funnel on Next when no path is picked", async () => {
     patchMeMock.mockResolvedValue({});
     render(() => (
       <I18nProvider>
@@ -143,7 +143,26 @@ describe("OnboardingProfile", () => {
 
     await waitFor(() => {
       expect(patchMeMock).toHaveBeenCalled();
-      expect(navigateMock).toHaveBeenCalledWith("/onboarding/courses");
+      expect(navigateMock).toHaveBeenCalledWith("/start");
+    });
+  });
+
+  it("continues to checkout on Next when a path is picked", async () => {
+    patchMeMock.mockResolvedValue({});
+    setMeState(makeMe({ selectedCourses: ["course-1"] }));
+    render(() => (
+      <I18nProvider>
+        <OnboardingProfile />
+      </I18nProvider>
+    ));
+
+    fireEvent.input(screen.getByLabelText(TELEGRAM_LABEL), {
+      target: { value: "@alice" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+
+    await waitFor(() => {
+      expect(navigateMock).toHaveBeenCalledWith("/onboarding/checkout");
     });
   });
 

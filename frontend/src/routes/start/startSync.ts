@@ -38,10 +38,12 @@ export async function syncDraftToMe(): Promise<SyncResult> {
     );
     if (chosenCourses.length > 0 || chosenLessons.length > 0) {
       payload.selectedCourses = chosenCourses;
-      if (chosenLessons.length > 0) payload.selectedLessons = chosenLessons;
+      // Sent even when empty: it replaces an earlier lesson selection.
+      payload.selectedLessons = chosenLessons;
       payload.subscriptionSelected = true;
     } else if (courseIds.length > 0) {
       payload.selectedCourses = courseIds;
+      payload.selectedLessons = [];
       payload.subscriptionSelected = true;
     }
   }
@@ -56,6 +58,8 @@ export async function syncDraftToMe(): Promise<SyncResult> {
     return "failed";
   }
 
-  clearDraft();
+  // Without a goal the account cannot move on, so the answers stay in the
+  // browser and the funnel can be finished once the lookup works.
+  if (goalId) clearDraft();
   return "synced";
 }

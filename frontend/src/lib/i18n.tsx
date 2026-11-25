@@ -108,7 +108,7 @@ type StartSection = {
     subtitle: string;
     expertTitle: string;
     expertBody: string;
-    lessonsSuffix: string;
+    lessonsCount: string;
     goalLabel: string;
     goalValue: string;
     showPath: string;
@@ -123,6 +123,7 @@ type StartSection = {
     pathEmpty: string;
     selectedLessonsCount: string;
     register: string;
+    continue: string;
     back: string;
     loadError: string;
     retry: string;
@@ -491,36 +492,9 @@ type RawDictionary = {
       lessonsNotAvailable: string;
     };
     onboarding: {
-      eyebrow: string;
-      stepperTitle: string;
-      steps: {
-        goal: string;
-        profile: string;
-        courses: string;
-        checkout: string;
-      };
       common: {
         saving: string;
         saveAndContinue: string;
-      };
-      goal: {
-        title: string;
-        subtitle: string;
-        cardTitle: string;
-        cardDescription: string;
-        noDescription: string;
-        selectedBadge: string;
-        next: string;
-        retry: string;
-        empty: string;
-        loadError: string;
-        saveError: string;
-        quote1: string;
-        quote2: string;
-        quote3: string;
-        questionsTitle: string;
-        questionsDescription: string;
-        requiredError: string;
       };
       profile: {
         title: string;
@@ -550,42 +524,6 @@ type RawDictionary = {
         submit: string;
         next: string;
       };
-      courses: {
-        title: string;
-        subtitle: string;
-        cardTitle: string;
-        cardDescription: string;
-        currencyLabel: string;
-        selected: string;
-        clickToSelect: string;
-        totalLabel: string;
-        communityTitle: string;
-        communityDescription: string;
-        communityRequiredBadge: string;
-        communityIncludedByDefault: string;
-        inactiveSectionTitle: string;
-        inactiveBadge: string;
-        retry: string;
-        loadError: string;
-        saveError: string;
-        currencySaveError: string;
-        lessonCount: string;
-        empty: string;
-        goalMissing: string;
-        showLessons: string;
-        hideLessons: string;
-        lessonsTitle: string;
-        lessonsEmpty: string;
-        selectAtLeastOne: string;
-        trialLesson: string;
-        goalSummaryTitle: string;
-        tabCourses: string;
-        tabPath: string;
-        perLesson: string;
-        buyIndividual: string;
-        wholeCourse: string;
-        selectedLessonsCount: string;
-      };
       checkout: {
         title: string;
         subtitle: string;
@@ -603,10 +541,13 @@ type RawDictionary = {
         afterPaymentTitle: string;
         afterPaymentManual: string;
         afterPaymentFree: string;
+        activatedMessage: string;
+        dashboardCta: string;
         afterPaymentContactLabel: string;
         removeCourse: string;
         backToCourses: string;
         removeError: string;
+        saveError: string;
       };
     };
   };
@@ -733,7 +674,7 @@ const dictionaries: Record<Locale, RawDictionary> = {
         expertTitle: "An expert will build your path",
         expertBody:
           "Your channel already has history, so your learning path should be built together with a live expert. Sign up and our expert will contact you to help.",
-        lessonsSuffix: "lessons",
+        lessonsCount: "Lessons: {{ count }}",
         goalLabel: "Your goal:",
         goalValue: "Become a YouTube blogger",
         showPath: "Show path",
@@ -748,6 +689,7 @@ const dictionaries: Record<Locale, RawDictionary> = {
         pathEmpty: "Nothing selected yet.",
         selectedLessonsCount: "Selected: {{ count }}",
         register: "Sign up",
+        continue: "Continue",
         back: "Back",
         loadError: "Could not load the path.",
         retry: "Try again",
@@ -1144,36 +1086,9 @@ const dictionaries: Record<Locale, RawDictionary> = {
         lessonsNotAvailable: "Individual lessons are not available for this course.",
       },
     onboarding: {
-      eyebrow: "Registration",
-      stepperTitle: "Registration steps",
-        steps: {
-          goal: "Goal",
-          profile: "Profile",
-          courses: "Path",
-          checkout: "Payment",
-        },
         common: {
           saving: "Saving...",
           saveAndContinue: "Save and continue",
-        },
-        goal: {
-          title: "Choose your goal",
-          subtitle: "Pick your learning track to personalize onboarding.",
-          cardTitle: "Goal selection",
-          cardDescription: "You can change this later.",
-          noDescription: "No description",
-          selectedBadge: "Selected",
-          next: "Next",
-          retry: "Retry",
-          empty: "No goals available yet.",
-          loadError: "Could not load goals.",
-          saveError: "Could not save selected goal.",
-          quote1: "A clear goal turns learning into a route, not a pile of lessons.",
-          quote2: "The path works best when it starts from the result you want.",
-          quote3: "Your answers help us remove noise and keep the route practical.",
-          questionsTitle: "A few clarifying questions",
-          questionsDescription: "Answer them so the path can be tuned to your actual situation.",
-          requiredError: "Please answer all required questions.",
         },
         profile: {
           title: "Tell us about yourself",
@@ -1208,44 +1123,6 @@ const dictionaries: Record<Locale, RawDictionary> = {
           submit: "Save profile",
           next: "Next",
         },
-        courses: {
-          title: "Choose your path",
-          subtitle: "Choose one or more paths to continue.",
-          cardTitle: "Path selection",
-          cardDescription:
-            "At this stage, you choose the path toward your goal. This is not just a course with a set of lessons. It is a step-by-step route with the right materials and assignments to help you achieve the result as effectively as possible.",
-          currencyLabel: "Preferred currency",
-          selected: "Selected",
-          clickToSelect: "Click to select",
-          totalLabel: "Total price",
-          communityTitle: "StoryWalkers Community",
-          communityDescription:
-            "Community access with group feedback and discussion channels.",
-          communityRequiredBadge: "Mandatory",
-          communityIncludedByDefault: "Included by default",
-          inactiveSectionTitle: "Unavailable paths",
-          inactiveBadge: "Inactive",
-          retry: "Retry",
-          loadError: "Could not load paths.",
-          saveError: "Could not save selected paths.",
-          currencySaveError: "Could not save preferred currency.",
-          lessonCount: "{{ count }} steps",
-          empty: "No paths selected yet.",
-          goalMissing: "Go back and choose a path first.",
-          showLessons: "Show path",
-          hideLessons: "Hide path",
-          lessonsTitle: "Path",
-          lessonsEmpty: "No path details available yet.",
-          selectAtLeastOne: "Select at least one path to continue.",
-          trialLesson: "Watch trial lesson",
-          goalSummaryTitle: "Your selected goal",
-          tabCourses: "Courses",
-          tabPath: "Selected path",
-          perLesson: "/ lesson",
-          buyIndividual: "Pick individual lessons",
-          wholeCourse: "Whole course",
-          selectedLessonsCount: "{{ count }} lessons selected",
-        },
         checkout: {
           title: "Payment",
           subtitle: "Review your selections before payment.",
@@ -1265,11 +1142,14 @@ const dictionaries: Record<Locale, RawDictionary> = {
           afterPaymentManual:
             "Access is activated manually after review. Please wait for confirmation from the team.",
           afterPaymentFree:
-            "You are in the first 100 students cohort. The team will confirm your access manually.",
+            "You are among the first 100 students. Access opens automatically.",
+          activatedMessage: "Your access is open.",
+          dashboardCta: "Go to dashboard",
           afterPaymentContactLabel: "If you have paid, message support:",
           removeCourse: "Remove",
           backToCourses: "Back to path selection",
           removeError: "Could not update selected paths.",
+          saveError: "Could not save selected paths.",
         },
       },
     },
@@ -1395,7 +1275,7 @@ const dictionaries: Record<Locale, RawDictionary> = {
         expertTitle: "План составит эксперт",
         expertBody:
           "У вашего канала уже есть история, поэтому план обучения должен составляться с живым представителем. Зарегистрируйтесь у нас на сайте, и наш эксперт свяжется с вами, чтобы помочь.",
-        lessonsSuffix: "уроков",
+        lessonsCount: "Уроков: {{ count }}",
         goalLabel: "Ваша цель:",
         goalValue: "Стать блоггером на Ютюб",
         showPath: "Показать путь",
@@ -1410,6 +1290,7 @@ const dictionaries: Record<Locale, RawDictionary> = {
         pathEmpty: "Пока ничего не выбрано.",
         selectedLessonsCount: "Выбрано: {{ count }}",
         register: "Зарегистрироваться",
+        continue: "Продолжить",
         back: "Назад",
         loadError: "Не удалось загрузить план.",
         retry: "Попробовать снова",
@@ -1809,36 +1690,9 @@ const dictionaries: Record<Locale, RawDictionary> = {
         lessonsNotAvailable: "Отдельные уроки недоступны для этого курса.",
       },
     onboarding: {
-      eyebrow: "Регистрация",
-      stepperTitle: "Шаги регистрации",
-        steps: {
-          goal: "Цель",
-          profile: "Профиль",
-          courses: "Путь",
-          checkout: "Оплата",
-        },
         common: {
           saving: "Сохранение...",
           saveAndContinue: "Сохранить и продолжить",
-        },
-        goal: {
-          title: "Выберите цель",
-          subtitle: "Это поможет персонализировать путь обучения.",
-          cardTitle: "Выбор цели",
-          cardDescription: "Позже это можно изменить.",
-          noDescription: "Описание отсутствует",
-          selectedBadge: "Выбрано",
-          next: "Далее",
-          retry: "Повторить",
-          empty: "Пока нет доступных целей.",
-          loadError: "Не удалось загрузить цели.",
-          saveError: "Не удалось сохранить выбранную цель.",
-          quote1: "Четкая цель превращает обучение в маршрут, а не в набор уроков.",
-          quote2: "Путь работает лучше, когда начинается с результата, к которому вы идете.",
-          quote3: "Ваши ответы помогают убрать лишнее и оставить практичный маршрут.",
-          questionsTitle: "Несколько уточняющих вопросов",
-          questionsDescription: "Ответьте на них, чтобы путь был ближе к вашей реальной ситуации.",
-          requiredError: "Ответьте на все обязательные вопросы.",
         },
         profile: {
           title: "Расскажите о себе",
@@ -1874,44 +1728,6 @@ const dictionaries: Record<Locale, RawDictionary> = {
           submit: "Сохранить профиль",
           next: "Далее",
         },
-        courses: {
-          title: "Выберите путь",
-          subtitle: "Выберите один или несколько путей, чтобы продолжить.",
-          cardTitle: "Выбор пути",
-          cardDescription:
-            "На этом этапе вы выбираете путь к своей цели. Это не просто курс с набором уроков, а пошаговый маршрут с нужными материалами и заданиями, который поможет вам прийти к результату максимально эффективно.",
-          currencyLabel: "Предпочитаемая валюта",
-          selected: "Выбрано",
-          clickToSelect: "Нажмите, чтобы выбрать",
-          totalLabel: "Итоговая стоимость",
-          communityTitle: "Сообщество Сториходцы",
-          communityDescription:
-            "Доступ в комьюнити с групповым фидбеком и каналами обсуждения.",
-          communityRequiredBadge: "Обязательно",
-          communityIncludedByDefault: "Включено по умолчанию",
-          inactiveSectionTitle: "Недоступные пути",
-          inactiveBadge: "Неактивен",
-          retry: "Повторить",
-          loadError: "Не удалось загрузить пути.",
-          saveError: "Не удалось сохранить выбранные пути.",
-          currencySaveError: "Не удалось сохранить предпочитаемую валюту.",
-          lessonCount: "{{ count }} шагов",
-          empty: "Пути пока не выбраны.",
-          goalMissing: "Сначала вернитесь и выберите путь.",
-          showLessons: "Показать путь",
-          hideLessons: "Скрыть путь",
-          lessonsTitle: "Путь",
-          lessonsEmpty: "Детали пути пока недоступны.",
-          selectAtLeastOne: "Выберите хотя бы один путь, чтобы продолжить.",
-          trialLesson: "Посмотреть пробный урок",
-          goalSummaryTitle: "Ваша выбранная цель",
-          tabCourses: "Курсы",
-          tabPath: "Выбранный путь",
-          perLesson: "/ урок",
-          buyIndividual: "Выбрать отдельные уроки",
-          wholeCourse: "Весь курс",
-          selectedLessonsCount: "Выбрано уроков: {{ count }}",
-        },
         checkout: {
           title: "Оплата",
           subtitle: "Проверьте выбранное перед оплатой.",
@@ -1931,11 +1747,14 @@ const dictionaries: Record<Locale, RawDictionary> = {
           afterPaymentManual:
             "Доступ активируется вручную после проверки. Пожалуйста, дождитесь подтверждения от команды.",
           afterPaymentFree:
-            "Вы входите в первую сотню учеников. Команда подтвердит доступ вручную.",
+            "Вы входите в первую сотню учеников. Доступ открывается автоматически.",
+          activatedMessage: "Доступ открыт.",
+          dashboardCta: "Перейти в кабинет",
           afterPaymentContactLabel: "Если вы оплатили, напишите в поддержку:",
           removeCourse: "Удалить",
           backToCourses: "Вернуться к выбору пути",
           removeError: "Не удалось обновить выбранные пути.",
+          saveError: "Не удалось сохранить выбранные пути.",
         },
       },
     },

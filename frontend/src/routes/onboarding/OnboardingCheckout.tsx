@@ -1,5 +1,12 @@
 import { A } from "@solidjs/router";
-import { createMemo, createSignal, For, onMount, Show } from "solid-js";
+import {
+  createEffect,
+  createMemo,
+  createSignal,
+  For,
+  onMount,
+  Show,
+} from "solid-js";
 
 import { useAuth } from "../../lib/auth";
 import {
@@ -19,6 +26,7 @@ import {
 } from "../../lib/coursesApi";
 import { getFxRates } from "../../lib/fxApi";
 import { useI18n } from "../../lib/i18n";
+import { draftFromYoutubeOnboarding, writeDraft } from "../start/startDraft";
 import { StartButton } from "../start/StartUi";
 import { OnboardingLayout } from "./OnboardingLayout";
 
@@ -42,17 +50,34 @@ export function OnboardingCheckout() {
   const [checkout, setCheckout] = createSignal<CheckoutIntentResponse | null>(null);
   const me = () => auth.me();
   const isFirstHundred = createMemo(() => me()?.isFirstHundred === true);
+  // The backend activates a free "first hundred" checkout at once.
+  const isAutoActivated = (result: CheckoutIntentResponse) =>
+    isFirstHundred() && result.amount === 0;
+  const activated = createMemo(() => {
+    const result = checkout();
+    return result !== null && isAutoActivated(result);
+  });
   const preferredCurrency = createMemo(() => me()?.preferredCurrency || "USD");
   const currencyRate = createMemo(() => {
     const rate = fxRates()[preferredCurrency()];
     return typeof rate === "number" && rate > 0 ? rate : 1;
   });
 
-  // Students from the pre-registration funnel go back to their path preview;
-  // legacy students still have the course selection step.
+  // Going back reopens the path step of the funnel. Accounts without funnel
+  // answers start it from the beginning.
   const backToPathHref = createMemo(() =>
-    me()?.youtubeOnboarding ? "/start/plan" : "/onboarding/courses",
+    me()?.youtubeOnboarding ? "/start/plan" : "/start",
   );
+  // The draft was cleared after registration, so rebuild it from the account.
+  const restorePath = () => {
+    const current = me();
+    if (!current?.youtubeOnboarding) return;
+    writeDraft({
+      ...draftFromYoutubeOnboarding(current.youtubeOnboarding),
+      selectedCourses: current.selectedCourses ?? [],
+      selectedLessons: current.selectedLessons ?? [],
+    });
+  };
   const selectedCourseIds = createMemo(() => me()?.selectedCourses || []);
   const selectedLessons = createMemo<SelectedLesson[]>(() => me()?.selectedLessons || []);
   const communitySelected = createMemo(() => true);
@@ -135,22 +160,24 @@ export function OnboardingCheckout() {
       } catch {
         setCoursesById({});
       }
-
-      const lessonCourseIds = [
-        ...new Set(selectedLessons().map((item) => item.courseId)),
-      ];
-      for (const courseId of lessonCourseIds) {
-        try {
-          const lessonsResponse = await listCourseLessons(courseId);
-          setLessonsByCourse((current) => ({
-            ...current,
-            [courseId]: lessonsResponse.items,
-          }));
-        } catch {
-          // keep lesson ids as fallback titles
-        }
-      }
     })();
+  });
+
+  // The account can arrive after this component mounts (full page load), so
+  // lesson titles are requested when the selection becomes known.
+  const requestedLessonCourses = new Set<string>();
+  createEffect(() => {
+    for (const { courseId } of selectedLessons()) {
+      if (requestedLessonCourses.has(courseId)) continue;
+      requestedLessonCourses.add(courseId);
+      void listCourseLessons(courseId).then(
+        (response) =>
+          setLessonsByCourse((current) => ({ ...current, [courseId]: response.items })),
+        () => {
+          // keep lesson ids as fallback titles
+        },
+      );
+    }
   });
 
   const goalSummary = createMemo(
@@ -205,10 +232,13 @@ export function OnboardingCheckout() {
         payload.selectedLessons = selectedLessons();
       }
       const result = await createCheckoutIntent(payload);
+      // The dashboard is closed to an inactive student, so reload the account
+      // before offering the way there.
+      if (isAutoActivated(result)) await auth.refreshMe();
       setCheckout(result);
     } catch (err) {
       const message = (err as Error).message?.trim();
-      setError(message || t("student.onboarding.courses.saveError"));
+      setError(message || t("student.onboarding.checkout.saveError"));
     } finally {
       setSaving(false);
     }
@@ -261,7 +291,11 @@ export function OnboardingCheckout() {
             fallback={
               <div class="st-notice space-y-3">
                 <div>{t("student.onboarding.checkout.coursesEmpty")}</div>
-                <A href={backToPathHref()} class="st-btn st-btn-secondary">
+                <A
+                  href={backToPathHref()}
+                  class="st-btn st-btn-secondary"
+                  onClick={restorePath}
+                >
                   {t("student.onboarding.checkout.backToCourses")}
                 </A>
               </div>
@@ -271,15 +305,17 @@ export function OnboardingCheckout() {
               {(course) => (
                 <div class="st-row">
                   <span class="min-w-0 flex-1 font-bold">{course.title}</span>
-                  <button
-                    type="button"
-                    class="st-icon-btn"
-                    aria-label={t("student.onboarding.checkout.removeCourse")}
-                    onClick={() => void removeCourse(course.id)}
-                    disabled={saving()}
-                  >
-                    <TrashIcon />
-                  </button>
+                  <Show when={!activated()}>
+                    <button
+                      type="button"
+                      class="st-icon-btn"
+                      aria-label={t("student.onboarding.checkout.removeCourse")}
+                      onClick={() => void removeCourse(course.id)}
+                      disabled={saving()}
+                    >
+                      <TrashIcon />
+                    </button>
+                  </Show>
                 </div>
               )}
             </For>
@@ -298,15 +334,17 @@ export function OnboardingCheckout() {
                         {formatCents(item.priceCents ?? 0, preferredCurrency())}
                       </span>
                     </Show>
-                    <button
-                      type="button"
-                      class="st-icon-btn"
-                      aria-label={t("student.onboarding.checkout.removeCourse")}
-                      onClick={() => void removeLesson(item.courseId, item.lessonId)}
-                      disabled={saving()}
-                    >
-                      <TrashIcon />
-                    </button>
+                    <Show when={!activated()}>
+                      <button
+                        type="button"
+                        class="st-icon-btn"
+                        aria-label={t("student.onboarding.checkout.removeCourse")}
+                        onClick={() => void removeLesson(item.courseId, item.lessonId)}
+                        disabled={saving()}
+                      >
+                        <TrashIcon />
+                      </button>
+                    </Show>
                   </div>
                 )}
               </For>
@@ -352,20 +390,38 @@ export function OnboardingCheckout() {
                 </div>
                 <div class="mt-2 font-mono text-lg">{result().activationCode}</div>
               </div>
-              <div>{result().instructionsText}</div>
-              <div class="text-[var(--st-muted)]">
-                {t("student.courses.amount", {
-                  amount: formatCents(result().amount, result().currency),
-                })}
-              </div>
+              <Show
+                when={!activated()}
+                fallback={
+                  <div role="status" class="font-bold">
+                    {t("student.onboarding.checkout.activatedMessage")}
+                  </div>
+                }
+              >
+                <div>{result().instructionsText}</div>
+                <div class="text-[var(--st-muted)]">
+                  {t("student.courses.amount", {
+                    amount: formatCents(result().amount, result().currency),
+                  })}
+                </div>
+              </Show>
             </div>
           )}
         </Show>
 
         <div class="flex flex-wrap items-center justify-center gap-4">
-          <A href={backToPathHref()} class="st-btn st-btn-secondary">
-            {t("student.onboarding.profile.back")}
-          </A>
+          <Show
+            when={!activated()}
+            fallback={
+              <A href="/student/home" class="st-btn st-btn-primary">
+                {t("student.onboarding.checkout.dashboardCta")}
+              </A>
+            }
+          >
+            <A href={backToPathHref()} class="st-btn st-btn-secondary" onClick={restorePath}>
+              {t("student.onboarding.profile.back")}
+            </A>
+          </Show>
           <Show when={hasSelection() && !checkout()}>
             <StartButton onClick={() => void startCheckout()} disabled={saving()}>
               {saving()
@@ -373,9 +429,14 @@ export function OnboardingCheckout() {
                 : t("student.courses.createPaymentInstructions")}
             </StartButton>
           </Show>
-          <Show when={checkout() && (checkout()?.amount ?? 0) > 0}>
+          {/* Offered after a free activation too: the community is paid there. */}
+          <Show when={checkout()}>
             <a
-              class="st-btn st-btn-primary"
+              class="st-btn"
+              classList={{
+                "st-btn-primary": !activated(),
+                "st-btn-secondary": activated(),
+              }}
               href={checkout()?.redirectUrl || BOOSTY_URL}
               target="_blank"
               rel="noopener noreferrer"
