@@ -72,6 +72,7 @@ type StudentProfile = {
   activeTo?: string | null;
   boostyUserId?: string | null;
   isFirstHundred?: boolean;
+  accessBlocked?: boolean;
   selectedGoalId?: string | null;
   onboardingStep?: string | null;
   createdAt?: unknown;
@@ -228,6 +229,8 @@ export function AdminStudentProfile() {
   const [boostyUserIdDirty, setBoostyUserIdDirty] = createSignal(false);
   const [telegramDirty, setTelegramDirty] = createSignal(false);
   const [isFirstHundredDraft, setIsFirstHundredDraft] = createSignal(false);
+  const [accessBlockedDraft, setAccessBlockedDraft] = createSignal(false);
+  const [accessBlockedDirty, setAccessBlockedDirty] = createSignal(false);
   const [selectedCourseIdsToAppend, setSelectedCourseIdsToAppend] = createSignal<string[]>([]);
   const [previewOpen, setPreviewOpen] = createSignal(false);
   const [previewLoading, setPreviewLoading] = createSignal(false);
@@ -315,6 +318,8 @@ export function AdminStudentProfile() {
       setBoostyUserIdDirty(false);
       setTelegramDirty(false);
       setIsFirstHundredDraft(nextStudent.isFirstHundred === true);
+      setAccessBlockedDraft(nextStudent.accessBlocked === true);
+      setAccessBlockedDirty(false);
       const savedGoalId = nextStudent.selectedGoalId || "";
       if (planData) {
         setPlan(planData as StudentPlan);
@@ -551,6 +556,10 @@ export function AdminStudentProfile() {
           : {}),
         ...(telegramDirty()
           ? { telegram: telegramDraft().trim() || null }
+          : {}),
+        // Sent only when changed here: otherwise the status change decides.
+        ...(accessBlockedDirty()
+          ? { accessBlocked: accessBlockedDraft() }
           : {}),
       });
       await load();
@@ -826,6 +835,14 @@ export function AdminStudentProfile() {
                       const nextStatus =
                         (value as SelectOption | null)?.value ?? "active";
                       setStatusDraft(nextStatus);
+                      // Preview what saving this status will do to the block.
+                      if (!accessBlockedDirty()) {
+                        setAccessBlockedDraft(
+                          nextStatus === student()?.status
+                            ? student()?.accessBlocked === true
+                            : nextStatus === "disabled",
+                        );
+                      }
                       if (
                         nextStatus === "active" &&
                         student()?.status !== "active" &&
@@ -938,6 +955,21 @@ export function AdminStudentProfile() {
                   />
                   <span>First 100 students: all courses are free</span>
                 </label>
+                <label class="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={accessBlockedDraft()}
+                    onChange={(event) => {
+                      setAccessBlockedDirty(true);
+                      setAccessBlockedDraft(event.currentTarget.checked);
+                    }}
+                  />
+                  <span>Access blocked: no self-activation</span>
+                </label>
+                <div class="text-xs text-muted-foreground">
+                  Set automatically when you disable a student. A blocked student
+                  cannot get access back through checkout or a payment email.
+                </div>
               </div>
               <Button
                 onClick={() => void saveProfile()}

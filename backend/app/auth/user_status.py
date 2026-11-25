@@ -21,6 +21,28 @@ def _is_valid_status(value: object) -> bool:
     return isinstance(value, str) and value in USER_STATUSES
 
 
+def is_access_blocked(data: dict | None) -> bool:
+    """Whether staff has barred the account from activating itself.
+
+    The "disabled" status alone cannot tell: new accounts and expired
+    subscriptions carry it too, and those may be activated by a checkout.
+    """
+    return bool(data) and data.get("accessBlocked") is True
+
+
+def was_disabled_by_staff(data: dict) -> bool:
+    """A staff-disabled account from before accessBlocked existed.
+
+    An explicit accessBlocked=False means staff has already decided.
+    """
+    if data.get("role") != "student" or data.get("status") != "disabled":
+        return False
+    if "accessBlocked" in data:
+        return False
+    actor = data.get("statusChangedBy")
+    return isinstance(actor, str) and bool(actor) and not actor.startswith("system:")
+
+
 def validate_user_status_or_400(value: object) -> UserStatus:
     if _is_valid_status(value):
         return value

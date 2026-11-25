@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 from pydantic_core import PydanticCustomError
 
 from app.auth.deps import get_current_user
+from app.auth.user_status import is_access_blocked
 from app.core.errors import AppError, forbidden_error
 from app.core.logging import get_logger
 from app.db.firestore import get_firestore_client
@@ -197,9 +198,26 @@ async def create_checkout_intent(
             status_code=403,
         )
 
+    db = get_firestore_client()
+    # Read the stored document: a free checkout activates the account at once,
+    # which must never undo a block set by staff.
+    stored_user = db.collection("users").document(user["uid"]).get().to_dict()
+    if is_access_blocked(stored_user):
+        logger.warning(
+            "checkout_intent_rejected_access_blocked",
+            extra={
+                "event": "checkout_intent_rejected_access_blocked",
+                "uid": user.get("uid"),
+            },
+        )
+        raise AppError(
+            code="access_blocked",
+            message="Access is blocked. Contact support.",
+            status_code=403,
+        )
+
     owned_lesson_pairs = _normalize_owned_lessons(user.get("ownedLessons"))
 
-    db = get_firestore_client()
     total_usd_cents, invalid_course_ids = _resolve_active_course_prices(
         db, payload.selectedCourses, owned_lesson_pairs
     )

@@ -333,3 +333,39 @@ def test_activate_by_code_not_found_sends_failure_notification(monkeypatch):
     assert "reason: activation_code_not_found" in sent_messages[0]
     assert "activation_code: SW-MISSING1" in sent_messages[0]
     assert "evidence: ev-404" in sent_messages[0]
+
+
+def test_activate_by_code_leaves_blocked_user_inactive(monkeypatch):
+    fake_db = _FakeFirestore(
+        payments={
+            "p1": {
+                "activationCode": "SW-BLOCKED1",
+                "status": "created",
+                "userUid": "u1",
+                "selectedCourses": ["c1"],
+            }
+        },
+        users={"u1": {"status": "disabled", "accessBlocked": True}},
+    )
+    notifications: list[str] = []
+    appended: list[str] = []
+    monkeypatch.setattr(payments_service, "get_settings", lambda: _Settings())
+    monkeypatch.setattr(payments_service, "_notify_admin_async", notifications.append)
+    monkeypatch.setattr(
+        payments_service,
+        "append_courses_to_student_plan",
+        lambda *_args: appended.append("courses"),
+    )
+
+    result = payments_service.activate_by_code(
+        fake_db, "SW-BLOCKED1", "gmail_message_id=m1"
+    )
+
+    assert result is False
+    assert fake_db._users["u1"]["status"] == "disabled"
+    # The payment stays open so staff can decide what to do with the money.
+    assert fake_db._payments["p1"]["status"] == "created"
+    assert fake_db._payments["p1"]["emailEvidence"] == "gmail_message_id=m1"
+    assert appended == []
+    assert len(notifications) == 1
+    assert "user_access_blocked" in notifications[0]

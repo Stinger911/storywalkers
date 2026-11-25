@@ -34,6 +34,7 @@ User profile + role.
 - `displayName`: `string`
 - `email`: `string`
 - `status`: `"disabled" | "active" | "community_only" | "expired"`
+- `accessBlocked`: `boolean` (optional) — staff bar on self-activation: checkout answers `403 access_blocked` and a payment email does not activate the account. Set when staff disables an account, cleared when staff activates it; can also be set directly. Automatic expiry does not set it.
 - `preferredCurrency`: `"USD" | "EUR" | "PLN"` (optional; default UI fallback is `USD`)
 - `selectedGoalId`: `string | null` (optional)
 - `selectedCourses`: `array<string>` (optional)

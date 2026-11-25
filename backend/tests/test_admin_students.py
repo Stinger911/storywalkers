@@ -1,3 +1,4 @@
+import pytest
 from datetime import date, timedelta
 
 from fastapi.testclient import TestClient
@@ -1102,3 +1103,61 @@ def test_delete_student_rejects_non_student(monkeypatch):
     assert response.status_code == 400
 
     app.dependency_overrides.clear()
+
+
+def _patch_student(monkeypatch, stored: dict, body: dict):
+    users = {"s1": {"role": "student", "email": "s1@x.com", **stored}}
+    fake_db = FakeFirestore(users)
+    monkeypatch.setattr(admin_students, "get_firestore_client", lambda: fake_db)
+
+    async def _fake_send_admin_message(_text: str) -> None:
+        return None
+
+    monkeypatch.setattr(admin_students, "send_admin_message", _fake_send_admin_message)
+    app.dependency_overrides[get_current_user] = _override_staff
+    response = TestClient(app).patch("/api/admin/students/s1", json=body)
+    app.dependency_overrides.clear()
+    return response, users["s1"]
+
+
+@pytest.mark.parametrize(
+    ("stored", "body", "blocked"),
+    [
+        # Disabling an active student blocks, activating lifts the block.
+        ({"status": "active"}, {"status": "disabled"}, True),
+        ({"status": "disabled", "accessBlocked": True}, {"status": "active"}, False),
+        # The profile form re-sends the status: a new account stays unblocked.
+        ({"status": "disabled"}, {"status": "disabled"}, None),
+        ({"status": "disabled", "accessBlocked": True}, {"status": "disabled"}, True),
+        # An explicit value wins over the status change.
+        ({"status": "disabled"}, {"accessBlocked": True}, True),
+        (
+            {"status": "disabled", "accessBlocked": True},
+            {"accessBlocked": False},
+            False,
+        ),
+        ({"status": "active"}, {"status": "disabled", "accessBlocked": False}, False),
+        # Other statuses leave the flag alone.
+        ({"status": "active"}, {"status": "expired"}, None),
+    ],
+)
+def test_patch_student_access_block(monkeypatch, stored, body, blocked):
+    response, saved = _patch_student(monkeypatch, stored, body)
+
+    assert response.status_code == 200
+    assert saved.get("accessBlocked") is blocked
+
+
+@pytest.mark.parametrize(
+    ("stored", "body"),
+    [
+        ({"status": "active"}, {"accessBlocked": True}),
+        ({"status": "disabled"}, {"status": "active", "accessBlocked": True}),
+    ],
+)
+def test_patch_student_cannot_block_active_account(monkeypatch, stored, body):
+    response, saved = _patch_student(monkeypatch, stored, body)
+
+    assert response.status_code == 400
+    assert saved["status"] == stored["status"]
+    assert "accessBlocked" not in saved

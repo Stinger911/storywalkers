@@ -162,6 +162,12 @@ components:
           format: date
           nullable: true
           description: "Access is checked on login; an expired activeTo auto-switches the student to disabled."
+        accessBlocked:
+          type: boolean
+          description: >-
+            Bars the account from activating itself through checkout or a payment
+            email. When omitted, set by a status change to disabled and cleared by
+            a change to active. Cannot be true for an active account.
       example:
         displayName: Alex Doe
         status: disabled

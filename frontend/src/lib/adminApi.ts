@@ -165,6 +165,7 @@ type Student = {
     track?: 'self_serve' | 'expert' | null
   } | null
   isFirstHundred?: boolean
+  accessBlocked?: boolean
   progressPercent?: number
   stepsDone?: number
   stepsTotal?: number
@@ -490,6 +491,7 @@ export async function updateStudent(
     boostyUserId?: string | null
     telegram?: string | null
     isFirstHundred?: boolean
+    accessBlocked?: boolean
   },
 ) {
   const response = await apiFetch(`/api/admin/students/${uid}`, {

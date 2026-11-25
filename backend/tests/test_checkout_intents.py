@@ -1,3 +1,4 @@
+import pytest
 from fastapi.testclient import TestClient
 from google.cloud import firestore
 
@@ -282,5 +283,28 @@ def test_checkout_intent_allowed_when_course_in_selected_courses(monkeypatch):
     response = client.post("/api/checkout/intents", json={"selectedCourses": ["c1"]})
 
     assert response.status_code == 201
+
+    app.dependency_overrides.clear()
+
+
+@pytest.mark.parametrize("is_first_hundred", [True, False])
+def test_checkout_intent_rejects_blocked_account(monkeypatch, is_first_hundred):
+    fake_db = FakeFirestore(
+        courses={"c1": {"priceUsdCents": 1200, "isActive": True}},
+        users={"u1": {"status": "disabled", "accessBlocked": True}},
+    )
+    monkeypatch.setattr(checkout, "get_firestore_client", lambda: fake_db)
+    app.dependency_overrides[auth_deps.get_current_user] = lambda: {
+        **_student("disabled"),
+        "isFirstHundred": is_first_hundred,
+    }
+    client = TestClient(app)
+
+    response = client.post("/api/checkout/intents", json={"selectedCourses": ["c1"]})
+
+    assert response.status_code == 403
+    assert response.json()["error"]["code"] == "access_blocked"
+    assert fake_db._payments == {}
+    assert fake_db._users["u1"] == {"status": "disabled", "accessBlocked": True}
 
     app.dependency_overrides.clear()

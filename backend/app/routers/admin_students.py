@@ -15,6 +15,7 @@ from app.auth.user_status import (
     DEFAULT_NEW_USER_STATUS,
     UserStatus,
     ensure_user_status_with_migration,
+    is_access_blocked,
     validate_user_status_or_400,
 )
 from app.core.errors import AppError, forbidden_error
@@ -48,6 +49,7 @@ class PatchStudentRequest(BaseModel):
     boostyUserId: str | None = None
     telegram: str | None = None
     isFirstHundred: bool | None = None
+    accessBlocked: bool | None = None
 
     model_config = {"extra": "forbid"}
 
@@ -591,6 +593,9 @@ async def create_student(
         "createdAt": created_at,
         "updatedAt": now,
     }
+    # Re-creating an account must not lift an earlier block.
+    if existing.exists and is_access_blocked(existing.to_dict()):
+        data["accessBlocked"] = True
     doc_ref.set(data)
     created = _doc_or_404(doc_ref)
     created["uid"] = created.pop("id")
@@ -685,6 +690,18 @@ async def update_student(
         updates["statusChangedBy"] = actor_uid
         if new_status == "active" and not active_to_provided:
             updates["activeTo"] = (date.today() + timedelta(days=30)).isoformat()
+    # An explicit accessBlocked wins; otherwise it follows the status change.
+    # Re-sending the current status (the profile form always does) changes nothing.
+    if updates.get("accessBlocked") is None:
+        updates.pop("accessBlocked", None)
+        if status_changed and new_status in {"disabled", "active"}:
+            updates["accessBlocked"] = new_status == "disabled"
+    elif updates["accessBlocked"] and (new_status or current_status) == "active":
+        raise AppError(
+            code="validation_error",
+            message="An active account cannot be blocked: set status to disabled",
+            status_code=400,
+        )
     updates["updatedAt"] = firestore.SERVER_TIMESTAMP
     doc_ref.update(updates)
     data = _doc_or_404(doc_ref)

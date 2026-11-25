@@ -3,6 +3,7 @@ from typing import Any
 
 from google.cloud import firestore
 
+from app.auth.user_status import is_access_blocked
 from app.core.config import get_settings
 from app.core.logging import get_logger
 from app.schemas.payments import PaymentStatus
@@ -195,6 +196,34 @@ def activate_by_code(
             _notify_admin_async(
                 fmt_email_activation_failed(
                     reason="user_not_disabled",
+                    payment_id=payment_id,
+                    activation_code=activation_code,
+                    user_uid=user_uid,
+                    payment_status=str(payment_status or ""),
+                    user_status=str(user_status or ""),
+                    evidence=evidence,
+                )
+            )
+        return False
+
+    if is_access_blocked(user_data):
+        # The money may well have arrived: keep the payment open for staff.
+        snap.reference.set(
+            {"emailEvidence": evidence, "updatedAt": firestore.SERVER_TIMESTAMP},
+            merge=True,
+        )
+        logger.warning(
+            "payment_activation_skipped_access_blocked",
+            extra={
+                "event": "payment_activation_skipped_access_blocked",
+                "paymentId": payment_id,
+                "uid": user_uid,
+            },
+        )
+        if settings.PAYMENT_REJECT_NOTIFY:
+            _notify_admin_async(
+                fmt_email_activation_failed(
+                    reason="user_access_blocked",
                     payment_id=payment_id,
                     activation_code=activation_code,
                     user_uid=user_uid,

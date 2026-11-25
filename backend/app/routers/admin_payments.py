@@ -390,9 +390,14 @@ async def activate_admin_payment(
         append_lessons_to_student_plan(db, user_uid, selected_lessons)
 
     tx = db.transaction()
+    # Activation by staff is a decision to grant access, so it lifts a block.
     tx.update(
         user_ref,
-        {"status": "active", "updatedAt": firestore.SERVER_TIMESTAMP},
+        {
+            "status": "active",
+            "accessBlocked": False,
+            "updatedAt": firestore.SERVER_TIMESTAMP,
+        },
     )
     tx.update(
         payment_ref,

@@ -361,6 +361,38 @@ describe("AdminStudentProfile", () => {
     });
   });
 
+  it("sends the access block only when it is changed", async () => {
+    getStudentMock.mockResolvedValue({
+      uid: "u1",
+      displayName: "Student One",
+      email: "s1@x.com",
+      role: "student",
+      status: "disabled",
+      activeTo: "2026-06-10",
+    });
+    getStudentPlanMock.mockRejectedValue(new Error("no plan"));
+    getStudentPlanStepsMock.mockResolvedValue({ items: [] });
+    listGoalsMock.mockResolvedValue({ items: [] });
+    updateStudentMock.mockResolvedValue({});
+
+    renderWithShell();
+
+    expect(await screen.findByText("Student One")).toBeInTheDocument();
+    fireEvent.click(
+      await screen.findByRole("checkbox", {
+        name: "Access blocked: no self-activation",
+      }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Save access" }));
+
+    await waitFor(() => {
+      expect(updateStudentMock).toHaveBeenCalledWith(
+        "u1",
+        expect.objectContaining({ status: "disabled", accessBlocked: true }),
+      );
+    });
+  });
+
   it("updates first hundred flag via access controls", async () => {
     getStudentMock.mockResolvedValue({
       uid: "u1",
