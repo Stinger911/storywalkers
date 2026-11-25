@@ -310,7 +310,7 @@ def test_plan_by_slug_returns_titles_without_content(monkeypatch):
     assert editing["lessonCount"] == 2
     assert [lesson["title"] for lesson in editing["lessons"]] == ["Timeline", "Export"]
     assert "content" not in editing["lessons"][0]
-    assert "priceUsdCents" not in editing
+    assert editing["priceUsdCents"] == 2000
 
 
 def test_plan_excludes_filming_courses_for_voiceover(monkeypatch):

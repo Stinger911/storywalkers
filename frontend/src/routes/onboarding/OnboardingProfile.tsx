@@ -1,18 +1,11 @@
 import { useNavigate } from "@solidjs/router";
-import { createEffect, createSignal, For } from "solid-js";
+import { createEffect, createSignal, Index, Show } from "solid-js";
 
-import { Button } from "../../components/ui/button";
 import { Icon } from "../../components/ui/icon";
-import { SectionCard } from "../../components/ui/section-card";
-import {
-  TextField,
-  TextFieldInput,
-  TextFieldLabel,
-  TextFieldTextArea,
-} from "../../components/ui/text-field";
 import { useAuth } from "../../lib/auth";
 import type { MeProfile, PatchMePayload } from "../../lib/auth";
 import { useI18n } from "../../lib/i18n";
+import { ButtonRow, StartButton, StartError, StartInput } from "../start/StartUi";
 import { OnboardingLayout } from "./OnboardingLayout";
 
 const PHONE_LIKE_RE = /^[0-9+\-\s()]+$/;
@@ -168,163 +161,156 @@ export function OnboardingProfile() {
       step="profile"
       title={t("student.onboarding.profile.title")}
     >
-      <SectionCard
-        title={t("student.onboarding.profile.cardTitle")}
-        class="rounded-[calc(var(--radius-lg)+8px)] border-0 bg-white shadow-card"
-      >
-        <div class="grid gap-5">
-          <p class="text-sm leading-7 text-muted-foreground">
-            {t("student.onboarding.profile.subtitle")}
-          </p>
-          <div class="grid gap-5 md:grid-cols-2">
-            <TextField class="grid gap-2">
-              <TextFieldLabel for="onb-first-name">
-                {t("student.onboarding.profile.firstNameLabel")}
-              </TextFieldLabel>
-              <TextFieldInput
-                id="onb-first-name"
-                value={firstName()}
-                onInput={(event) => setFirstName(event.currentTarget.value)}
-                placeholder={t("student.onboarding.profile.firstNamePlaceholder")}
-                disabled={saving()}
-                autocomplete="given-name"
-              />
-            </TextField>
-            <TextField class="grid gap-2">
-              <TextFieldLabel for="onb-last-name">
-                {t("student.onboarding.profile.lastNameLabel")}
-              </TextFieldLabel>
-              <TextFieldInput
-                id="onb-last-name"
-                value={lastName()}
-                onInput={(event) => setLastName(event.currentTarget.value)}
-                placeholder={t("student.onboarding.profile.lastNamePlaceholder")}
-                disabled={saving()}
-                autocomplete="family-name"
-              />
-            </TextField>
-          </div>
-          <TextField class="grid gap-2">
-            <TextFieldLabel for="onb-email">
-              {t("student.onboarding.profile.emailLabel")}
-            </TextFieldLabel>
-              <TextFieldInput
-                id="onb-email"
-                type="email"
-                value={auth.me()?.email || ""}
-                readOnly
-                disabled
-                autocomplete="email"
-            />
-          </TextField>
-          <TextField class="grid gap-2">
-            <TextFieldLabel for="onb-about">
-              {t("student.onboarding.profile.aboutMeLabel")}
-            </TextFieldLabel>
-            <TextFieldTextArea
-              id="onb-about"
-              class="min-h-[180px]"
-              value={aboutMe()}
-              onInput={(event) => setAboutMe(event.currentTarget.value)}
-              placeholder={t("student.onboarding.profile.aboutMePlaceholder")}
-              disabled={saving()}
-            />
-          </TextField>
-          <TextField class="grid gap-2">
-            <TextFieldLabel for="onb-telegram">
-              {t("student.onboarding.profile.telegramLabel")}{" "}
-              <span class="text-red-600" aria-hidden="true">
-                *
-              </span>
-            </TextFieldLabel>
-            <TextFieldInput
-              id="onb-telegram"
-              value={telegram()}
-              onInput={(event) => setTelegram(normalizeTelegramInput(event.currentTarget.value))}
-              placeholder={t("student.onboarding.profile.telegramPlaceholder")}
-              disabled={saving()}
-              required
-              aria-required="true"
-            />
-            <p class="text-xs text-muted-foreground">
-              {t("student.onboarding.profile.telegramHelp")}
-            </p>
-          </TextField>
-          <div class="grid gap-3">
-            <div class="flex items-center justify-between gap-3">
-              <div class="text-sm font-medium leading-none">
-                {t("student.onboarding.profile.socialLinksLabel")}
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setSocialLinks((current) => [...current, ""])}
-                disabled={saving()}
-              >
-                {t("student.onboarding.profile.addSocialLink")}
-              </Button>
-            </div>
-            <For each={socialLinks()}>
-              {(value, index) => (
-                <div class="flex items-center gap-2">
-                  <TextField class="flex-1">
-                    <TextFieldInput
-                      value={value}
-                      onInput={(event) =>
-                        setSocialLinks((current) =>
-                          current.map((item, itemIndex) =>
-                            itemIndex === index() ? event.currentTarget.value : item,
-                          ),
-                        )}
-                      placeholder={t("student.onboarding.profile.socialLinkPlaceholder")}
-                      disabled={saving()}
-                    />
-                  </TextField>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    onClick={() =>
-                      setSocialLinks((current) =>
-                        current.filter((_, itemIndex) => itemIndex !== index()),
-                      )}
-                    disabled={saving()}
-                    aria-label={t("student.onboarding.profile.removeSocialLink")}
-                  >
-                    <Icon name="close" class="text-[18px]" />
-                  </Button>
-                </div>
-              )}
-            </For>
-          </div>
-          <div class="flex flex-wrap gap-2">
-            <Button variant="outline" onClick={() => void navigate("/onboarding/goal")} disabled={saving()}>
-              {t("student.onboarding.profile.back")}
-            </Button>
-            <Button variant="outline" onClick={() => void save()} disabled={saving()}>
-              {saving()
-                ? t("student.onboarding.common.saving")
-                : t("student.onboarding.profile.submit")}
-            </Button>
-            <Button onClick={() => void next()} disabled={saving()}>
-              {saving()
-                ? t("student.onboarding.common.saving")
-                : t("student.onboarding.profile.next")}
-            </Button>
-          </div>
-          {fieldError() ? (
-            <div class="rounded-md border border-error bg-error/10 p-3 text-sm text-error-foreground">
-              {fieldError()}
-            </div>
-          ) : null}
-          {error() ? (
-            <div class="rounded-md border border-error bg-error/10 p-3 text-sm text-error-foreground">
-              {error()}
-            </div>
-          ) : null}
+      <p class="st-lead">{t("student.onboarding.profile.subtitle")}</p>
+
+      <div class="grid gap-4 sm:grid-cols-2">
+        <div class="space-y-2">
+          <label class="st-label" for="onb-first-name">
+            {t("student.onboarding.profile.firstNameLabel")}
+          </label>
+          <StartInput
+            id="onb-first-name"
+            value={firstName()}
+            onInput={(event) => setFirstName(event.currentTarget.value)}
+            placeholder={t("student.onboarding.profile.firstNamePlaceholder")}
+            disabled={saving()}
+            autocomplete="given-name"
+          />
         </div>
-      </SectionCard>
+        <div class="space-y-2">
+          <label class="st-label" for="onb-last-name">
+            {t("student.onboarding.profile.lastNameLabel")}
+          </label>
+          <StartInput
+            id="onb-last-name"
+            value={lastName()}
+            onInput={(event) => setLastName(event.currentTarget.value)}
+            placeholder={t("student.onboarding.profile.lastNamePlaceholder")}
+            disabled={saving()}
+            autocomplete="family-name"
+          />
+        </div>
+      </div>
+
+      <div class="space-y-2">
+        <label class="st-label" for="onb-email">
+          {t("student.onboarding.profile.emailLabel")}
+        </label>
+        <StartInput
+          id="onb-email"
+          type="email"
+          value={auth.me()?.email || ""}
+          readOnly
+          disabled
+          autocomplete="email"
+        />
+      </div>
+
+      <div class="space-y-2">
+        <label class="st-label" for="onb-about">
+          {t("student.onboarding.profile.aboutMeLabel")}
+        </label>
+        <textarea
+          id="onb-about"
+          class="st-field st-textarea"
+          value={aboutMe()}
+          onInput={(event) => setAboutMe(event.currentTarget.value)}
+          placeholder={t("student.onboarding.profile.aboutMePlaceholder")}
+          disabled={saving()}
+        />
+      </div>
+
+      <div class="space-y-2">
+        <label class="st-label" for="onb-telegram">
+          {t("student.onboarding.profile.telegramLabel")}{" "}
+          <span class="text-red-600" aria-hidden="true">
+            *
+          </span>
+        </label>
+        <StartInput
+          id="onb-telegram"
+          value={telegram()}
+          onInput={(event) => setTelegram(normalizeTelegramInput(event.currentTarget.value))}
+          placeholder={t("student.onboarding.profile.telegramPlaceholder")}
+          disabled={saving()}
+          required
+          aria-required="true"
+        />
+        <p class="text-xs text-[var(--st-muted)]">
+          {t("student.onboarding.profile.telegramHelp")}
+        </p>
+      </div>
+
+      <div class="space-y-3">
+        <div class="flex items-center justify-between gap-3">
+          <div class="st-label">{t("student.onboarding.profile.socialLinksLabel")}</div>
+          <StartButton
+            variant="small"
+            onClick={() => setSocialLinks((current) => [...current, ""])}
+            disabled={saving()}
+          >
+            {t("student.onboarding.profile.addSocialLink")}
+          </StartButton>
+        </div>
+        <Index each={socialLinks()}>
+          {(value, index) => (
+            <div class="flex items-center gap-2">
+              <StartInput
+                value={value()}
+                onInput={(event) =>
+                  setSocialLinks((current) =>
+                    current.map((item, itemIndex) =>
+                      itemIndex === index ? event.currentTarget.value : item,
+                    ),
+                  )
+                }
+                placeholder={t("student.onboarding.profile.socialLinkPlaceholder")}
+                disabled={saving()}
+              />
+              <button
+                type="button"
+                class="st-icon-btn"
+                onClick={() =>
+                  setSocialLinks((current) =>
+                    current.filter((_, itemIndex) => itemIndex !== index),
+                  )
+                }
+                disabled={saving()}
+                aria-label={t("student.onboarding.profile.removeSocialLink")}
+              >
+                <Icon name="close" class="text-[18px]" />
+              </button>
+            </div>
+          )}
+        </Index>
+      </div>
+
+      <Show when={fieldError()}>
+        <StartError>{fieldError()}</StartError>
+      </Show>
+      <Show when={error()}>
+        <StartError>{error()}</StartError>
+      </Show>
+
+      <ButtonRow>
+        <StartButton
+          variant="secondary"
+          onClick={() => void navigate("/onboarding/goal")}
+          disabled={saving()}
+        >
+          {t("student.onboarding.profile.back")}
+        </StartButton>
+        <StartButton variant="secondary" onClick={() => void save()} disabled={saving()}>
+          {saving()
+            ? t("student.onboarding.common.saving")
+            : t("student.onboarding.profile.submit")}
+        </StartButton>
+        <StartButton onClick={() => void next()} disabled={saving()}>
+          {saving()
+            ? t("student.onboarding.common.saving")
+            : t("student.onboarding.profile.next")}
+        </StartButton>
+      </ButtonRow>
     </OnboardingLayout>
   );
 }

@@ -1,8 +1,6 @@
 import { A } from "@solidjs/router";
 import { createMemo, createSignal, For, onMount, Show } from "solid-js";
 
-import { Button } from "../../components/ui/button";
-import { SectionCard } from "../../components/ui/section-card";
 import { useAuth } from "../../lib/auth";
 import {
   createCheckoutIntent,
@@ -21,6 +19,7 @@ import {
 } from "../../lib/coursesApi";
 import { getFxRates } from "../../lib/fxApi";
 import { useI18n } from "../../lib/i18n";
+import { StartButton } from "../start/StartUi";
 import { OnboardingLayout } from "./OnboardingLayout";
 
 const COMMUNITY_PRICE_RUB_CENTS = 200000;
@@ -215,6 +214,16 @@ export function OnboardingCheckout() {
     }
   };
 
+  const TrashIcon = () => (
+    <svg viewBox="0 0 24 24" class="size-4" fill="none" stroke="currentColor" stroke-width="1.6">
+      <path
+        d="M4 7h16M10 11v6M14 11v6M6 7l1 12a1 1 0 001 1h8a1 1 0 001-1l1-12M9 7V4h6v3"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      />
+    </svg>
+  );
+
   return (
     <OnboardingLayout
       step="checkout"
@@ -222,172 +231,182 @@ export function OnboardingCheckout() {
       subtitle={t("student.onboarding.checkout.subtitle")}
     >
       <Show when={isFirstHundred()}>
-        <SectionCard title={t("student.onboarding.checkout.firstHundredCardTitle")}>
-          <p class="text-sm leading-6 text-muted-foreground">
+        <div class="st-card st-card-fill space-y-2 px-8 py-6 text-center">
+          <h2 class="st-display text-lg">
+            {t("student.onboarding.checkout.firstHundredCardTitle")}
+          </h2>
+          <p class="text-xs leading-6">
             {t("student.onboarding.checkout.firstHundredCardBody")}
           </p>
-        </SectionCard>
+        </div>
       </Show>
 
-      <SectionCard title={t("student.onboarding.checkout.cardTitle")}>
-        <div class="space-y-4 text-sm">
-          <div>
-            <span class="text-muted-foreground">
-              {t("student.onboarding.checkout.goalLabel")}
-            </span>{" "}
-            <span class="font-medium">{goalSummary()}</span>
-          </div>
-          <div>
-            <div class="text-muted-foreground">
-              {t("student.onboarding.checkout.coursesLabel")}
-            </div>
-            <Show
-              when={hasSelection()}
-              fallback={
-                <div class="mt-2 rounded-md border border-warning/40 bg-warning/10 p-3 text-warning-foreground">
-                  <div>{t("student.onboarding.checkout.coursesEmpty")}</div>
-                  <div class="mt-3">
-                    <Button as={A} href={backToPathHref()} variant="outline">
-                      {t("student.onboarding.checkout.backToCourses")}
-                    </Button>
-                  </div>
-                </div>
-              }
-            >
-              <div class="mt-2 space-y-2">
-                <For each={selectedCourseItems()}>
-                  {(course) => (
-                    <div class="flex items-center justify-between gap-3 rounded-md border border-border/70 bg-card px-3 py-2">
-                      <span>{course.title}</span>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => void removeCourse(course.id)}
-                        disabled={saving()}
-                      >
-                        {t("student.onboarding.checkout.removeCourse")}
-                      </Button>
-                    </div>
-                  )}
-                </For>
-                <Show when={selectedLessonItems().length > 0}>
-                  <div class="pt-1 text-muted-foreground">
-                    {t("student.onboarding.checkout.lessonsLabel")}
-                  </div>
-                  <For each={selectedLessonItems()}>
-                    {(item) => (
-                      <div class="flex items-center justify-between gap-3 rounded-md border border-border/70 bg-card px-3 py-2">
-                        <span class="min-w-0 flex-1 truncate">
-                          {item.courseTitle} · {item.lessonTitle}
-                        </span>
-                        <span class="flex shrink-0 items-center gap-2">
-                          <Show when={item.priceCents !== null && !isFirstHundred()}>
-                            <span class="font-medium">
-                              {formatCents(item.priceCents ?? 0, preferredCurrency())}
-                            </span>
-                          </Show>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => void removeLesson(item.courseId, item.lessonId)}
-                            disabled={saving()}
-                          >
-                            {t("student.onboarding.checkout.removeCourse")}
-                          </Button>
-                        </span>
-                      </div>
-                    )}
-                  </For>
-                </Show>
-              </div>
-            </Show>
-            {/* The community line stays visible even with no courses left:
-                it is mandatory and always part of the total. */}
-            <Show when={communitySelected()}>
-              <div class="mt-2 flex items-center justify-between rounded-md border border-border/70 bg-card px-3 py-2">
-                <span>{t("student.onboarding.checkout.communityLabel")}</span>
-                <span class="font-medium">
-                  {formatCents(communityPriceCents(), preferredCurrency())}
-                </span>
-              </div>
-            </Show>
-          </div>
-          <div class="flex items-center justify-between rounded-xl border border-border/70 bg-muted/30 px-4 py-3">
-            <span class="text-muted-foreground">
-              {t("student.onboarding.checkout.totalLabel")}
-            </span>
-            <span class="text-lg font-semibold">
-              {formatCents(totalPrice(), preferredCurrency())}
-            </span>
-          </div>
-          <Show when={error()}>
-            <div class="rounded-md border border-error bg-error/10 p-3 text-sm text-error-foreground">
-              {error()}
-            </div>
-          </Show>
-          <Show when={checkout()}>
-            {(result) => (
-              <div class="space-y-3 rounded-xl border border-border/70 bg-card p-4">
-                <div>
-                  <div class="text-xs font-semibold uppercase text-muted-foreground">
-                    {t("student.courses.activationCode")}
-                  </div>
-                  <div class="mt-2 font-mono text-lg">{result().activationCode}</div>
-                </div>
-                <div class="text-muted-foreground">{result().instructionsText}</div>
-                <div class="text-muted-foreground">
-                  {t("student.courses.amount", {
-                    amount: formatCents(result().amount, result().currency),
-                  })}
-                </div>
-              </div>
-            )}
-          </Show>
-          <div class="flex flex-wrap gap-2">
-            <Button as={A} href={backToPathHref()} variant="outline">
-              {t("student.onboarding.profile.back")}
-            </Button>
-            <Show when={hasSelection() && !checkout()}>
-              <Button onClick={() => void startCheckout()} disabled={saving()}>
-                {saving()
-                  ? t("student.onboarding.common.saving")
-                  : t("student.courses.createPaymentInstructions")}
-              </Button>
-            </Show>
-            <Show when={checkout() && (checkout()?.amount ?? 0) > 0}>
-              <Button
-                as="a"
-                href={checkout()?.redirectUrl || BOOSTY_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                {t("student.onboarding.checkout.boostyCta")}
-              </Button>
-            </Show>
-          </div>
+      <section class="space-y-5 rounded-md border border-[var(--st-line)] bg-white p-6">
+        <h2 class="st-display text-sm uppercase tracking-[0.12em]">
+          {t("student.onboarding.checkout.cardTitle")}
+        </h2>
+        <div class="text-sm">
+          <span class="text-[var(--st-muted)]">
+            {t("student.onboarding.checkout.goalLabel")}
+          </span>{" "}
+          <span class="font-bold">{goalSummary()}</span>
         </div>
-      </SectionCard>
 
-      <SectionCard title={t("student.onboarding.checkout.afterPaymentTitle")}>
-        <div class="space-y-3 text-sm">
-          <p class="text-muted-foreground">
-            {isFirstHundred()
-              ? t("student.onboarding.checkout.afterPaymentFree")
-              : t("student.onboarding.checkout.afterPaymentManual")}
-          </p>
-          <p class="text-muted-foreground">
-            {t("student.onboarding.checkout.afterPaymentContactLabel")} {" "}
+        <div class="space-y-2 text-sm">
+          <div class="text-[var(--st-muted)]">
+            {t("student.onboarding.checkout.coursesLabel")}
+          </div>
+          <Show
+            when={hasSelection()}
+            fallback={
+              <div class="st-notice space-y-3">
+                <div>{t("student.onboarding.checkout.coursesEmpty")}</div>
+                <A href={backToPathHref()} class="st-btn st-btn-secondary">
+                  {t("student.onboarding.checkout.backToCourses")}
+                </A>
+              </div>
+            }
+          >
+            <For each={selectedCourseItems()}>
+              {(course) => (
+                <div class="st-row">
+                  <span class="min-w-0 flex-1 font-bold">{course.title}</span>
+                  <button
+                    type="button"
+                    class="st-icon-btn"
+                    aria-label={t("student.onboarding.checkout.removeCourse")}
+                    onClick={() => void removeCourse(course.id)}
+                    disabled={saving()}
+                  >
+                    <TrashIcon />
+                  </button>
+                </div>
+              )}
+            </For>
+            <Show when={selectedLessonItems().length > 0}>
+              <div class="pt-1 text-[var(--st-muted)]">
+                {t("student.onboarding.checkout.lessonsLabel")}
+              </div>
+              <For each={selectedLessonItems()}>
+                {(item) => (
+                  <div class="st-row">
+                    <span class="min-w-0 flex-1 truncate">
+                      {item.courseTitle} · {item.lessonTitle}
+                    </span>
+                    <Show when={item.priceCents !== null && !isFirstHundred()}>
+                      <span class="flex-none font-bold">
+                        {formatCents(item.priceCents ?? 0, preferredCurrency())}
+                      </span>
+                    </Show>
+                    <button
+                      type="button"
+                      class="st-icon-btn"
+                      aria-label={t("student.onboarding.checkout.removeCourse")}
+                      onClick={() => void removeLesson(item.courseId, item.lessonId)}
+                      disabled={saving()}
+                    >
+                      <TrashIcon />
+                    </button>
+                  </div>
+                )}
+              </For>
+            </Show>
+          </Show>
+          {/* The community line stays visible even with no courses left:
+              it is mandatory and always part of the total. */}
+          <Show when={communitySelected()}>
+            <div class="st-row">
+              <span class="min-w-0 flex-1 font-bold">
+                {t("student.onboarding.checkout.communityLabel")}
+              </span>
+              <span class="flex-none font-bold">
+                {formatCents(communityPriceCents(), preferredCurrency())}
+              </span>
+            </div>
+          </Show>
+        </div>
+
+        <div class="flex items-center justify-between rounded-md bg-[var(--st-red-soft)] px-5 py-4">
+          <span class="text-xs uppercase tracking-[0.1em]">
+            {t("student.onboarding.checkout.totalLabel")}
+          </span>
+          <span class="st-display text-lg text-[var(--st-red)]">
+            {formatCents(totalPrice(), preferredCurrency())}
+          </span>
+        </div>
+
+        <Show when={error()}>
+          <div
+            role="alert"
+            class="rounded-md border border-[var(--st-red-border)] bg-[var(--st-red-soft)] px-4 py-3 text-center text-xs text-[var(--st-red)]"
+          >
+            {error()}
+          </div>
+        </Show>
+        <Show when={checkout()}>
+          {(result) => (
+            <div class="space-y-3 rounded-md border border-[var(--st-line)] bg-[var(--st-surface)] p-5 text-sm">
+              <div>
+                <div class="text-[0.65rem] font-bold uppercase tracking-[0.1em] text-[var(--st-muted)]">
+                  {t("student.courses.activationCode")}
+                </div>
+                <div class="mt-2 font-mono text-lg">{result().activationCode}</div>
+              </div>
+              <div>{result().instructionsText}</div>
+              <div class="text-[var(--st-muted)]">
+                {t("student.courses.amount", {
+                  amount: formatCents(result().amount, result().currency),
+                })}
+              </div>
+            </div>
+          )}
+        </Show>
+
+        <div class="flex flex-wrap items-center justify-center gap-4">
+          <A href={backToPathHref()} class="st-btn st-btn-secondary">
+            {t("student.onboarding.profile.back")}
+          </A>
+          <Show when={hasSelection() && !checkout()}>
+            <StartButton onClick={() => void startCheckout()} disabled={saving()}>
+              {saving()
+                ? t("student.onboarding.common.saving")
+                : t("student.courses.createPaymentInstructions")}
+            </StartButton>
+          </Show>
+          <Show when={checkout() && (checkout()?.amount ?? 0) > 0}>
             <a
-              class="font-medium text-primary underline-offset-4 hover:underline"
-              href={SUPPORT_TELEGRAM_URL}
+              class="st-btn st-btn-primary"
+              href={checkout()?.redirectUrl || BOOSTY_URL}
               target="_blank"
               rel="noopener noreferrer"
             >
-              {t("common.contactSupport")}
+              {t("student.onboarding.checkout.boostyCta")}
             </a>
-          </p>
+          </Show>
         </div>
-      </SectionCard>
+      </section>
+
+      <section class="space-y-3 rounded-md border border-[var(--st-line)] bg-[var(--st-surface)] p-6 text-sm">
+        <h2 class="st-display text-sm uppercase tracking-[0.12em]">
+          {t("student.onboarding.checkout.afterPaymentTitle")}
+        </h2>
+        <p>
+          {isFirstHundred()
+            ? t("student.onboarding.checkout.afterPaymentFree")
+            : t("student.onboarding.checkout.afterPaymentManual")}
+        </p>
+        <p>
+          {t("student.onboarding.checkout.afterPaymentContactLabel")}{" "}
+          <a
+            class="font-bold text-[var(--st-red)] underline-offset-4 hover:underline"
+            href={SUPPORT_TELEGRAM_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {t("common.contactSupport")}
+          </a>
+        </p>
+      </section>
     </OnboardingLayout>
   );
 }

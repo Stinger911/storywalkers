@@ -91,6 +91,25 @@ describe("syncDraftToMe", () => {
     expect(readDraft().hasChannel).toBeNull();
   });
 
+  it("sends the courses and lessons picked on the plan step", async () => {
+    seedSelfServeDraft();
+    writeDraft({
+      selectedCourses: ["c1", "unknown"],
+      selectedLessons: [
+        { courseId: "c1", lessonId: "l-dup" },
+        { courseId: "c2", lessonId: "l2" },
+        { courseId: "zzz", lessonId: "l9" },
+      ],
+    });
+
+    expect(await syncDraftToMe()).toBe("synced");
+
+    const body = patchedBody();
+    expect(body.selectedCourses).toEqual(["c1"]);
+    expect(body.selectedLessons).toEqual([{ courseId: "c2", lessonId: "l2" }]);
+    expect(body.subscriptionSelected).toBe(true);
+  });
+
   it("preselects no courses for the expert track", async () => {
     seedExpertDraft();
 

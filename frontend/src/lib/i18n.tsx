@@ -10,8 +10,16 @@ import * as i18n from "@solid-primitives/i18n";
 type StartSection = {
   eyebrow: string;
   stepperTitle: string;
-  steps: { channel: string; topic: string; goal: string; plan: string };
+  steps: {
+    channel: string;
+    topic: string;
+    goal: string;
+    plan: string;
+    payment: string;
+  };
   stepPlanExpert: string;
+  quote: { text: string; author: string };
+  summary: { title: string };
   expert: {
     title: string;
     body: string;
@@ -101,6 +109,19 @@ type StartSection = {
     expertTitle: string;
     expertBody: string;
     lessonsSuffix: string;
+    goalLabel: string;
+    goalValue: string;
+    showPath: string;
+    hidePath: string;
+    tabCourses: string;
+    tabPath: string;
+    wholeCourse: string;
+    individualLessons: string;
+    perLesson: string;
+    total: string;
+    selectAtLeastOne: string;
+    pathEmpty: string;
+    selectedLessonsCount: string;
     register: string;
     back: string;
     loadError: string;
@@ -603,8 +624,14 @@ const dictionaries: Record<Locale, RawDictionary> = {
         topic: "Topic",
         goal: "Goal",
         plan: "Plan",
+        payment: "Payment",
       },
       stepPlanExpert: "Expert",
+      quote: {
+        text: "Any great goal can be reached if you break it into clear steps.",
+        author: "Henry Ford",
+      },
+      summary: { title: "Channel information" },
       expert: {
         title: "An expert is building your path",
         body: "Your channel already has history, so your learning path is built together with a live expert. We have your answers - our expert will contact you in Telegram to agree on the next steps.",
@@ -707,6 +734,19 @@ const dictionaries: Record<Locale, RawDictionary> = {
         expertBody:
           "Your channel already has history, so your learning path should be built together with a live expert. Sign up and our expert will contact you to help.",
         lessonsSuffix: "lessons",
+        goalLabel: "Your goal:",
+        goalValue: "Become a YouTube blogger",
+        showPath: "Show path",
+        hidePath: "Hide path",
+        tabCourses: "Courses",
+        tabPath: "Selected path",
+        wholeCourse: "Whole course",
+        individualLessons: "Pick individual lessons",
+        perLesson: "per lesson",
+        total: "Total",
+        selectAtLeastOne: "Pick at least one course or lesson to continue.",
+        pathEmpty: "Nothing selected yet.",
+        selectedLessonsCount: "Selected: {{ count }}",
         register: "Sign up",
         back: "Back",
         loadError: "Could not load the path.",
@@ -1243,8 +1283,14 @@ const dictionaries: Record<Locale, RawDictionary> = {
         topic: "Тематика",
         goal: "Цель",
         plan: "План",
+        payment: "Оплата",
       },
       stepPlanExpert: "Эксперт",
+      quote: {
+        text: "Любую великую цель можно достичь, если разбить её на понятные шаги.",
+        author: "Генри Форд",
+      },
+      summary: { title: "Информация о канале" },
       expert: {
         title: "Эксперт составляет ваш путь",
         body: "У вашего канала уже есть история, поэтому план обучения составляется с живым представителем. Ваши ответы у нас — эксперт свяжется с вами в Telegram, чтобы обсудить следующие шаги.",
@@ -1350,6 +1396,19 @@ const dictionaries: Record<Locale, RawDictionary> = {
         expertBody:
           "У вашего канала уже есть история, поэтому план обучения должен составляться с живым представителем. Зарегистрируйтесь у нас на сайте, и наш эксперт свяжется с вами, чтобы помочь.",
         lessonsSuffix: "уроков",
+        goalLabel: "Ваша цель:",
+        goalValue: "Стать блоггером на Ютюб",
+        showPath: "Показать путь",
+        hidePath: "Скрыть путь",
+        tabCourses: "Курсы",
+        tabPath: "Выбранный путь",
+        wholeCourse: "Весь курс",
+        individualLessons: "Выбрать отдельные уроки",
+        perLesson: "за урок",
+        total: "Итого",
+        selectAtLeastOne: "Выберите хотя бы один курс или урок, чтобы продолжить.",
+        pathEmpty: "Пока ничего не выбрано.",
+        selectedLessonsCount: "Выбрано: {{ count }}",
         register: "Зарегистрироваться",
         back: "Назад",
         loadError: "Не удалось загрузить план.",

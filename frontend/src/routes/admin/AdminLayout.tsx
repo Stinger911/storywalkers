@@ -62,7 +62,7 @@ export function AdminLayout(props: AdminLayoutProps) {
 
   return (
     <RequireAuth role="staff">
-      <div class="admin-shell min-h-screen bg-background text-foreground [font-family:Manrope,'Space_Grotesk',system-ui,sans-serif]">
+      <div class="admin-shell min-h-screen bg-background text-foreground [font-family:'Manrope_Variable','Space_Grotesk_Variable',system-ui,sans-serif]">
         <AppShell
           title="StoryWalkers Club"
           roleLabel="Admin Console"

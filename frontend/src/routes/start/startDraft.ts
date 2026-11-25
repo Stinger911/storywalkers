@@ -2,6 +2,7 @@
 // code in lib/referral.ts. After login the draft is sent once to PATCH /api/me
 // and cleared (stage 4 of the plan).
 
+import type { YoutubeOnboarding } from "../../lib/auth";
 import type { ChannelStats } from "../../lib/publicOnboardingApi";
 import {
   excludedTagsForFormat,
@@ -31,8 +32,14 @@ export type StartDraft = {
   purpose: Purpose | null;
   monetizationEnabled: boolean | null;
   targetMilestone: Milestone | null;
+  /** Whole courses picked on the plan step (self-serve track). */
+  selectedCourses: string[];
+  /** Single lessons picked on the plan step. */
+  selectedLessons: DraftLesson[];
   updatedAt: number;
 };
+
+export type DraftLesson = { courseId: string; lessonId: string };
 
 export const DEFAULT_GOAL_SLUG = "youtube";
 
@@ -47,6 +54,8 @@ export function emptyDraft(): StartDraft {
     purpose: null,
     monetizationEnabled: null,
     targetMilestone: null,
+    selectedCourses: [],
+    selectedLessons: [],
     updatedAt: Date.now(),
   };
 }
@@ -207,5 +216,34 @@ export function toYoutubeOnboardingPayload(
     targetMilestone: milestone,
     track: trackForChannel(false),
     excludedTags: excludedTagsForFormat(draft.format),
+  };
+}
+
+/** Read-only draft rebuilt from the saved profile, for the summary panel after registration. */
+export function draftFromYoutubeOnboarding(
+  data: YoutubeOnboarding | null | undefined,
+): StartDraft {
+  const base = emptyDraft();
+  if (!data) return base;
+  const channel = data.channel;
+  return {
+    ...base,
+    hasChannel: data.hasChannel,
+    channel: channel
+      ? {
+          channelId: channel.channelId ?? null,
+          title: channel.title ?? null,
+          url: channel.url ?? null,
+          subscriberCount: channel.subscriberCount ?? null,
+          hiddenSubscriberCount: channel.hiddenSubscriberCount === true,
+          videoCount: channel.videoCount ?? null,
+          viewCount: channel.viewCount ?? null,
+        }
+      : null,
+    topic: (data.topic as StartDraft["topic"]) ?? null,
+    format: (data.format as StartDraft["format"]) ?? null,
+    purpose: (data.purpose as StartDraft["purpose"]) ?? null,
+    monetizationEnabled: data.monetizationEnabled ?? null,
+    targetMilestone: (data.targetMilestone as StartDraft["targetMilestone"]) ?? null,
   };
 }

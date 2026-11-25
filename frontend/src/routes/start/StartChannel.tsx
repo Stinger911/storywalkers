@@ -1,13 +1,6 @@
 import { useNavigate } from "@solidjs/router";
 import { createSignal, Show } from "solid-js";
 
-import { Button } from "../../components/ui/button";
-import { SectionCard } from "../../components/ui/section-card";
-import {
-  TextField,
-  TextFieldInput,
-  TextFieldLabel,
-} from "../../components/ui/text-field";
 import { useI18n } from "../../lib/i18n";
 import {
   lookupYoutubeChannel,
@@ -15,6 +8,13 @@ import {
   type ChannelStats,
 } from "../../lib/publicOnboardingApi";
 import { StartLayout } from "./StartLayout";
+import {
+  ButtonRow,
+  StartButton,
+  StartError,
+  StartInput,
+  StartOption,
+} from "./StartUi";
 import { readDraft, startPath, writeDraft, type StartDraft } from "./startDraft";
 
 const ERROR_KEYS: Record<string, string> = {
@@ -130,109 +130,80 @@ export function StartChannel() {
     <StartLayout
       step="channel"
       draft={draft()}
-      title={t("start.channel.title")}
+      title={t("start.channel.question")}
       subtitle={t("start.channel.subtitle")}
     >
-      <SectionCard title={t("start.channel.question")}>
-        <div class="space-y-5">
-          <div class="grid gap-3 sm:grid-cols-2">
-            <button
-              type="button"
-              aria-pressed={hasChannel() === false}
-              class={`rounded-xl border p-4 text-left transition-colors ${
-                hasChannel() === false
-                  ? "border-primary bg-primary/5"
-                  : "border-border/70 bg-card hover:border-primary/50"
-              }`}
-              onClick={() => pick(false)}
+      <div class="grid gap-4 sm:grid-cols-2">
+        <StartOption selected={hasChannel() === false} onClick={() => pick(false)}>
+          {t("start.channel.answerNo")}
+        </StartOption>
+        <StartOption selected={hasChannel() === true} onClick={() => pick(true)}>
+          {t("start.channel.answerYes")}
+        </StartOption>
+      </div>
+
+      <Show when={hasChannel() === true}>
+        <div class="st-enter space-y-4">
+          <p class="st-lead">{t("start.channel.linkHint")}</p>
+          <label class="sr-only" for="start-channel-url">
+            {t("start.channel.linkLabel")}
+          </label>
+          <StartInput
+            id="start-channel-url"
+            value={url()}
+            placeholder={t("start.channel.linkPlaceholder")}
+            aria-invalid={error() && !manualOpen() ? "true" : undefined}
+            onInput={(event) => setUrl(event.currentTarget.value)}
+            disabled={checking()}
+          />
+          <div class="flex justify-center">
+            <StartButton
+              variant="small"
+              onClick={() => void check()}
+              disabled={checking() || !url().trim()}
             >
-              <span class="font-medium">{t("start.channel.answerNo")}</span>
-            </button>
-            <button
-              type="button"
-              aria-pressed={hasChannel() === true}
-              class={`rounded-xl border p-4 text-left transition-colors ${
-                hasChannel() === true
-                  ? "border-primary bg-primary/5"
-                  : "border-border/70 bg-card hover:border-primary/50"
-              }`}
-              onClick={() => pick(true)}
-            >
-              <span class="font-medium">{t("start.channel.answerYes")}</span>
-            </button>
+              {checking() ? t("start.channel.checking") : t("start.channel.check")}
+            </StartButton>
           </div>
 
-          <Show when={hasChannel() === true}>
-            <div class="space-y-4 rounded-xl border border-border/70 bg-muted/20 p-4">
-              <p class="text-sm leading-6 text-muted-foreground">
-                {t("start.channel.linkHint")}
-              </p>
-              <TextField>
-                <TextFieldLabel for="start-channel-url">
-                  {t("start.channel.linkLabel")}
-                </TextFieldLabel>
-                <TextFieldInput
-                  id="start-channel-url"
-                  value={url()}
-                  placeholder={t("start.channel.linkPlaceholder")}
-                  onInput={(event) => setUrl(event.currentTarget.value)}
-                  disabled={checking()}
-                />
-              </TextField>
-              <Button
-                variant="outline"
-                onClick={() => void check()}
-                disabled={checking() || !url().trim()}
-              >
-                {checking() ? t("start.channel.checking") : t("start.channel.check")}
-              </Button>
-
-              <Show when={channel()?.title}>
-                <div class="rounded-md border border-border/70 bg-card px-3 py-2 text-sm">
-                  <span class="text-muted-foreground">{t("start.channel.found")}: </span>
-                  <span class="font-medium">{channel()?.title}</span>
-                </div>
-              </Show>
-
-              <Show when={manualOpen() || needsSubscribers()}>
-                <div class="space-y-3 rounded-md border border-border/70 bg-card p-3">
-                  <div class="text-sm font-semibold">
-                    {t("start.channel.manualTitle")}
-                  </div>
-                  <p class="text-sm text-muted-foreground">
-                    {t("start.channel.manualHint")}
-                  </p>
-                  <TextField>
-                    <TextFieldLabel for="start-manual-subscribers">
-                      {t("start.channel.manualLabel")}
-                    </TextFieldLabel>
-                    <TextFieldInput
-                      id="start-manual-subscribers"
-                      type="number"
-                      min="0"
-                      value={manualCount()}
-                      onInput={(event) => setManualCount(event.currentTarget.value)}
-                    />
-                  </TextField>
-                  <Button variant="outline" onClick={applyManualCount}>
-                    {t("start.channel.manualApply")}
-                  </Button>
-                </div>
-              </Show>
-            </div>
+          <Show when={channel()?.title}>
+            <p class="st-lead">
+              <span class="text-[var(--st-muted)]">{t("start.channel.found")}: </span>
+              <span class="font-bold">{channel()?.title}</span>
+            </p>
           </Show>
 
-          <Show when={error()}>
-            <div class="rounded-md border border-error bg-error/10 p-3 text-sm text-error-foreground">
-              {error()}
+          <Show when={manualOpen() || needsSubscribers()}>
+            <div class="space-y-3 rounded-md border border-[var(--st-line)] bg-[var(--st-surface)] p-4">
+              <div class="text-sm font-bold">{t("start.channel.manualTitle")}</div>
+              <p class="text-xs leading-5">{t("start.channel.manualHint")}</p>
+              <label class="text-xs font-semibold" for="start-manual-subscribers">
+                {t("start.channel.manualLabel")}
+              </label>
+              <StartInput
+                id="start-manual-subscribers"
+                type="number"
+                min="0"
+                value={manualCount()}
+                onInput={(event) => setManualCount(event.currentTarget.value)}
+              />
+              <StartButton variant="small" onClick={applyManualCount}>
+                {t("start.channel.manualApply")}
+              </StartButton>
             </div>
           </Show>
-
-          <Button onClick={next} disabled={hasChannel() === null || checking()}>
-            {t("start.channel.next")}
-          </Button>
         </div>
-      </SectionCard>
+      </Show>
+
+      <Show when={error()}>
+        <StartError>{error()}</StartError>
+      </Show>
+
+      <ButtonRow>
+        <StartButton onClick={next} disabled={hasChannel() === null || checking()}>
+          {t("start.channel.next")}
+        </StartButton>
+      </ButtonRow>
     </StartLayout>
   );
 }

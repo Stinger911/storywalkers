@@ -202,6 +202,7 @@ async def get_onboarding_plan(
                 "description": course.description,
                 "tags": course.tags,
                 "lessonCount": len(lessons),
+                "priceUsdCents": course.priceUsdCents,
                 "lessons": [
                     {"id": lesson.id, "title": lesson.title, "order": lesson.order}
                     for lesson in lessons

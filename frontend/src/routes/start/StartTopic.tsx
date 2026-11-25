@@ -1,10 +1,16 @@
 import { useNavigate } from "@solidjs/router";
 import { createSignal, For, Show } from "solid-js";
 
-import { Button } from "../../components/ui/button";
-import { SectionCard } from "../../components/ui/section-card";
 import { useI18n } from "../../lib/i18n";
 import { StartLayout } from "./StartLayout";
+import {
+  ButtonRow,
+  StartButton,
+  StartError,
+  StartOption,
+  StartSelect,
+  type StartSelectOption,
+} from "./StartUi";
 import {
   canAccessStep,
   readDraft,
@@ -19,6 +25,28 @@ import {
   type TopicSlug,
   type VideoFormat,
 } from "./startRules";
+
+// Emoji stand in for the topic icons from the Figma "иконки" frame until the
+// SVGs are exported to public/start/icons/<slug>.svg.
+const TOPIC_ICONS: Record<TopicSlug, string> = {
+  movies_anime: "🎬",
+  games: "🎮",
+  education: "🎓",
+  business: "💼",
+  tech_ai: "🤖",
+  lifestyle: "🌿",
+  beauty: "💄",
+  health: "🏋️",
+  food: "🍳",
+  travel: "✈️",
+  family: "👨‍👩‍👧",
+  psychology: "🧠",
+  news: "📰",
+  music: "🎵",
+  sport: "⚽",
+  humor: "😄",
+  true_crime: "🔍",
+};
 
 export function StartTopic() {
   const { t } = useI18n();
@@ -58,97 +86,74 @@ export function StartTopic() {
     navigate(startPath("goal"));
   };
 
+  const topicOptions = (): StartSelectOption[] =>
+    TOPICS.map((topic) => ({
+      value: topic,
+      label: t(`start.topics.${topic}`),
+      icon: <span aria-hidden="true">{TOPIC_ICONS[topic]}</span>,
+    }));
+
   return (
     <StartLayout
       step="topic"
       draft={draft()}
       title={t("start.topic.title")}
-      subtitle={t("start.topic.subtitle")}
+      subtitle={t("start.topic.question")}
     >
-      <SectionCard title={t("start.topic.question")} description={t("start.topic.hint")}>
-        <div class="flex flex-wrap gap-2">
-          <For each={TOPICS}>
-            {(topic) => {
-              const selected = () => draft().topic === topic;
-              return (
-                <button
-                  type="button"
-                  aria-pressed={selected()}
-                  class={`rounded-full border px-4 py-2 text-sm transition-colors ${
-                    selected()
-                      ? "border-primary bg-primary/10 font-medium text-primary"
-                      : "border-border/70 bg-card hover:border-primary/50"
-                  }`}
-                  onClick={() => pickTopic(topic)}
-                >
-                  {t(`start.topics.${topic}`)}
-                </button>
-              );
-            }}
-          </For>
+      <StartSelect
+        options={topicOptions()}
+        value={draft().topic}
+        placeholder={t("start.topic.hint")}
+        ariaLabel={t("start.topic.title")}
+        onChange={(value) => pickTopic(value as TopicSlug)}
+      />
+
+      <p class="st-lead">{t("start.topic.formatQuestion")}</p>
+      <div class="grid gap-4 sm:grid-cols-3">
+        <For each={VIDEO_FORMATS}>
+          {(format) => {
+            const disabled = () => Boolean(lockedFormat()) && lockedFormat() !== format;
+            return (
+              <StartOption
+                selected={draft().format === format}
+                disabled={disabled()}
+                onClick={() => pickFormat(format)}
+              >
+                {t(`start.formats.${format}`)}
+              </StartOption>
+            );
+          }}
+        </For>
+      </div>
+
+      <Show when={lockedFormat()}>
+        <p class="st-lead text-[var(--st-muted)]">{t("start.topic.lifestyleLocked")}</p>
+      </Show>
+
+      <Show when={voiceoverOpen()}>
+        <div
+          role="dialog"
+          aria-label={t("start.topic.voiceoverTitle")}
+          class="st-enter space-y-3 rounded-md border border-[var(--st-red-border)] bg-[var(--st-red-soft)] p-4 text-center"
+        >
+          <div class="text-sm font-bold">{t("start.topic.voiceoverTitle")}</div>
+          <p class="text-xs leading-5">{t("start.topic.voiceoverBody")}</p>
+          <StartButton variant="small" onClick={() => setVoiceoverOpen(false)}>
+            {t("start.topic.voiceoverOk")}
+          </StartButton>
         </div>
-      </SectionCard>
+      </Show>
 
-      <SectionCard title={t("start.topic.formatQuestion")}>
-        <div class="space-y-3">
-          <div class="flex flex-wrap gap-2">
-            <For each={VIDEO_FORMATS}>
-              {(format) => {
-                const selected = () => draft().format === format;
-                const disabled = () => Boolean(lockedFormat()) && lockedFormat() !== format;
-                return (
-                  <button
-                    type="button"
-                    aria-pressed={selected()}
-                    disabled={disabled()}
-                    class={`rounded-full border px-4 py-2 text-sm transition-colors ${
-                      selected()
-                        ? "border-primary bg-primary/10 font-medium text-primary"
-                        : "border-border/70 bg-card hover:border-primary/50"
-                    } ${disabled() ? "cursor-not-allowed opacity-50" : ""}`}
-                    onClick={() => pickFormat(format)}
-                  >
-                    {t(`start.formats.${format}`)}
-                  </button>
-                );
-              }}
-            </For>
-          </div>
+      <Show when={error()}>
+        <StartError>{error()}</StartError>
+      </Show>
 
-          <Show when={lockedFormat()}>
-            <p class="text-sm text-muted-foreground">{t("start.topic.lifestyleLocked")}</p>
-          </Show>
-
-          <Show when={voiceoverOpen()}>
-            <div
-              role="dialog"
-              aria-label={t("start.topic.voiceoverTitle")}
-              class="space-y-3 rounded-xl border border-primary/40 bg-primary/5 p-4"
-            >
-              <div class="text-sm font-semibold">{t("start.topic.voiceoverTitle")}</div>
-              <p class="text-sm leading-6 text-muted-foreground">
-                {t("start.topic.voiceoverBody")}
-              </p>
-              <Button variant="outline" onClick={() => setVoiceoverOpen(false)}>
-                {t("start.topic.voiceoverOk")}
-              </Button>
-            </div>
-          </Show>
-
-          <Show when={error()}>
-            <div class="rounded-md border border-error bg-error/10 p-3 text-sm text-error-foreground">
-              {error()}
-            </div>
-          </Show>
-
-          <div class="flex flex-wrap gap-2">
-            <Button variant="outline" onClick={() => navigate(startPath("channel"))}>
-              {t("start.topic.back")}
-            </Button>
-            <Button onClick={next}>{t("start.topic.next")}</Button>
-          </div>
-        </div>
-      </SectionCard>
+      <ButtonRow>
+        <StartButton variant="secondary" onClick={() => navigate(startPath("channel"))}>
+          {t("start.topic.back")}
+        </StartButton>
+        <StartButton onClick={next}>{t("start.topic.next")}</StartButton>
+      </ButtonRow>
     </StartLayout>
   );
 }

@@ -7,6 +7,8 @@ import { useAuth } from "../../lib/auth";
 import { useI18n } from "../../lib/i18n";
 import { useTheme } from "../../lib/theme";
 import { cn } from "../../lib/utils";
+import { StartLayout } from "../start/StartLayout";
+import { draftFromYoutubeOnboarding } from "../start/startDraft";
 import {
   canAccessOnboardingStep,
   getNextOnboardingStep,
@@ -116,6 +118,20 @@ export function OnboardingLayout(props: OnboardingLayoutProps) {
         when={auth.me()?.role === "student"}
         fallback={<Navigate href={auth.me()?.role === "staff" ? "/admin" : "/login"} />}
       >
+        <Show
+          when={props.step !== "checkout" && props.step !== "profile"}
+          fallback={
+            // These screens use the redesigned funnel; payment is its fifth step.
+            <StartLayout
+              step={props.step === "checkout" ? "payment" : "plan"}
+              draft={draftFromYoutubeOnboarding(auth.me()?.youtubeOnboarding)}
+              title={props.title}
+              subtitle={props.subtitle}
+            >
+              {props.children}
+            </StartLayout>
+          }
+        >
         <StudentLayout>
           <section class="mx-auto max-w-5xl space-y-6">
             <header
@@ -142,6 +158,7 @@ export function OnboardingLayout(props: OnboardingLayoutProps) {
             {props.children}
           </section>
         </StudentLayout>
+        </Show>
       </Show>
     </Show>
   );

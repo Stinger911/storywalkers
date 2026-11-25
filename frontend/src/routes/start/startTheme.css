@@ -1,0 +1,549 @@
+/*
+ * Visual theme of the pre-registration onboarding (/start/*), taken from the
+ * Figma "Storywalkers" onboarding screens. Everything is scoped to
+ * `.start-theme` so the rest of the app keeps its own look.
+ *
+ * Values were measured from Figma screenshots; replace the tokens below with
+ * the exact ones from Figma variables if they differ.
+ */
+/*
+ * Fonts are self-hosted. Never @import another origin here: the hosting CSP
+ * blocks it, and a blocked import makes the whole stylesheet fail to preload.
+ */
+@import "@fontsource-variable/inter";
+@import "@fontsource-variable/unbounded";
+
+.start-theme {
+  --st-orange: #ea580c;
+  --st-red: #d91a1c;
+  --st-red-border: #d9272e;
+  --st-red-soft: #fce7e9;
+  --st-ink: #111111;
+  --st-line: #d6d6d6;
+  --st-surface: #fafafa;
+  --st-muted: #8a8a8a;
+  --st-grad: linear-gradient(95deg, var(--st-orange) 0%, var(--st-red) 100%);
+  --st-grad-hover: linear-gradient(95deg, #f0510a 0%, #cf1518 100%);
+  --st-font-display: "Unbounded Variable", "Inter Variable", system-ui, sans-serif;
+  --st-font-body: "Inter Variable", system-ui, sans-serif;
+
+  min-height: 100vh;
+  isolation: isolate;
+  background: #ffffff;
+  color: var(--st-ink);
+  font-family: var(--st-font-body);
+}
+
+/* ---------- cards ---------- */
+
+.st-card {
+  position: relative;
+  border: 1.5px solid var(--st-ink);
+  border-radius: 32px;
+  background: #ffffff;
+}
+
+/* halftone "shadow" under the cards */
+.st-card::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: auto 6px -9px 6px;
+  height: 22px;
+  border-radius: 0 0 30px 30px;
+  background-image: radial-gradient(#bdbdbd 0.7px, transparent 0.8px);
+  background-size: 3px 3px;
+}
+
+.st-card-fill {
+  border-color: var(--st-ink);
+  background: var(--st-grad);
+  color: #ffffff;
+}
+
+.st-display {
+  font-family: var(--st-font-display);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.st-heading {
+  font-family: var(--st-font-display);
+  font-weight: 600;
+  font-size: 1.35rem;
+  line-height: 1.25;
+  color: var(--st-red);
+  text-align: center;
+}
+
+.st-lead {
+  text-align: center;
+  font-size: 0.8rem;
+  line-height: 1.55;
+}
+
+/* ---------- stepper ---------- */
+
+.st-step {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 6px;
+  border: 1px dashed var(--st-line);
+  background: #f4f4f4;
+  padding: 0.55rem 1.1rem;
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #444;
+  white-space: nowrap;
+}
+
+.st-step[data-state="done"],
+.st-step[data-state="current"] {
+  border-style: solid;
+  border-color: var(--st-red-border);
+  background: var(--st-red-soft);
+  color: var(--st-ink);
+}
+
+.st-step[data-state="current"] {
+  font-weight: 700;
+}
+
+.st-step-link {
+  height: 0;
+  flex: 1 1 12px;
+  min-width: 10px;
+  border-top: 1px dashed var(--st-line);
+}
+
+.st-step-link[data-done="true"] {
+  border-top-color: var(--st-red-border);
+}
+
+/* ---------- selection tiles ---------- */
+
+.st-option {
+  display: flex;
+  min-height: 50px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--st-line);
+  border-radius: 6px;
+  background: var(--st-surface);
+  padding: 0.75rem 1.25rem;
+  text-align: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--st-ink);
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.15s ease;
+}
+
+.st-option:hover:not(:disabled) {
+  border-color: var(--st-red-border);
+}
+
+.st-option:active:not(:disabled) {
+  transform: scale(0.99);
+}
+
+.st-option[aria-pressed="true"] {
+  border-color: var(--st-red-border);
+  background: var(--st-red-soft);
+}
+
+.st-option:disabled {
+  cursor: not-allowed;
+  border-color: #e3e3e3;
+  background: #ececec;
+  color: #b0b0b0;
+}
+
+.st-option:focus-visible,
+.st-btn:focus-visible,
+.st-field:focus-visible,
+.st-select-trigger:focus-visible {
+  outline: 2px solid var(--st-red-border);
+  outline-offset: 2px;
+}
+
+/* ---------- buttons ---------- */
+
+.st-btn {
+  display: inline-flex;
+  min-height: 50px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 0 2.9rem;
+  font-family: var(--st-font-display);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
+}
+
+.st-btn-primary {
+  border: 0;
+  background: var(--st-grad);
+  color: #ffffff;
+  box-shadow: 0 8px 18px -8px rgba(217, 26, 28, 0.65);
+}
+
+.st-btn-primary:hover:not(:disabled) {
+  background: var(--st-grad-hover);
+  box-shadow: 0 10px 22px -8px rgba(217, 26, 28, 0.8);
+}
+
+.st-btn-primary:active:not(:disabled) {
+  background: var(--st-red);
+  transform: translateY(1px);
+  box-shadow: none;
+}
+
+.st-btn-primary:disabled {
+  cursor: not-allowed;
+  background: linear-gradient(95deg, #b9b9b9, #7c7c7c);
+  box-shadow: none;
+  color: #e6e6e6;
+}
+
+.st-btn-secondary {
+  border: 1px solid #f08a5d;
+  background: #ffffff;
+  color: var(--st-ink);
+  box-shadow: 0 8px 18px -10px rgba(234, 88, 12, 0.7);
+}
+
+.st-btn-secondary:hover:not(:disabled) {
+  border-color: var(--st-red-border);
+  color: var(--st-red);
+}
+
+.st-btn-secondary:active:not(:disabled) {
+  border-color: var(--st-red);
+  color: var(--st-red);
+  transform: translateY(1px);
+  box-shadow: none;
+}
+
+.st-btn-secondary:disabled {
+  cursor: not-allowed;
+  border-color: #dcdcdc;
+  color: #b5b5b5;
+  box-shadow: none;
+}
+
+.st-btn-small {
+  min-height: 28px;
+  border-radius: 6px;
+  padding: 0 0.85rem;
+  font-family: var(--st-font-body);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  border: 1px solid var(--st-line);
+  background: #f4f4f4;
+  color: var(--st-ink);
+  box-shadow: none;
+}
+
+.st-btn-small[aria-pressed="true"] {
+  border-color: var(--st-red-border);
+  background: var(--st-red-soft);
+  color: var(--st-red);
+}
+
+/* ---------- inputs ---------- */
+
+.st-field {
+  width: 100%;
+  min-height: 50px;
+  border: 1px solid var(--st-line);
+  border-radius: 6px;
+  background: #ffffff;
+  padding: 0 1.4rem;
+  font-size: 0.85rem;
+  color: var(--st-ink);
+}
+
+.st-field::placeholder {
+  font-style: italic;
+  color: var(--st-muted);
+}
+
+.st-field:focus {
+  border-color: var(--st-ink);
+  outline: none;
+}
+
+.st-field[aria-invalid="true"] {
+  border-color: var(--st-red-border);
+  color: var(--st-red);
+}
+
+.st-check {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  appearance: none;
+  border: 1px solid #9a9a9a;
+  border-radius: 3px;
+  background: #ffffff;
+  cursor: pointer;
+}
+
+.st-check:checked {
+  border-color: var(--st-orange);
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 8.5l2.7 2.7L12 5.6' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")
+      center / 100% no-repeat,
+    var(--st-orange);
+}
+
+/* ---------- dropdown ---------- */
+
+.st-select-trigger {
+  display: flex;
+  min-height: 50px;
+  width: 100%;
+  align-items: center;
+  gap: 0.75rem;
+  border: 1px solid var(--st-line);
+  border-radius: 6px;
+  background: #ffffff;
+  padding: 0 1.1rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.st-select-trigger[aria-expanded="true"] {
+  border-color: var(--st-ink);
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.st-select-list {
+  z-index: 20;
+  max-height: 168px;
+  overflow-y: auto;
+  border: 1px solid var(--st-line);
+  border-top: 0;
+  border-radius: 0 0 6px 6px;
+  background: #ffffff;
+  box-shadow: 0 12px 24px -12px rgba(0, 0, 0, 0.25);
+}
+
+.st-select-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.65rem 1.1rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.st-select-item:hover,
+.st-select-item[data-highlighted] {
+  background: var(--st-red-soft);
+}
+
+/* ---------- summary panel ---------- */
+
+.st-summary-label {
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  opacity: 0.9;
+}
+
+.st-summary-value {
+  margin-top: 0.4rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.st-summary-value[data-upper="true"] {
+  text-transform: uppercase;
+}
+
+/* ---------- motion ---------- */
+
+@keyframes st-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.st-enter {
+  animation: st-enter 0.35s ease-out both;
+}
+
+@keyframes st-value-in {
+  from {
+    opacity: 0;
+    transform: translateX(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.st-summary-value[data-filled="true"] {
+  animation: st-value-in 0.3s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .st-enter,
+  .st-summary-value[data-filled="true"] {
+    animation: none;
+  }
+
+  .st-btn,
+  .st-option {
+    transition: none;
+  }
+}
+
+/* ---------- course list (plan step) ---------- */
+
+.st-course {
+  border: 1px solid var(--st-line);
+  border-radius: 6px;
+  background: #ffffff;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.st-course[data-selected="true"] {
+  border-color: var(--st-red-border);
+  background: #fff8f8;
+}
+
+/* selected path: vertical flow of course nodes */
+.st-path {
+  position: relative;
+  display: grid;
+  gap: 1.25rem;
+  padding-left: 1.75rem;
+}
+
+.st-path::before {
+  content: "";
+  position: absolute;
+  top: 0.75rem;
+  bottom: 0.75rem;
+  left: 0.45rem;
+  border-left: 1px dashed var(--st-red-border);
+}
+
+.st-path-node {
+  position: relative;
+  border: 1px solid var(--st-line);
+  border-radius: 6px;
+  background: var(--st-surface);
+  padding: 0.9rem 1.2rem;
+}
+
+.st-path-node::before {
+  content: "";
+  position: absolute;
+  top: 1.1rem;
+  left: -1.55rem;
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 999px;
+  background: var(--st-grad);
+}
+
+/* ---------- payment step ---------- */
+
+.st-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  border: 1px solid var(--st-line);
+  border-radius: 6px;
+  background: #ffffff;
+  padding: 0.75rem 1rem;
+  font-size: 0.8rem;
+}
+
+.st-icon-btn {
+  display: inline-flex;
+  width: 28px;
+  height: 28px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  color: var(--st-muted);
+  cursor: pointer;
+}
+
+.st-icon-btn:hover:not(:disabled) {
+  background: var(--st-red-soft);
+  color: var(--st-red);
+}
+
+.st-icon-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.st-icon-btn:focus-visible {
+  outline: 2px solid var(--st-red-border);
+  outline-offset: 2px;
+}
+
+.st-notice {
+  border: 1px solid #f3c58c;
+  border-radius: 6px;
+  background: #fff6e8;
+  padding: 0.9rem 1.1rem;
+}
+
+/* ---------- forms ---------- */
+
+.st-label {
+  display: block;
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.st-field:disabled {
+  cursor: not-allowed;
+  background: #f4f4f4;
+  color: var(--st-muted);
+}
+
+.st-textarea {
+  display: block;
+  min-height: 140px;
+  padding-top: 0.9rem;
+  padding-bottom: 0.9rem;
+  resize: vertical;
+}

@@ -30,9 +30,20 @@ export async function syncDraftToMe(): Promise<SyncResult> {
   if (goalId) payload.selectedGoalId = goalId;
   // Students without a channel buy the whole path; the expert picks lessons
   // for the others later, so nothing is preselected for them.
-  if (!youtubeOnboarding.hasChannel && courseIds.length > 0) {
-    payload.selectedCourses = courseIds;
-    payload.subscriptionSelected = true;
+  if (!youtubeOnboarding.hasChannel) {
+    const known = new Set(courseIds);
+    const chosenCourses = draft.selectedCourses.filter((id) => known.has(id));
+    const chosenLessons = draft.selectedLessons.filter(
+      (item) => known.has(item.courseId) && !chosenCourses.includes(item.courseId),
+    );
+    if (chosenCourses.length > 0 || chosenLessons.length > 0) {
+      payload.selectedCourses = chosenCourses;
+      if (chosenLessons.length > 0) payload.selectedLessons = chosenLessons;
+      payload.subscriptionSelected = true;
+    } else if (courseIds.length > 0) {
+      payload.selectedCourses = courseIds;
+      payload.subscriptionSelected = true;
+    }
   }
 
   try {

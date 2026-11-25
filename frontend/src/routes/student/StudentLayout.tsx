@@ -54,7 +54,7 @@ export function StudentLayout(props: StudentLayoutProps) {
   const [leftRailContent, setLeftRailContent] = createSignal<JSX.Element | null>(null);
 
   const shell = (
-    <div class="student-shell min-h-screen bg-background text-foreground [font-family:Manrope,'Space_Grotesk',system-ui,sans-serif]">
+    <div class="student-shell min-h-screen bg-background text-foreground [font-family:'Manrope_Variable','Space_Grotesk_Variable',system-ui,sans-serif]">
       <StudentLayoutRailContext.Provider value={setLeftRailContent}>
         <AppShell
           title={t("student.layout.title")}

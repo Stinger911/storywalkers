@@ -29,6 +29,7 @@ export type PlanCourse = {
   description: string | null;
   tags: string[];
   lessonCount: number;
+  priceUsdCents: number | null;
   lessons: PlanLesson[];
 };
 
@@ -129,6 +130,7 @@ function normalizePlanCourse(raw: unknown): PlanCourse | null {
       ? data.tags.filter((tag): tag is string => typeof tag === "string")
       : [],
     lessonCount: asNumberOrNull(data.lessonCount) ?? lessons.length,
+    priceUsdCents: asNumberOrNull(data.priceUsdCents),
     lessons: lessons
       .map((lesson) => {
         const item = (lesson ?? {}) as Record<string, unknown>;
