@@ -1,6 +1,7 @@
 import { createEffect, createSignal, For, on, Show, type JSX } from "solid-js";
 
 import { useI18n } from "../../lib/i18n";
+import { QuoteCarousel } from "./QuoteCarousel";
 import { START_STEPS, type StartDraft, type StartStep } from "./startDraft";
 import "./startTheme.css";
 
@@ -95,23 +96,6 @@ function SummaryPanel(props: { draft: StartDraft }) {
         </For>
       </dl>
     </aside>
-  );
-}
-
-/* ---------- right column: quote ---------- */
-
-function QuoteCard() {
-  const { t } = useI18n();
-  // The design has pagination dots for several quotes; only one is supplied so far.
-  return (
-    <figure class="st-card relative flex min-h-[250px] flex-col items-center justify-center px-8 py-10 text-center">
-      <blockquote class="st-display text-base leading-8 text-[var(--st-red)]">
-        «{t("start.quote.text")}»
-      </blockquote>
-      <figcaption class="mt-3 text-[0.65rem] uppercase tracking-[0.12em]">
-        {t("start.quote.author")}
-      </figcaption>
-    </figure>
   );
 }
 
@@ -227,7 +211,7 @@ export function StartLayout(props: StartLayoutProps) {
 
         <div class="space-y-7 lg:sticky lg:top-6">
           <SummaryPanel draft={props.draft} />
-          <QuoteCard />
+          <QuoteCarousel />
         </div>
       </div>
     </div>

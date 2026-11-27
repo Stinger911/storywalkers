@@ -18,7 +18,14 @@ type StartSection = {
     payment: string;
   };
   stepPlanExpert: string;
-  quote: { text: string; author: string };
+  quotes: {
+    label: string;
+    show: string;
+    ford: { text: string; author: string };
+    clearGoal: string;
+    fromResult: string;
+    yourAnswers: string;
+  };
   summary: { title: string };
   expert: {
     title: string;
@@ -568,9 +575,16 @@ const dictionaries: Record<Locale, RawDictionary> = {
         payment: "Payment",
       },
       stepPlanExpert: "Expert",
-      quote: {
-        text: "Any great goal can be reached if you break it into clear steps.",
-        author: "Henry Ford",
+      quotes: {
+        label: "Quotes",
+        show: "Show quote {{ number }}",
+        ford: {
+          text: "Any great goal can be reached if you break it into clear steps.",
+          author: "Henry Ford",
+        },
+        clearGoal: "A clear goal turns learning into a route, not a pile of lessons.",
+        fromResult: "The path works best when it starts from the result you want.",
+        yourAnswers: "Your answers help us remove noise and keep the route practical.",
       },
       summary: { title: "Channel information" },
       expert: {
@@ -1166,9 +1180,16 @@ const dictionaries: Record<Locale, RawDictionary> = {
         payment: "Оплата",
       },
       stepPlanExpert: "Эксперт",
-      quote: {
-        text: "Любую великую цель можно достичь, если разбить её на понятные шаги.",
-        author: "Генри Форд",
+      quotes: {
+        label: "Цитаты",
+        show: "Показать цитату {{ number }}",
+        ford: {
+          text: "Любую великую цель можно достичь, если разбить её на понятные шаги.",
+          author: "Генри Форд",
+        },
+        clearGoal: "Четкая цель превращает обучение в маршрут, а не в набор уроков.",
+        fromResult: "Путь работает лучше, когда начинается с результата, к которому вы идете.",
+        yourAnswers: "Ваши ответы помогают убрать лишнее и оставить практичный маршрут.",
       },
       summary: { title: "Информация о канале" },
       expert: {

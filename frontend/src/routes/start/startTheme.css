@@ -427,6 +427,85 @@
   }
 }
 
+/* ---------- quote carousel ---------- */
+
+.st-quote {
+  /* Horizontal gestures switch quotes; vertical ones still scroll the page. */
+  touch-action: pan-y;
+  user-select: none;
+  cursor: grab;
+}
+
+.st-quote[data-dragging="true"] {
+  cursor: grabbing;
+}
+
+.st-quote:not([data-dragging="true"]) .st-quote-track {
+  transition: transform 0.2s ease-out;
+}
+
+.st-quote-slide {
+  visibility: hidden;
+}
+
+.st-quote-slide[data-active="true"] {
+  visibility: visible;
+}
+
+.st-quote-slide[data-from="right"] {
+  animation: st-quote-from-right 0.3s ease-out both;
+}
+
+.st-quote-slide[data-from="left"] {
+  animation: st-quote-from-left 0.3s ease-out both;
+}
+
+@keyframes st-quote-from-right {
+  from {
+    opacity: 0;
+    transform: translateX(40px);
+  }
+}
+
+@keyframes st-quote-from-left {
+  from {
+    opacity: 0;
+    transform: translateX(-40px);
+  }
+}
+
+/* 6px dots 3px apart, with a taller hit area */
+.st-quote-dot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 9px;
+  height: 22px;
+  cursor: pointer;
+}
+
+.st-quote-dot::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #cccccc;
+}
+
+.st-quote-dot[aria-current="true"]::before {
+  background: var(--st-ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .st-quote-slide[data-from] {
+    animation: none;
+  }
+
+  .st-quote:not([data-dragging="true"]) .st-quote-track {
+    transition: none;
+  }
+}
+
 /* ---------- course list (plan step) ---------- */
 
 .st-course {

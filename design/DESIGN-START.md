@@ -138,7 +138,7 @@ implements it today.
 | Summary row | `.st-row`, `.st-summary-label`, `.st-summary-value` | 6px radius, 1px `--st-line` | empty (`-`), filled (uppercase value optional) |
 | Inline callout | — (`s5` congratulation block) | 6px radius, gradient 90°, white text | static |
 | Rail brand card | — | 24px radius, **vertical** gradient, 1px white hairlines between label/value pairs | static |
-| Rail quote card | — | 24px radius, white, 2px ink outline, tape/pin decoration | static |
+| Rail quote card | `.st-quote` | 24px radius, white, 2px ink outline, tape/pin decoration, 6px pagination dots | swipe or drag, dots, arrow keys; new quote slides in from the swipe side; changes by itself every 5.2s, paused on hover and drag, off with reduced motion |
 
 Missing from the implementation, present in the frames: the inline callout, the rail quote card,
 the pressed state of the primary button (implemented, undocumented), and the dropdown's

@@ -43,6 +43,8 @@ tags.
   and total page counts in the student list.
 - Student: the current-step card opens the step details.
 - Onboarding design system and Figma reference frames in `design/`.
+- Onboarding quote card with four quotes that rotate automatically and can be
+  switched by swipe, dots or arrow keys.
 
 ### Changed
 
